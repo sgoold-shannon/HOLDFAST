@@ -56,7 +56,7 @@ func try_breaker(confirm: bool = false) -> bool:
 	isolate_pending = false
 	machine["pending_shot"] = NONE
 	for cohort in cohorts:
-		if cohort["status"] == "active" and cohort["order"] != "hold" and not cohort["passed"]:
+		if cohort["status"] == "active" and cohort["order"] in ["north", "south"] and not cohort["passed"]:
 			cohort["passed"] = cohort["cell"] == civilian_waypoint(cohort["order"])
 			cohort["note"] = "Using confirmed bypass"
 	status_text = "Drive isolated for 1 AP. Machine stopped; civilian gates locked; bypasses applied."

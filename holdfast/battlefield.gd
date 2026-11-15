@@ -448,6 +448,25 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				try_select_cell(hovered_cell)
 
+func soldier_role(index: int) -> String:
+	return {"MSG":"PSYOP", "Ortiz":"MEDIC", "Bell":"ENGINEER", "Park":"RECON"}.get(soldiers[index]["name"], "RIFLE")
+
+func soldier_color(index: int) -> Color:
+	return [Color("e9c66a"),Color("8ce0c1"),Color("8fb9ff"),Color("d7a2ed")][index % 4]
+
+func draw_soldier_marker(index: int, center: Vector2) -> void:
+	var color := soldier_color(index) if soldiers[index]["hp"] > 0 else Color("b36b6b")
+	draw_rect(Rect2(center-Vector2(12,10),Vector2(24,24)),Color("14221d"))
+	match index % 4:
+		0: draw_colored_polygon(PackedVector2Array([center+Vector2(0,-15),center+Vector2(14,0),center+Vector2(0,15),center+Vector2(-14,0)]),color)
+		1:
+			draw_rect(Rect2(center-Vector2(5,14),Vector2(10,28)),color)
+			draw_rect(Rect2(center-Vector2(14,5),Vector2(28,10)),color)
+		2: draw_rect(Rect2(center-Vector2(13,13),Vector2(26,26)),color)
+		3: draw_colored_polygon(PackedVector2Array([center+Vector2(0,-15),center+Vector2(15,13),center+Vector2(-15,13)]),color)
+	draw_string(font,center+Vector2(-12,6),soldiers[index]["mark"],HORIZONTAL_ALIGNMENT_CENTER,24,17,Color("14221d"))
+	if index == active_soldier: draw_arc(center,17,0,TAU,24,Color.WHITE,2)
+
 func _draw() -> void:
 	draw_string(font, Vector2(40, 36), "HOLDFAST  /  A6 SAVE & REPLAY", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
 	draw_string(font, Vector2(40, 62), "T: move / aim | F: fire | R: reload | N: end turn | E: extract | Esc: clear", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("aebbb6"))
@@ -504,15 +523,14 @@ func _draw() -> void:
 		if not soldier_visible(i):
 			continue
 		var center := cell_to_local(soldiers[i]["cell"]) + Vector2(18, 18)
-		draw_circle(center, 13, Color("ab6767") if soldiers[i]["hp"] <= 0 else (Color("f7cd6c") if i == active_soldier else Color("d5e0d9")))
-		draw_string(font, center + Vector2(-12, 6), soldiers[i]["mark"], HORIZONTAL_ALIGNMENT_CENTER, 24, 18, Color("16251e"))
+		draw_soldier_marker(i, center)
 	var selection := "Select a soldier  |  Green 1 = move  |  Blue 2 = dash"
 	if active_soldier >= 0:
 		var soldier: Dictionary = soldiers[active_soldier]
-		selection = "%s | HP %d/8 | AP %d | Ammo %d | Attack %s | (%d,%d)" % [soldier["name"], soldier["hp"], soldier["ap"], soldier["ammo"], "used" if soldier["attacked"] else "ready", soldier["cell"].x, soldier["cell"].y]
+		selection = "%s / %s | HP %d/8 | AP %d | Ammo %d | Attack %s | (%d,%d)" % [soldier["name"], soldier_role(active_soldier), soldier["hp"], soldier["ap"], soldier["ammo"], "used" if soldier["attacked"] else "ready", soldier["cell"].x, soldier["cell"].y]
 	elif selected_cell != NONE:
 		selection = "Selected ground (%d, %d)" % [selected_cell.x, selected_cell.y]
-	draw_string(font, Vector2(40, 702), selection, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("f7cd6c"))
+	draw_string(font, Vector2(40, 711), selection, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("f7cd6c"))
 	var preview := "Green 1: up to 4 squares / 1 AP. Blue 2: 5–8 squares / 2 AP."
 	if path.size() > 0:
 		preview = "Destination (%d, %d): %d orthogonal steps / %d AP" % [hovered_cell.x, hovered_cell.y, path.size() - 1, move_cost(hovered_cell)]
@@ -536,12 +554,20 @@ func _draw() -> void:
 			draw_string(font, Vector2(40, 820), explanation, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
 	draw_string(font, Vector2(40, 730), preview, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
 	draw_string(font, Vector2(40, 758), status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
-	var roster := "Phase %d  |  " % phase
-	for soldier in soldiers:
-		roster += "%s %s   " % [soldier["name"], "OUT" if soldier["extracted"] else ("CRIT" if soldier["hp"] <= 0 else "%dHP" % soldier["hp"])]
-	draw_string(font, Vector2(40, 865), roster, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
+	for index in range(soldiers.size()):
+		var soldier: Dictionary = soldiers[index]
+		var origin := Vector2(40+index*196,837)
+		draw_rect(Rect2(origin,Vector2(190,38)),Color("22312a"))
+		draw_rect(Rect2(origin,Vector2(4,38)),soldier_color(index))
+		var health := "OUT" if soldier["extracted"] else "%d HP" % soldier["hp"]
+		if soldier.get("condition") == "critical": health = "CRIT %d" % soldier["bleed"]
+		elif soldier.get("condition") == "stable": health = "STABLE"
+		elif soldier.get("condition") == "dead": health = "DEAD"
+		if soldier.get("actor_id", "original") == "": health = "UNFILLED"
+		draw_string(font,origin+Vector2(10,16),"%s · %s" % [soldier["name"],health],HORIZONTAL_ALIGNMENT_LEFT,180,14,soldier_color(index))
+		draw_string(font,origin+Vector2(10,32),soldier_role(index)+" · %d AP" % soldier["ap"],HORIZONTAL_ALIGNMENT_LEFT,180,12,Color.WHITE)
 	draw_rect(NEXT_PHASE_RECT, Color("315b50"))
-	draw_string(font, NEXT_PHASE_RECT.position + Vector2(0, 26), "End turn [N]", HORIZONTAL_ALIGNMENT_CENTER, NEXT_PHASE_RECT.size.x, 16, Color.WHITE)
+	draw_string(font, NEXT_PHASE_RECT.position + Vector2(0, 26), "End round %d [N]" % phase, HORIZONTAL_ALIGNMENT_CENTER, NEXT_PHASE_RECT.size.x, 16, Color.WHITE)
 
 	draw_rect(MODE_RECT, Color("304965") if sight_mode else Color("315b50"))
 	draw_string(font, MODE_RECT.position + Vector2(0, 26), "Aim / sight [T]" if sight_mode else "Movement [T]", HORIZONTAL_ALIGNMENT_CENTER, MODE_RECT.size.x, 16, Color.WHITE)

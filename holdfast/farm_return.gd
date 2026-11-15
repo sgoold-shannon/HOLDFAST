@@ -159,6 +159,14 @@ func civilian_waypoint(order: String) -> Vector2i:
 	if return_state["active"]: return Vector2i(10,4) if order == "north" else Vector2i(5,4)
 	return super.civilian_waypoint(order)
 
+func route_label(order: String) -> String:
+	if return_state["active"]:
+		return ("Cooling" if cooling_ready() else "Cooling locked") if order == "north" else "Manual route"
+	return super.route_label(order)
+
+func route_available(order: String) -> bool:
+	return not (return_state["active"] and order == "north" and not cooling_ready())
+
 func order_cohort(index: int, order: String) -> bool:
 	if return_state["active"] and order == "north" and not cooling_ready():
 		status_text = "Cooling route unavailable. Choose the manual route; disabled equipment needs two repairs."
@@ -290,11 +298,6 @@ func _draw() -> void:
 	draw_rect(Rect2(35,10,805,34),Color("0e1412"))
 	draw_string(font,Vector2(40,36),"HOLDFAST / D1 · "+("NORTHBOUND RETURN" if return_state["active"] else "FARM ROAD ORIGIN"),HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
 	if not return_state["active"]: return
-	for item in [[NORTH_RECT,"Cooling route (10,4)" if cooling_ready() else "Cooling route unavailable"],[SOUTH_RECT,"Manual route (5,4)"]]:
-		draw_rect(item[0],Color("304965"))
-		draw_string(font,item[0].position+Vector2(0,25),item[1],HORIZONTAL_ALIGNMENT_CENTER,item[0].size.x,16,Color.WHITE)
-	draw_rect(Rect2(872,686,256,29),Color("18231f"))
-	draw_string(font,Vector2(876,704),"North exit: (10,1), automatic",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8be6de"))
 	draw_rect(Rect2(35,773,800,61),Color("0e1412"))
 	draw_rect(BREAKER_RECT,Color("34473e"))
 	draw_string(font,BREAKER_RECT.position+Vector2(0,29),"Repair [I] · 1 AP · %d/2" % return_state["repair"],HORIZONTAL_ALIGNMENT_CENTER,250,16,Color.WHITE)

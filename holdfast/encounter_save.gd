@@ -189,8 +189,12 @@ static func validate(data: Dictionary) -> String:
 			var id: String = ["A", "B", "C"][index]
 			if group.get("id") != id or not cell(group.get("cell")) or not integer(group.get("hp"),0,4) or not group.get("passed") is bool or not group.get("note") is String:
 				return "invalid group identity or resources."
-			if not ["hold","north","south"].has(group.get("order")) or not ["active","extracted","stranded"].has(group.get("status")):
+			if not ["hold","north","south","follow"].has(group.get("order")) or not ["active","extracted","stranded"].has(group.get("status")):
 				return "invalid group order or disposition."
+			if group.get("order") == "follow" and not integer(group.get("leader"),0,3):
+				return "invalid civilian follow leader."
+			if group.has("leader") and not integer(group["leader"],-1,3):
+				return "invalid civilian leader."
 			var manifest_id := "D%d-%s" % [data["campaign"]["deployment"],id] if roster_scene else id
 			if group.get("manifest") != [manifest_id+"-01",manifest_id+"-02",manifest_id+"-03",manifest_id+"-04"]:
 				return "invalid civilian manifest."

@@ -373,15 +373,6 @@ func _draw() -> void:
 			draw_string(font,center+Vector2(7,-6),"+",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("8be6de"))
 		if soldier["carrying"] >= 0:
 			draw_string(font,center+Vector2(-15,22),"+"+soldiers[soldier["carrying"]]["mark"],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8be6de"))
-	var roster := "Phase %d | " % phase
-	for soldier in soldiers:
-		if soldier.get("actor_id","original") == "":
-			roster += "Unfilled slot  "
-			continue
-		var state: String = "OUT" if soldier["extracted"] else ("CRIT %d" % soldier["bleed"] if soldier["condition"] == "critical" else ("STABLE" if soldier["condition"] == "stable" else ("DEAD" if soldier["condition"] == "dead" else "%dHP" % soldier["hp"])))
-		roster += "%s %s  " % [soldier["name"],state]
-	draw_rect(Rect2(35,842,800,29),Color("0e1412"))
-	draw_string(font,Vector2(40,865),roster,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("d6ded9"))
 	var target := target_for_rescue()
 	draw_rect(CASUALTY_RECT,Color("34473e"))
 	draw_string(font,CASUALTY_RECT.position+Vector2(0,23),"Casualty: %s [V]" % (soldiers[target]["name"] if casualty_available(target) else "none"),HORIZONTAL_ALIGNMENT_CENTER,248,14,Color.WHITE)
@@ -396,8 +387,8 @@ func _draw() -> void:
 		var living_left := 0
 		for soldier in soldiers:
 			living_left += 1 if not soldier["extracted"] and soldier["condition"] != "dead" else 0
-		draw_rect(Rect2(872,852,256,29),Color("18231f"))
-		draw_string(font,Vector2(876,870),"%d living soldiers left behind." % living_left,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color.WHITE)
+		draw_rect(Rect2(872,905,256,25),Color("18231f"))
+		draw_string(font,Vector2(876,922),"%d living soldiers left behind." % living_left,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color.WHITE)
 	if ended:
 		var out_count := 0
 		var dead_count := 0

@@ -50,6 +50,16 @@ func enemy_intent() -> String:
 	var shot: Vector2i = machine["pending_shot"]
 	return "%s | Next: %s%s" % ["HOSTILE" if machine["hostile"] else "NEUTRAL", action, " | SHOT (%d,%d): 4 damage" % [shot.x, shot.y] if shot != NONE else ""]
 
+func danger_summary() -> String:
+	if not machine_present(): return "Machine gone. Civilian rescue still needs orders and End turn [N]."
+	if next_machine_cell() == NONE and machine["pending_shot"] == NONE:
+		return enemy_intent()
+	if machine["pending_shot"] != NONE:
+		return "DANGER: red X takes 4 damage next machine turn. Move off it before [N]."
+	if machine["hostile"]:
+		return "HOSTILE: charges after its move if a soldier is visible within 6 cells; fires next turn."
+	return "NEUTRAL: orange cell takes 4 damage if occupied. Firing makes it hostile."
+
 func cell_occupied_by_people(cell: Vector2i) -> bool:
 	return soldier_at(cell) >= 0
 
@@ -126,7 +136,7 @@ func try_fire() -> bool:
 		machine["pending_shot"] = NONE
 		for direction in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 			damage_cell(enemies[0]["cell"] + direction, 4)
-		status_text += " Explosion: 4 damage in outlined cells."
+		status_text += " Blast: 4 damage nearby. Destroyed before any further response."
 	rebuild_movement()
 	return true
 
@@ -182,20 +192,30 @@ func _draw() -> void:
 		draw_string(font, cell_to_local(Vector2i(7, 8)) + Vector2(0, 12), "SKID", HORIZONTAL_ALIGNMENT_CENTER, 36, 10, Color("e8d9b4"))
 	var next := next_machine_cell()
 	if next != NONE:
+		draw_rect(Rect2(cell_to_local(next) + Vector2(2, 2), Vector2(32, 32)), Color(1.0,0.5,0.1,0.3))
 		draw_rect(Rect2(cell_to_local(next) + Vector2(2, 2), Vector2(32, 32)), Color("ffb75a"), false, 3)
-		draw_string(font, cell_to_local(next) + Vector2(0, 12), "MOVE", HORIZONTAL_ALIGNMENT_CENTER, 36, 9, Color("ffb75a"))
+		draw_string(font, cell_to_local(next) + Vector2(0, 12), "IMPACT", HORIZONTAL_ALIGNMENT_CENTER, 36, 9, Color("ffb75a"))
 	var shot: Vector2i = machine["pending_shot"]
 	if shot != NONE:
+		draw_rect(Rect2(cell_to_local(shot) + Vector2(3, 3), Vector2(30, 30)), Color(1.0,0.1,0.2,0.4))
 		draw_rect(Rect2(cell_to_local(shot) + Vector2(3, 3), Vector2(30, 30)), Color("ff6d78"), false, 3)
 		draw_line(cell_to_local(shot) + Vector2(4, 4), cell_to_local(shot) + Vector2(32, 32), Color("ff6d78"), 2)
 		draw_line(cell_to_local(shot) + Vector2(32, 4), cell_to_local(shot) + Vector2(4, 32), Color("ff6d78"), 2)
 	if machine_present():
 		var center := cell_to_local(enemies[0]["cell"]) + Vector2(18, 18)
-		draw_circle(center, 14, Color("a84c48") if machine["hostile"] else Color("5b849b"))
-		draw_string(font, center + Vector2(-12, 6), "D", HORIZONTAL_ALIGNMENT_CENTER, 24, 18, Color.WHITE)
+		var hull := PackedVector2Array([center+Vector2(-14,-8),center+Vector2(-8,-14),center+Vector2(8,-14),center+Vector2(14,-8),center+Vector2(14,10),center+Vector2(-14,10)])
+		draw_colored_polygon(hull, Color("b34b42") if machine["hostile"] else Color("607e8f"))
+		draw_rect(Rect2(center+Vector2(-17,-9),Vector2(5,23)),Color("192329"))
+		draw_rect(Rect2(center+Vector2(12,-9),Vector2(5,23)),Color("192329"))
+		draw_line(center,center+Vector2(-17,0),Color("f7cd6c"),5)
+		draw_circle(center,5,Color("ff6d78") if machine["hostile"] else Color("8be6de"))
+		draw_rect(Rect2(center+Vector2(-16,15),Vector2(32,3)),Color("17202a"))
+		draw_rect(Rect2(center+Vector2(-16,15),Vector2(32.0*enemies[0]["hp"]/16.0,3)),Color("f7cd6c"))
 		if sight_mode and pinned_target == enemies[0]["cell"]:
 			for direction in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 				draw_rect(Rect2(cell_to_local(enemies[0]["cell"] + direction) + Vector2(1, 1), Vector2(34, 34)), Color("e6a2c7"), false, 1)
+	draw_rect(Rect2(35,672,800,20),Color("0e1412"))
+	draw_string(font,Vector2(40,687),danger_summary(),HORIZONTAL_ALIGNMENT_LEFT,790,14,Color("ffb75a"))
 	var forecast := "none (machine stopped)"
 	if machine["collected_round"] > 0:
 		forecast = str(machine["collected_round"] + 1)
