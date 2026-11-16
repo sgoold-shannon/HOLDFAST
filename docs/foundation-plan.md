@@ -143,6 +143,14 @@ All five committed suites and B2–B5 regression checks pass. New direct input t
 
 All five committed suites pass, including small-overlay geometry/text and snapshot-isolation checks. All 119 recorded gameplay snapshots match. Installed in the Desktop project and tracked on the HOLDFAST Trello board. No visual screenshot comparison was performed.
 
+## Completed: composed main encounter view routing
+
+The active `farm_final.gd` now composes an explicit drawing pipeline through `presentation/view_router.gd`, instead of calling `super._draw()` through the eleven-layer chain. Priority is roster → dialogue/log → mission results → tactical view. Ordered tactical layers and navigation/return/ending overlays preserve the existing sequence and visibility guards. Six tactical layers expose named draw methods; their original `_draw` adapters remain for earlier gate scenes.
+
+This removes inherited drawing traversal from the main scene, not gameplay inheritance. Input dispatch, save orchestration and other controller responsibilities still need consolidation. Some navigation adapter code intentionally remains in both the compatibility scenes and the composed main scene until those adapters can be retired safely.
+
+Validation: five committed suites and C1/C2/D1/D2 regressions pass; all 119 recorded action snapshots match. Router tests cover all 16 roster/dialogue/results flag combinations and exact layer call order for the four screen types. No visual screenshot comparison was performed.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

@@ -1,4 +1,5 @@
 extends "res://farm_return.gd"
+const ViewRouter = preload("res://presentation/view_router.gd")
 const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
 
@@ -31,8 +32,31 @@ func _unhandled_input(event: InputEvent) -> void:
 	super._unhandled_input(event)
 
 func _draw() -> void:
-	super._draw()
-	EndingOverlay.render(self,font,board_projection,ending_overlay_snapshot())
+	ViewRouter.render(ViewRouter.screen(roster_open,scene_view,result_ready),{
+		"tactical":draw_tactical_layer,"machine":draw_machine_layer,"civilian":draw_civilian_layer,
+		"breaker":draw_breaker_layer,"protocol":draw_protocol_layer,"rescue":draw_rescue_layer,
+		"roster":func(): RosterPanel.render(self,font,board_projection,roster_panel_snapshot()),
+		"story":func(): StoryPanel.render(self,font,board_projection,story_panel_snapshot()),
+		"results":func(): ResultsPanel.render(self,font,board_projection,results_panel_snapshot()),
+		"results_header":func(): SceneChrome.header(self,font,"HOLDFAST / B6 MISSION RESULTS",790,Color.WHITE),
+		"story_navigation":draw_story_navigation,
+		"roster_navigation":draw_roster_navigation,
+		"return":func(): ReturnOverlay.render(self,font,board_projection,return_overlay_snapshot()),
+		"ending":func(): EndingOverlay.render(self,font,board_projection,ending_overlay_snapshot())})
+
+func draw_story_navigation() -> void:
+	if not result_ready:
+		SceneChrome.header(self,font,"HOLDFAST / C1 · TAB: SCENE LOG",790,Color.WHITE)
+	elif not retry_required():
+		SceneChrome.button(self,font,DEBRIEF_RECT,"Debrief [B]",Color("344f46"),27,18)
+
+func draw_roster_navigation() -> void:
+	if not result_ready:
+		SceneChrome.header(self,font,"HOLDFAST / C2 · DEPLOYMENT %d / 2" % campaign.get("deployment",1),805,Color.WHITE)
+	else:
+		SceneChrome.button(self,font,ROSTER_RECT,"Roster / service history [G]",Color("344f46"),27,17)
+		if campaign["committed"]:
+			SceneChrome.button(self,font,RETRY_RECT,"Roster [Q / G]",Color("304965"),35,19)
 
 func ending_overlay_snapshot() -> Dictionary:
 	return {

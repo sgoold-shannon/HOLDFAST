@@ -204,6 +204,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
+	draw_protocol_layer()
+
+func draw_protocol_layer() -> void:
 	ProtocolPanel.render(self,font,board_projection,protocol_panel_snapshot())
 
 func machine_plan() -> Dictionary:

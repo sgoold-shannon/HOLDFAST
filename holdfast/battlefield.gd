@@ -440,6 +440,9 @@ func draw_soldier_marker(index: int, center: Vector2) -> void:
 	ActorView.soldier(self,font,center,soldier_marker_snapshot(index))
 
 func _draw() -> void:
+	draw_tactical_layer()
+
+func draw_tactical_layer() -> void:
 	SceneChrome.sandbox_header(self,font)
 	BoardView.render(self,font,board_projection,board_view_snapshot())
 	var path: Array[Vector2i] = []

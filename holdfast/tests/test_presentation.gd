@@ -235,6 +235,24 @@ func run() -> void:
 	expect(chrome.rectangles[0][0]==Rect2(35,10,805,34) and chrome.strings[0][1]=="Test title","Header geometry and text retained")
 	decorations.button(chrome,farm.font,farm.DEBRIEF_RECT,"Debrief [B]",Color("344f46"),27,18)
 	expect(chrome.strings[1][0]==farm.DEBRIEF_RECT.position+Vector2(0,27),"Navigation label alignment retained")
+
+	var router = preload("res://presentation/view_router.gd")
+	for roster in [false,true]:
+		for story in ["","opening","log","debrief"]:
+			for results in [false,true]:
+				var expected: String = "roster" if roster else ("story" if story!="" else ("results" if results else "tactical"))
+				expect(router.screen(roster,story,results)==expected,"Screen precedence retained")
+	var expected_layers := {
+		"roster":["roster","return","ending"],
+		"story":["story","return","ending"],
+		"results":["results","story_navigation","roster_navigation","return","ending"],
+		"tactical":["tactical","machine","civilian","breaker","protocol","rescue","results_header","story_navigation","roster_navigation","return","ending"]}
+	for screen_name in expected_layers:
+		var calls := []
+		var callbacks := {}
+		for layer in expected_layers[screen_name]: callbacks[layer] = func(): calls.append(layer)
+		router.render(screen_name,callbacks)
+		expect(calls==expected_layers[screen_name],"Composed layers preserve ordering for "+screen_name)
 	farm.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

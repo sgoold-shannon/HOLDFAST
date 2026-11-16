@@ -163,6 +163,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
+	draw_breaker_layer()
+
+func draw_breaker_layer() -> void:
 	BreakerPanel.render(self,font,board_projection,breaker_panel_snapshot())
 
 func machine_plan() -> Dictionary:

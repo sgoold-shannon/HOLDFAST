@@ -330,6 +330,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
+	draw_civilian_layer()
+
+func draw_civilian_layer() -> void:
 	SceneChrome.header(self,font,"HOLDFAST / B2 CIVILIAN EVACUATION",790,Color("e5e9e7"))
 	SceneChrome.rescue_guide(self,font)
 	CivilianView.render(self,font,board_projection,civilian_view_snapshot())

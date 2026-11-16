@@ -109,3 +109,5 @@ Dialogue, roster and results inputs now translate through a shared modal intent 
 Civilian order/card controls, casualty actions and machine interaction buttons now use the shared intent decoder while controller guards preserve confirmation, aiming and targeting priorities.
 
 Shared headers/navigation decorations and machine status/footer drawing now live in presentation helpers. Remaining foundation work is controller/view routing, save orchestration and reducing the inherited scene chain.
+
+The main encounter now uses an explicit view router rather than traversing the inherited drawing chain. Roster, dialogue, results and tactical screen priority and layer order are tested. Earlier gate scenes retain compatibility drawing adapters; gameplay inheritance and save orchestration remain to be simplified.

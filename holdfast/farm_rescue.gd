@@ -340,6 +340,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
+	draw_rescue_layer()
+
+func draw_rescue_layer() -> void:
 	RescuePanel.render(self,font,board_projection,rescue_panel_snapshot())
 
 func rescue_panel_snapshot() -> Dictionary:

@@ -149,6 +149,9 @@ func skid_visible() -> bool:
 
 func _draw() -> void:
 	super._draw()
+	draw_machine_layer()
+
+func draw_machine_layer() -> void:
 	# Scene-specific title and footer replace the Gate A test labels.
 	SceneChrome.header(self,font,"HOLDFAST / B1 FARM ROAD MACHINE",790,Color("e5e9e7"))
 	MachineView.render(self,font,board_projection,machine_view_snapshot())
