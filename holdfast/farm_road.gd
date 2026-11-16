@@ -18,6 +18,9 @@ var machine: Dictionary:
 
 func _ready() -> void:
 	super._ready()
+	initialize_machine()
+
+func initialize_machine() -> void:
 	machine_behavior = MachineActivation.new(next_machine_cell, enemy_target, cell_occupied_by_people, damage_cell, machine_path)
 	enemies.assign([{"cell": mission_definition().machine_spawn, "hp": mission_definition().machine_hp, "ammo": 4}])
 	status_text = "Farm Road: neutral machine. Orange = next movement; red = charged shot."

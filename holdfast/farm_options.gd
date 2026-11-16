@@ -16,6 +16,9 @@ var isolate_pending := false
 
 func _ready() -> void:
 	super._ready()
+	initialize_breaker()
+
+func initialize_breaker() -> void:
 	status_text = "Breaker (9,4): stand adjacent, then I to open for 1 AP. I again previews isolation."
 	save_feedback = "B3 save slot. Destroy: blast + lost cooling. Disable: locked civilian gates."
 

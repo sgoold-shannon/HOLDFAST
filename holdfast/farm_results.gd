@@ -27,6 +27,9 @@ var completion_path := COMPLETION_SLOT
 
 func _ready() -> void:
 	super._ready()
+	initialize_results()
+
+func initialize_results() -> void:
 	save_feedback = "B6: K save / L load. H opens the last resolved mission report."
 
 func rescue_layout() -> String:

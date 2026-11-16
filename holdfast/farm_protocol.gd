@@ -18,6 +18,9 @@ var protocol: Dictionary:
 
 func _ready() -> void:
 	super._ready()
+	initialize_protocol()
+
+func initialize_protocol() -> void:
 	status_text = "MSG: O observe, P transmit. Console: Bell uses A authenticate, D divert."
 	save_feedback = "B4 save slot. Protocol: HOLD / ONE CYCLE. Acknowledgement token: ACK-01."
 

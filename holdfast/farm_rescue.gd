@@ -11,6 +11,9 @@ var drop_mode := false
 
 func _ready() -> void:
 	super._ready()
+	initialize_rescue()
+
+func initialize_rescue() -> void:
 	for index in range(soldiers.size()):
 		soldiers[index].merge({"condition":"active","bleed":0,"critical_epoch":0,
 			"medical":2 if index == 1 else 0,"carrying":-1,"carried_by":-1})

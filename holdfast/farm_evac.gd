@@ -41,6 +41,9 @@ var last_civilian_phase: int:
 
 func _ready() -> void:
 	super._ready()
+	initialize_evacuation()
+
+func initialize_evacuation() -> void:
 	evacuation_rules = EvacuationRules.new(civilian_safe, civilian_waypoint, civilian_exit,
 		route_available, soldier_can_act, on_civilian_step)
 	for index in range(cohorts.size()):

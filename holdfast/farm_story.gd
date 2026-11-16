@@ -37,6 +37,9 @@ var return_page := 0
 
 func _ready() -> void:
 	super._ready()
+	initialize_story()
+
+func initialize_story() -> void:
 	report_path = "user://holdfast_c1_result.save"
 	completion_path = "user://holdfast_c1_completed.save"
 	save_feedback = "C1: Tab opens the scene log / intelligence. K save / L load."

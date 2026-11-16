@@ -17,9 +17,15 @@ var return_state: Dictionary:
 func _ready() -> void:
 	var resume := auto_resume
 	auto_resume = false
-	if campaign_path == CAMPAIGN_SLOT: campaign_path = RETURN_CAMPAIGN
+	prepare_return_startup()
 	super._ready()
 	auto_resume = resume
+	initialize_return(resume)
+
+func prepare_return_startup() -> void:
+	if campaign_path == CAMPAIGN_SLOT: campaign_path = RETURN_CAMPAIGN
+
+func initialize_return(resume: bool) -> void:
 	report_path = "user://holdfast_d1_result.save"
 	completion_path = "user://holdfast_d1_completed.save"
 	if return_state["active"]: configure_return()

@@ -219,6 +219,14 @@ The main scene directly composes evacuation/rescue closure, campaign/return hist
 
 Eight committed suites and twelve regressions pass. Completion checks cover pending/ready guards, exact callback order, living/dead/extracted dispositions, finalized report state, repeated calls and earlier-gate compatibility. All 119 recorded gameplay states and six route outcomes match the previous build. No visual playtest was performed for this change.
 
+## Completed: explicit main-scene startup
+
+The main scene now initializes tactical geometry/RNG, machine behavior, evacuation, interaction/rescue data, story, roster and return configuration in an explicit order. It does not traverse inherited `_ready` methods. Earlier gate scenes call the same initialization adapters through compatibility wrappers. Roster initialization receives an explicit resume flag, so the main scene no longer temporarily mutates its auto-resume preference to prevent premature loading.
+
+Return configuration and report paths are established before automatic campaign restoration. Default slot selection and legacy fallback are unchanged. Nine committed suites and twelve regressions pass; all 119 recorded states and six route outcomes match. The startup suite compares fresh main-scene state with the return fixture byte-for-byte, verifies services and instructions, resumes saved progress, respects disabled resume and rejects corrupt state without altering the fresh encounter.
+
+Gameplay action composition, save/load entry-point consolidation and final adapter cleanup/visual acceptance remain outstanding. Startup adapters are still defined in the compatibility classes; explicit orchestration is a step toward removing that dependency, not completion of the composed-controller milestone.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

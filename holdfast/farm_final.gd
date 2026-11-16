@@ -5,6 +5,20 @@ const ViewRouter = preload("res://presentation/view_router.gd")
 const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
 
+func _ready() -> void:
+	prepare_return_startup()
+	initialize_tactical()
+	initialize_machine()
+	initialize_evacuation()
+	initialize_breaker()
+	initialize_protocol()
+	initialize_rescue()
+	initialize_results()
+	initialize_story()
+	# Restore only after roster assignment and return configuration are ready.
+	initialize_roster(false)
+	initialize_return(auto_resume)
+
 func return_scene_path() -> String:
 	return "res://farm_final.tscn"
 

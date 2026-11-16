@@ -20,6 +20,9 @@ var history_page := 0
 
 func _ready() -> void:
 	super._ready()
+	initialize_roster(auto_resume)
+
+func initialize_roster(resume: bool) -> void:
 	report_path = "user://holdfast_c2_result.save"
 	completion_path = "user://holdfast_c2_completed.save"
 	if campaign.is_empty(): campaign = Roster.initial()
@@ -30,7 +33,7 @@ func _ready() -> void:
 		scene_view = ""
 		status_text = "Deployment 2 roster test: same map, new civilian manifest. Existing wounds remain."
 	save_feedback = "C2: K save / L load. G roster after resolution. Campaign resumes saved progress."
-	if auto_resume and FileAccess.file_exists(campaign_path):
+	if resume and FileAccess.file_exists(campaign_path):
 		load_encounter(campaign_path)
 
 func apply_assignments() -> void:

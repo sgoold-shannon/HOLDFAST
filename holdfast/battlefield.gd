@@ -76,6 +76,9 @@ const NEXT_PHASE_RECT := Rect2(668, 880, 156, 40)
 var font: Font = ThemeDB.fallback_font
 
 func _ready() -> void:
+	initialize_tactical()
+
+func initialize_tactical() -> void:
 	shot_rng.seed = COMBAT_SEED
 	board_projection = GridProjection.new(GRID_ORIGIN,Vector2(CELL_SIZE,0),Vector2(0,CELL_SIZE))
 	for index in range(soldiers.size()):
