@@ -1,4 +1,5 @@
 extends "res://farm_return.gd"
+const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
 
 func return_scene_path() -> String:
@@ -31,7 +32,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
-	if not ending_available() or scene_view != "": return
-	var rect := DEPLOY_RECT if roster_open else ENDING_RECT
-	draw_rect(rect,Color("344f46"))
-	draw_string(font,rect.position+Vector2(10,29),"Ending logic test [Z]",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,19,Color.WHITE)
+	EndingOverlay.render(self,font,board_projection,ending_overlay_snapshot())
+
+func ending_overlay_snapshot() -> Dictionary:
+	return {
+		"scene_view":scene_view,
+		"roster_open":roster_open,
+		"DEPLOY_RECT":DEPLOY_RECT,
+		"ENDING_RECT":ENDING_RECT,
+		"available":ending_available()}

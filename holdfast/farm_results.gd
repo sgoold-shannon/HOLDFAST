@@ -1,4 +1,5 @@
 extends "res://farm_rescue.gd"
+const ResultInput = preload("res://presentation/modal_input.gd")
 const ResultsPanel = preload("res://presentation/results_panel.gd")
 ## B6 derives results from the resolved encounter, never from predicted outcomes.
 const RESULT_SLOT := "user://holdfast_b6.save"
@@ -176,18 +177,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not result_ready:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_Q: restart_attempt()
-			KEY_L: load_encounter()
-			KEY_K:
-				save_encounter()
-				result_feedback = save_feedback
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-		if RETRY_RECT.has_point(point): restart_attempt()
-		elif RESUME_RECT.has_point(point): load_encounter()
-		elif RECORD_RECT.has_point(point):
+	var point := Vector2.ZERO
+	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
+	var action := ResultInput.command(event,point,{KEY_Q:"retry",KEY_L:"load",KEY_K:"save"},
+		{"retry":RETRY_RECT,"load":RESUME_RECT,"save":RECORD_RECT})
+	match action:
+		"retry": restart_attempt()
+		"load": load_encounter()
+		"save":
 			save_encounter()
 			result_feedback = save_feedback
 	queue_redraw()

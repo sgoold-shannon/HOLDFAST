@@ -1,4 +1,5 @@
 extends "res://farm_results.gd"
+const ModalInput = preload("res://presentation/modal_input.gd")
 const StoryPanel = preload("res://presentation/story_panel.gd")
 ## C1: authored scenes consume recorded facts; dialogue never changes combat values.
 const STORY_SLOT := "user://holdfast_c1.save"
@@ -259,25 +260,22 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 		super._unhandled_input(event)
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE:
+	var rows := []
+	for index in range(3): rows.append(Rect2(60,770+index*70,980,58))
+	var point := Vector2.ZERO
+	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
+	var action := ModalInput.command(event,point,
+		{KEY_ESCAPE:"back",KEY_ENTER:"next",KEY_SPACE:"next",KEY_1:"row:0",KEY_2:"row:1",KEY_3:"row:2"},
+		{"next":NEXT_RECT,"back":SKIP_RECT,"log":LOG_RECT},rows)
+	match action:
+		"back":
 			if scene_view == "opening": finish_opening()
 			elif scene_view == "log": toggle_log()
 			else: scene_view = ""
-		elif event.keycode == KEY_ENTER or event.keycode == KEY_SPACE: advance_scene()
-		elif event.keycode in [KEY_1,KEY_2,KEY_3]:
-			choose_scene_option(event.keycode-KEY_1)
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-		if NEXT_RECT.has_point(point): advance_scene()
-		elif SKIP_RECT.has_point(point):
-			if scene_view == "opening": finish_opening()
-			elif scene_view == "log": toggle_log()
-			else: scene_view = ""
-		elif LOG_RECT.has_point(point): toggle_log()
-		else:
-			for index in range(3):
-				if Rect2(60,770+index*70,980,58).has_point(point): choose_scene_option(index)
+		"next": advance_scene()
+		"log": toggle_log()
+		_:
+			if action.begins_with("row:"): choose_scene_option(int(action.get_slice(":",1)))
 	queue_redraw()
 
 func choose_scene_option(index: int) -> void:

@@ -123,6 +123,14 @@ The existing roster history-page clamp now runs in its snapshot adapter instead 
 
 Validation: all five committed suites and seven targeted B3–B6/C1/C2/staging-care regressions pass. Renderer checks exercise all six snapshots, opening choice labels, roster page bounds and breaker confirmation/cancel controls. The 119-action before/after comparison still matches exactly. No visual screenshot comparison was performed.
 
+## Completed: modal event translation and return/ending overlays
+
+`presentation/modal_input.gd` translates keys, button hits and indexed rows into named intents for dialogue, roster and results. Scene adapters retain screen visibility, global shortcuts, action dispatch and inherited priority. Unknown events remain consumed by open modal screens. Repeated/released keys and non-left mouse clicks produce no intent; buttons retain priority over rows. The controller still performs canvas-to-local conversion before hit testing.
+
+`return_overlay.gd` and `ending_overlay.gd` now draw return-mission information, cooling/repair hints, roster deployment overlays and the ending-test entry from detached snapshots. Small header/navigation overlays, other interaction input handlers and the inheritance chain remain. No new gameplay or isometric rendering is enabled.
+
+All five committed suites and six targeted narrative/roster/results/return/ending/staging-care regressions pass. Added checks cover modal key isolation, roster selection and underlying dialogue restoration, click precedence, ignored events and overlay data isolation. All 119 recorded action snapshots match the prior build. No visual screenshot comparison was performed.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

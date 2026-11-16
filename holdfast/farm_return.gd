@@ -1,4 +1,5 @@
 extends "res://farm_roster.gd"
+const ReturnOverlay = preload("res://presentation/return_overlay.gd")
 const NorthboundMission = preload("res://missions/northbound_return.tres")
 const ReturnRules = preload("res://return_rules.gd")
 const RETURN_SLOT := "user://holdfast_d1.save"
@@ -282,33 +283,24 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
-	if roster_open:
-		draw_rect(Rect2(35,75,1050,100),Color("0e1412"))
-		result_line(115,"D1 / RETURN TO FARM ROAD",Color("f7cd6c"),26)
-		result_line(155,"Original machinery: %s. Original casualties and civilian records are retained." % ReturnRules.outcome(campaign),Color("aebbb6"),17)
-		draw_rect(Rect2(35,930,1060,65),Color("0e1412"))
-		result_line(955,"North service tunnel. Manual route always available; preserved machinery adds cooling.",Color("8be6de"),18)
-		draw_rect(DEPLOY_RECT,Color("304965"))
-		draw_string(font,DEPLOY_RECT.position+Vector2(15,35),"Return test complete" if return_state["active"] else ("Deploy to return map [Enter]" if can_deploy() else ("MSG needs staging care [T]" if campaign["committed"] else "Resolve the current mission first")),HORIZONTAL_ALIGNMENT_LEFT,450,19,Color.WHITE)
-		return
-	if scene_view != "" or result_ready: return
-	draw_rect(Rect2(35,10,805,34),Color("0e1412"))
-	draw_string(font,Vector2(40,36),"HOLDFAST / D1 · "+("NORTHBOUND RETURN" if return_state["active"] else "FARM ROAD ORIGIN"),HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
-	if not return_state["active"]: return
-	draw_rect(Rect2(35,773,800,61),Color("0e1412"))
-	draw_rect(BREAKER_RECT,Color("34473e"))
-	draw_string(font,BREAKER_RECT.position+Vector2(0,29),"Repair [I] · 1 AP · %d/2" % return_state["repair"],HORIZONTAL_ALIGNMENT_CENTER,250,16,Color.WHITE)
-	draw_string(font,Vector2(308,792),"Retained machine (10,8): adjacent repair" if return_state["source"] == "disabled" else "Original outcome: "+return_state["source"],HORIZONTAL_ALIGNMENT_LEFT,520,16,Color("f7cd6c"))
-	draw_rect(Rect2(35,930,800,85),Color("0e1412"))
-	draw_string(font,Vector2(40,958),machine_outcome(),HORIZONTAL_ALIGNMENT_LEFT,784,18,Color("8be6de"))
-	draw_string(font,Vector2(40,987),"North access closes after round 10. Manual evacuation remains available.",HORIZONTAL_ALIGNMENT_LEFT,784,15,Color.WHITE)
-	draw_rect(Rect2(35,1070,800,155),Color("0e1412"))
-	draw_string(font,Vector2(40,1094),"Cooling: "+("available" if cooling_ready() else "unavailable")+" | one free civilian move, up to 3 cells",HORIZONTAL_ALIGNMENT_LEFT,784,16,Color("8be6de"))
-	draw_string(font,Vector2(40,1122),save_feedback,HORIZONTAL_ALIGNMENT_LEFT,784,14,Color("aebbb6"))
-	draw_rect(COOLING_BUTTON,Color("304965"))
-	draw_string(font,COOLING_BUTTON.position+Vector2(0,28),"Cooling move used" if return_state["bonus_event"] != "" else "Use cooling move on selected civilian group [Y]",HORIZONTAL_ALIGNMENT_CENTER,784,18,Color.WHITE)
-	draw_string(font,Vector2(40,1201),"Select a civilian group, order a route, then Y. Repairing never restores earlier losses.",HORIZONTAL_ALIGNMENT_LEFT,784,15,Color("aebbb6"))
+	ReturnOverlay.render(self,font,board_projection,return_overlay_snapshot())
 
 func mission_definition() -> Resource:
 	if mission_override != null: return mission_override
 	return NorthboundMission if return_state["active"] else super.mission_definition()
+
+func return_overlay_snapshot() -> Dictionary:
+	return {
+		"roster_open":roster_open,
+		"scene_view":scene_view,
+		"result_ready":result_ready,
+		"DEPLOY_RECT":DEPLOY_RECT,
+		"BREAKER_RECT":BREAKER_RECT,
+		"COOLING_BUTTON":COOLING_BUTTON,
+		"save_feedback":save_feedback,
+		"return_state":return_state.duplicate(true),
+		"campaign":campaign.duplicate(true),
+		"source_outcome":ReturnRules.outcome(campaign),
+		"deploy":can_deploy(),
+		"outcome":machine_outcome(),
+		"cooling":cooling_ready()}

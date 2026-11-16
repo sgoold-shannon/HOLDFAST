@@ -157,6 +157,44 @@ func run() -> void:
 	labels_found.clear()
 	for label in confirmation.strings: labels_found.append(label[1])
 	expect(labels_found.has("Confirm isolate [I]") and labels_found.has("Cancel [Esc]"),"Breaker confirmation controls preserved")
+
+	for overlay_name in ["return_overlay","ending_overlay"]:
+		var data: Dictionary = farm.call(overlay_name+"_snapshot")
+		var before_data := data.duplicate(true)
+		var recorder := RecordingCanvas.new()
+		load("res://presentation/"+overlay_name+".gd").render(recorder,farm.font,farm.board_projection,data)
+		expect(data==before_data,"Mission overlay preserves display data")
+	var decoder = preload("res://presentation/modal_input.gd")
+	var mouse := InputEventMouseButton.new()
+	mouse.pressed = true
+	mouse.button_index = MOUSE_BUTTON_LEFT
+	var rect := Rect2(10,10,100,40)
+	expect(decoder.command(mouse,Vector2(20,20),{},{"button":rect},[rect])=="button","Modal buttons take precedence over rows")
+	expect(decoder.command(mouse,Vector2(20,20),{},{},[rect])=="row:0","Modal row selection")
+	mouse.button_index = MOUSE_BUTTON_RIGHT
+	expect(decoder.command(mouse,Vector2(20,20),{},{"button":rect})=="","Right clicks ignored")
+	var key := InputEventKey.new()
+	key.keycode = KEY_ENTER
+	key.pressed = true
+	key.echo = true
+	expect(decoder.command(key,Vector2.ZERO,{KEY_ENTER:"next"},{})=="","Modal key repeats ignored")
+	key.echo = false
+	key.pressed = false
+	expect(decoder.command(key,Vector2.ZERO,{KEY_ENTER:"next"},{})=="","Modal key releases ignored")
+	var prior_phase: int = farm.phase
+	farm.scene_view = "opening"
+	farm.roster_open = false
+	press(farm,KEY_N)
+	expect(farm.phase==prior_phase,"Opening consumes gameplay keys")
+	farm.roster_open = true
+	farm.roster_index = 0
+	farm.history_page = 3
+	press(farm,KEY_DOWN)
+	expect(farm.roster_index==1 and farm.history_page==0,"Roster selection resets history page")
+	press(farm,KEY_N)
+	expect(farm.phase==prior_phase,"Roster consumes gameplay keys")
+	press(farm,KEY_ESCAPE)
+	expect(not farm.roster_open and farm.scene_view=="opening","Closing roster preserves underlying dialogue")
 	farm.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

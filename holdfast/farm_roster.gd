@@ -238,31 +238,28 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 		super._unhandled_input(event)
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_ESCAPE: roster_open = false
-			KEY_ENTER: start_second_deployment()
-			KEY_T: provide_staging_care()
-			KEY_RIGHT: history_page += 1
-			KEY_LEFT: history_page = maxi(0,history_page-1)
-			KEY_DOWN:
-				roster_index = (roster_index+1)%campaign["members"].size()
+	var rows := []
+	for index in range(campaign["members"].size()): rows.append(Rect2(60,210+index*67,300,58))
+	var point := Vector2.ZERO
+	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
+	var action := ModalInput.command(event,point,
+		{KEY_ESCAPE:"back",KEY_ENTER:"deploy",KEY_T:"care",KEY_RIGHT:"right",KEY_LEFT:"left",KEY_DOWN:"down",KEY_UP:"up",KEY_K:"save",KEY_L:"load"},
+		{"care":CARE_RECT,"deploy":DEPLOY_RECT,"back":BACK_RECT},rows)
+	match action:
+		"back": roster_open = false
+		"deploy": start_second_deployment()
+		"care": provide_staging_care()
+		"right": history_page += 1
+		"left": history_page = maxi(0,history_page-1)
+		"down", "up":
+			roster_index = posmod(roster_index+(1 if action=="down" else -1),campaign["members"].size())
+			history_page = 0
+		"save": save_encounter()
+		"load": load_encounter()
+		_:
+			if action.begins_with("row:"):
+				roster_index = int(action.get_slice(":",1))
 				history_page = 0
-			KEY_UP:
-				roster_index = posmod(roster_index-1,campaign["members"].size())
-				history_page = 0
-			KEY_K: save_encounter()
-			KEY_L: load_encounter()
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-		if CARE_RECT.has_point(point): provide_staging_care()
-		elif DEPLOY_RECT.has_point(point): start_second_deployment()
-		elif BACK_RECT.has_point(point): roster_open = false
-		else:
-			for index in range(campaign["members"].size()):
-				if Rect2(60,210+index*67,300,58).has_point(point):
-					roster_index = index
-					history_page = 0
 	queue_redraw()
 
 func roster_details(actor: Dictionary) -> Array[String]:

@@ -103,3 +103,5 @@ Soldier markers and movement/aim/cover overlays now also use separate renderers 
 Machine hazards and appearance, civilian groups/routes, the tactical action panel and civilian-order panel now use separate snapshot-based renderers. Opening, roster, debrief and other mission-specific panels remain in the scene layers. The same presentation test covers the new renderers.
 
 Opening/log/debrief dialogue, roster, mission results, casualty rescue, breaker and protocol panel content now also render from detached snapshots. Scene adapters retain modal input/visibility and smaller mission overlays; the inheritance cleanup remains in progress.
+
+Dialogue, roster and results inputs now translate through a shared modal intent decoder. Controllers retain modal priority and action execution. Return-mission and ending-entry overlays also use detached display snapshots.
