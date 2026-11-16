@@ -301,3 +301,14 @@ func protocol_reason(action: String) -> String:
 	if ["authenticate","divert"].has(action) and soldier_can_act(active_soldier) and soldiers[active_soldier].get("carrying",-1) >= 0:
 		return "Cannot operate the console while carrying."
 	return origin_protocol_reason(action)
+
+func before_turn_resolution() -> bool:
+	return resolve_bleeding()
+
+func rebuild_movement() -> void:
+	refresh_tactical_movement()
+	limit_carrier_movement()
+
+func try_reload() -> bool:
+	close_pending = false
+	return false if ended else reload_selected_soldier()

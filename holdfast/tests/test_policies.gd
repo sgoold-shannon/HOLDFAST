@@ -1,6 +1,17 @@
 extends "res://tests/test_support.gd"
 
 func run() -> void:
+	var search = preload("res://systems/movement_search.gd")
+	var directions := [Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP]
+	var walkable := func(cell: Vector2i): return cell.x>=0 and cell.x<4 and cell.y>=0 and cell.y<4 and cell!=Vector2i(1,0)
+	var found: Dictionary = search.reachable(Vector2i.ZERO,3,directions,walkable)
+	expect(not found["distances"].has(Vector2i(1,0)) and found["distances"][Vector2i(1,1)]==2,"Search routes around blocked cells")
+	expect(found["parents"][Vector2i(1,2)]==Vector2i(1,1),"Equal routes retain supplied direction priority")
+	expect(not found["distances"].has(Vector2i(3,3)),"Search respects movement budget")
+	var zero: Dictionary = search.reachable(Vector2i.ZERO,0,directions,walkable)
+	expect(zero["distances"]=={Vector2i.ZERO:0} and zero["parents"].is_empty(),"Zero budget retains only the origin")
+	found["distances"].clear()
+	expect(search.reachable(Vector2i.ZERO,3,directions,walkable)["distances"].size()>1,"Separate searches do not share mutable results")
 	var main = new_board("policies")
 	var legacy = load("res://farm_return.tscn").instantiate()
 	legacy.auto_resume = false
@@ -16,8 +27,8 @@ func run() -> void:
 			board.soldiers[1]["carried_by"] = 0 if scenario=="carrying" else -1
 			board.active_soldier = 0
 			board.machine["pending_shot"] = Vector2i(6,6)
-		for y in range(16):
-			for x in range(20):
+		for y in range(1,17):
+			for x in range(1,21):
 				var cell := Vector2i(x,y)
 				expect(main.is_walkable(cell)==legacy.is_walkable(cell),scenario+": walkability parity")
 				expect(main.civilian_safe(cell)==legacy.civilian_safe(cell),scenario+": civilian safety parity")

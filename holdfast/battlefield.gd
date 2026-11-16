@@ -1,4 +1,5 @@
 extends Node2D
+const MovementSearch = preload("res://systems/movement_search.gd")
 const CombatState = preload("res://state/combat_state.gd")
 var combat_state := CombatState.new()
 var shot_rng: RandomNumberGenerator:
@@ -260,6 +261,9 @@ func try_fire() -> bool:
 	return true
 
 func try_reload() -> bool:
+	return reload_selected_soldier()
+
+func reload_selected_soldier() -> bool:
 	if not soldier_can_act(active_soldier):
 		status_text = "Select an active soldier to reload."
 	elif soldiers[active_soldier]["ap"] < 1:
@@ -321,28 +325,17 @@ func soldier_at(cell: Vector2i) -> int:
 	return -1
 
 func rebuild_movement() -> void:
+	refresh_tactical_movement()
+
+func refresh_tactical_movement() -> void:
 	distances.clear()
 	parents.clear()
 	if not soldier_can_act(active_soldier):
 		queue_redraw()
 		return
-	var origin: Vector2i = soldiers[active_soldier]["cell"]
-	var budget: int = soldiers[active_soldier]["ap"] * 4
-	var frontier: Array[Vector2i] = [origin]
-	distances[origin] = 0
-	var cursor := 0
-	while cursor < frontier.size():
-		var cell := frontier[cursor]
-		cursor += 1
-		if distances[cell] >= budget:
-			continue
-		for direction in DIRECTIONS:
-			var neighbor := cell + direction
-			if not is_walkable(neighbor) or distances.has(neighbor):
-				continue
-			distances[neighbor] = distances[cell] + 1
-			parents[neighbor] = cell
-			frontier.append(neighbor)
+	var found := MovementSearch.reachable(soldiers[active_soldier]["cell"],soldiers[active_soldier]["ap"]*4,DIRECTIONS,is_walkable)
+	distances.merge(found["distances"])
+	parents.merge(found["parents"])
 	queue_redraw()
 
 func move_cost(cell: Vector2i) -> int:

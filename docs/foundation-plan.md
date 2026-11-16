@@ -259,6 +259,12 @@ The main scene now defines mission selection, actor eligibility, targeting, mach
 
 Eleven committed suites and twelve regressions pass. New policy comparisons check every one of the 320 cells across origin, disabled, casualty, carrying, ended and return states, plus eligibility, waypoints, action rejection text, machine plans and mission selection. All 119 recorded states and six route outcomes match. Shared data/method ownership, narrative/presentation policies and remaining inherited hooks still prevent removal of the compatibility-class chain; this pass does not close the composed-controller milestone.
 
+## Completed: independent movement search and remaining turn hooks
+
+`systems/movement_search.gd` owns breadth-first movement-range and parent-map calculation using explicit origin, budget, direction order and walkability callback. Tactical scenes retain display refresh and carrier range limits. The main scene directly coordinates movement refresh, bleeding resolution and ended-state reload restrictions without inherited hook traversal.
+
+Eleven committed suites and twelve regressions pass; all 119 recorded states and six outcomes match. Independent search checks cover blocked-cell detours, equal-route priority, budget limits, zero-budget origin and isolated results. The policy grid loops were corrected to the game's 1-based coordinates, so the six-state comparison now includes the far row and column. Shared scene data/method ownership and narrative/presentation dependencies still require consolidation before removing the inheritance chain.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

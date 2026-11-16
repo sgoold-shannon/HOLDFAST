@@ -149,3 +149,5 @@ Attack, damage, rescue and extraction now use explicit main-scene orchestration.
 Movement, civilian orders and breaker/return-repair actions now use explicit main-scene orchestration. Checks preserve carrying behavior, order limits, confirmation costs and cooling-route eligibility.
 
 Main-scene mission selection, safety/occupancy checks and action eligibility now use explicit policies. `tests/test_policies.gd` compares all 320 cells across six encounter states against the compatibility scene.
+
+Movement search is now a scene-independent component with stable route ordering. Main-scene movement refresh, bleeding and reload hooks use explicit calls. Full-grid policy checks include the 1-based far edges.

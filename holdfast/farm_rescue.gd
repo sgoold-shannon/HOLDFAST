@@ -98,6 +98,9 @@ func apply_casualty_damage(cell: Vector2i, amount: int) -> String:
 	return "empty cell" if reports.is_empty() else "; ".join(reports)
 
 func before_turn_resolution() -> bool:
+	return resolve_bleeding()
+
+func resolve_bleeding() -> bool:
 	drop_mode = false
 	for index in range(soldiers.size()):
 		var soldier: Dictionary = soldiers[index]
@@ -108,7 +111,7 @@ func before_turn_resolution() -> bool:
 	if soldiers[0]["condition"] == "dead":
 		finish_operation("MSG bled out: retry required")
 		return false
-	return super.before_turn_resolution()
+	return true
 
 func casualty_available(index: int) -> bool:
 	return index >= 0 and index < soldiers.size() and not soldiers[index]["extracted"] and ["critical","stable"].has(soldiers[index]["condition"])
@@ -204,6 +207,9 @@ func try_drop(cell: Vector2i) -> bool:
 
 func rebuild_movement() -> void:
 	super.rebuild_movement()
+	limit_carrier_movement()
+
+func limit_carrier_movement() -> void:
 	if soldier_can_act(active_soldier) and soldiers[active_soldier].get("carrying",-1) >= 0:
 		for cell in distances.keys():
 			if distances[cell] > 2:
