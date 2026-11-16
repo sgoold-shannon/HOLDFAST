@@ -122,6 +122,9 @@ func deliver_briefing() -> void:
 	persist_story_report()
 
 func persist_story_report() -> void:
+	save_story_report()
+
+func save_story_report() -> void:
 	if not ended or retry_required(): return
 	var problem := CampaignPersistence.report(encounter_snapshot,report_path,completion_path,true)
 	result_feedback = "Debrief choices and knowledge saved." if problem == "" else problem
@@ -154,6 +157,9 @@ func evidence_pages() -> Array:
 	return pages
 
 func debrief_pages() -> Array:
+	return origin_debrief_pages()
+
+func origin_debrief_pages() -> Array:
 	var pages: Array = [{"speaker":"FARM ROAD / VERIFIED FIELD REPORT","text":report_text(),"tag":"This report is read to the available survivors before discussion."}]
 	pages.append_array(evidence_pages())
 	var machine_text := "The machine remained active when we withdrew. No intervention was completed."
@@ -225,6 +231,9 @@ func choose_response(value: String) -> void:
 	queue_redraw()
 
 func log_pages() -> Array:
+	return origin_log_pages()
+
+func origin_log_pages() -> Array:
 	var pages := opening_pages()
 	pages.append({"speaker":"MSG / SAVED DIALOGUE PREFERENCE","text":"Opening choice: %s\n\nThis preference changes no combat stats." % {"unset":"Not chosen yet.","skipped":"Opening skipped; no preference selected.","procedure":"Mark both spaces, then check the route.","patients":"Ortiz, walk me through the slowest patient.","logistics":"Bell, show me the failure point."}[preference],"tag":"Dialogue record"})
 	pages.append({"speaker":"INTELLIGENCE / OBSERVATION & ASSESSMENT", "text":("FACT: retrieving a marked component.\n\nASSESSMENT: evacuation equipment — unconfirmed." if protocol["observed"] else "No close observation has been completed.\n\nThe machine’s purpose is unconfirmed.")+ ("\n\nACK-01 received. This verifies a bounded channel only." if protocol["acknowledged"] else "\n\nNo protocol acknowledgement recorded."),"tag":"Facts and interpretation kept separate"})
@@ -248,6 +257,9 @@ func toggle_log() -> void:
 	queue_redraw()
 
 func advance_scene() -> void:
+	advance_origin_scene()
+
+func advance_origin_scene() -> void:
 	if scene_view == "opening" and scene_page == 0: return
 	if scene_view == "debrief" and scene_page == evidence_pages().size(): deliver_briefing()
 	if scene_page+1 < current_pages().size():
@@ -302,10 +314,16 @@ func handle_story_input(event: InputEvent) -> bool:
 	return true
 
 func choose_scene_option(index: int) -> void:
+	choose_origin_scene_option(index)
+
+func choose_origin_scene_option(index: int) -> void:
 	if scene_view == "opening": choose_opening(["procedure","patients","logistics"][index])
 	elif scene_view == "debrief": choose_response(["cost","correction","treatment"][index])
 
 func scene_options() -> Array:
+	return origin_scene_options()
+
+func origin_scene_options() -> Array:
 	if scene_view == "opening" and scene_page == 0:
 		return ["Mark both spaces, then check the route.","Ortiz, walk me through the slowest patient.","Bell, show me the failure point."]
 	if scene_view == "debrief" and scene_page == debrief_pages().size()-1 and debrief_response == "unset" and present(0) and soldiers[0]["condition"] == "active":

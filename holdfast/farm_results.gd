@@ -146,6 +146,9 @@ func retry_required() -> bool:
 	return not soldiers[0]["extracted"] or soldiers[0]["condition"] == "dead"
 
 func soldier_disposition(index: int) -> String:
+	return recorded_soldier_disposition(index)
+
+func recorded_soldier_disposition(index: int) -> String:
 	var soldier: Dictionary = soldiers[index]
 	if soldier["condition"] == "dead":
 		return "CONFIRMED DEAD"

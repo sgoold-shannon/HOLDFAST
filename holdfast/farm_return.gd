@@ -267,11 +267,17 @@ func record_return_result() -> void:
 
 func debrief_pages() -> Array:
 	if not return_state["active"]: return super.debrief_pages()
+	return return_debrief_pages()
+
+func return_debrief_pages() -> Array:
 	return [{"speaker":"FARM ROAD RETURN / VERIFIED REPORT","text":report_text(),"tag":"Return-map outcomes; original losses remain recorded."},
 		{"speaker":"STAGING RECORD","text":machine_outcome()+"\n\n"+feeder_result()+"\n\n"+("One cooling move used by group %s." % return_state["bonus_group"] if return_state["bonus_event"] != "" else "No cooling move used.")+"\n\nRepairs restore a function. They do not restore the original casualties.","tag":"Earlier choice / observed playable consequence"}]
 
 func log_pages() -> Array:
 	if not return_state["active"]: return super.log_pages()
+	return return_log_pages()
+
+func return_log_pages() -> Array:
 	var pages: Array = [{"speaker":"FARM ROAD RETURN / EARLIER RECORD","text":"Original machine: %s.\n\n%s\n\nManual route: waypoint (5,4).\nCooling route: waypoint (10,4), when available.\nCivilian exit: north service tunnel (10,1).\n\nDisabled machinery needs two adjacent 1-AP repairs.\nCooling provides one free move of up to three cells." % [return_state["source"],feeder_result()],"tag":"Original losses persist; this test changes route and repair work."}]
 	if result_ready and not retry_required(): pages.append_array(debrief_pages())
 	return pages

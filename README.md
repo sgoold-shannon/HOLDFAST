@@ -151,3 +151,5 @@ Movement, civilian orders and breaker/return-repair actions now use explicit mai
 Main-scene mission selection, safety/occupancy checks and action eligibility now use explicit policies. `tests/test_policies.gd` compares all 320 cells across six encounter states against the compatibility scene.
 
 Movement search is now a scene-independent component with stable route ordering. Main-scene movement refresh, bleeding and reload hooks use explicit calls. Full-grid policy checks include the 1-based far edges.
+
+Narrative routing, survivor labels and story/campaign persistence now use explicit main-scene orchestration. `tests/test_narrative.gd` checks content and navigation parity across five scenarios.

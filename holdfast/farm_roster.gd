@@ -308,6 +308,9 @@ func roster_details(actor: Dictionary) -> Array[String]:
 
 func log_pages() -> Array:
 	var pages := super.log_pages()
+	return annotate_historical_pages(pages)
+
+func annotate_historical_pages(pages: Array) -> Array:
 	if campaign["deployment"] == 2:
 		# The original opening is historical, not a new scene performed by replacements.
 		for index in range(3): pages[index]["speaker"] = "DEPLOYMENT 1 TRANSCRIPT / "+pages[index]["speaker"]

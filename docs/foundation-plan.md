@@ -265,6 +265,12 @@ Eleven committed suites and twelve regressions pass. New policy comparisons chec
 
 Eleven committed suites and twelve regressions pass; all 119 recorded states and six outcomes match. Independent search checks cover blocked-cell detours, equal-route priority, budget limits, zero-budget origin and isolated results. The policy grid loops were corrected to the game's 1-based coordinates, so the six-state comparison now includes the far row and column. Shared scene data/method ownership and narrative/presentation dependencies still require consolidation before removing the inheritance chain.
 
+## Completed: explicit narrative routing and survivor presentation
+
+The main scene directly selects origin/return debrief and log builders, historical transcript annotations, available choices, choice application, scene navigation, survivor eligibility and disposition labels. Story-report and campaign-knowledge persistence are sequenced explicitly. Earlier fixtures reuse named content adapters; no dialogue text or recorded outcome changes.
+
+Twelve committed suites and twelve regressions pass. Narrative comparisons cover opening, historical transcript, casualties, vacancies and return-map content, choices and navigation against the compatibility scene. All 119 recorded states and six outcomes match. Machine-status/presentation helpers and shared scene data/method ownership still depend on compatibility layers; the controller milestone remains open.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

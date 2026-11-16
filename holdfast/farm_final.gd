@@ -312,3 +312,37 @@ func rebuild_movement() -> void:
 func try_reload() -> bool:
 	close_pending = false
 	return false if ended else reload_selected_soldier()
+
+func present(index: int) -> bool:
+	return soldiers[index].get("actor_id","") != "" and soldiers[index]["extracted"] and ["active","stable"].has(soldiers[index]["condition"])
+
+func soldier_disposition(index: int) -> String:
+	if soldiers[index].get("actor_id","") == "": return "NOT DEPLOYED / vacancy"
+	return recorded_soldier_disposition(index)
+
+func debrief_pages() -> Array:
+	return return_debrief_pages() if return_state["active"] else origin_debrief_pages()
+
+func log_pages() -> Array:
+	return return_log_pages() if return_state["active"] else annotate_historical_pages(origin_log_pages())
+
+func scene_options() -> Array:
+	return [] if return_state["active"] else origin_scene_options()
+
+func choose_scene_option(index: int) -> void:
+	if not return_state["active"]: choose_origin_scene_option(index)
+
+func advance_scene() -> void:
+	if return_state["active"] and scene_view == "debrief":
+		if scene_page == 0: scene_page = 1
+		else:
+			deliver_briefing()
+			scene_view = ""
+		queue_redraw()
+	else: advance_origin_scene()
+
+func persist_story_report() -> void:
+	save_story_report()
+	if result_ready and not retry_required():
+		sync_knowledge()
+		persist_campaign_result()
