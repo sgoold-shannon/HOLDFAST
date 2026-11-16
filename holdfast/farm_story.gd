@@ -247,27 +247,29 @@ func advance_scene() -> void:
 	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_story_input(event): super._unhandled_input(event)
+
+func handle_story_input(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_TAB:
 			toggle_log()
-			return
+			return true
 		if event.keycode == KEY_L:
 			load_encounter()
-			return
+			return true
 		if event.keycode == KEY_K:
 			save_encounter()
-			return
+			return true
 		if scene_view == "" and event.keycode == KEY_B and result_ready:
 			begin_debrief()
-			return
+			return true
 	if scene_view == "":
 		if result_ready and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
 			if DEBRIEF_RECT.has_point(point):
 				begin_debrief()
-				return
-		super._unhandled_input(event)
-		return
+				return true
+		return false
 	var rows := []
 	for index in range(3): rows.append(Rect2(60,770+index*70,980,58))
 	var point := Vector2.ZERO
@@ -285,6 +287,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_:
 			if action.begins_with("row:"): choose_scene_option(int(action.get_slice(":",1)))
 	queue_redraw()
+	return true
 
 func choose_scene_option(index: int) -> void:
 	if scene_view == "opening": choose_opening(["procedure","patients","logistics"][index])

@@ -271,16 +271,19 @@ func advance_scene() -> void:
 	else: super.advance_scene()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_return_input(event): super._unhandled_input(event)
+
+func handle_return_input(event: InputEvent) -> bool:
 	if return_state["active"] and scene_view == "" and not roster_open and not result_ready:
 		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_Y:
 			use_cooling_move()
-			return
+			return true
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
 			if COOLING_BUTTON.has_point(point):
 				use_cooling_move()
-				return
-	super._unhandled_input(event)
+				return true
+	return false
 
 func _draw() -> void:
 	super._draw()

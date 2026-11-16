@@ -284,9 +284,11 @@ func load_encounter(path: String = RESCUE_SLOT) -> bool:
 	return true
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_rescue_input(event): super._unhandled_input(event)
+
+func handle_rescue_input(event: InputEvent) -> bool:
 	if isolate_pending:
-		super._unhandled_input(event)
-		return
+		return false
 	if drop_mode:
 		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 			drop_mode = false
@@ -294,7 +296,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
 			try_drop(local_to_cell(point))
 		queue_redraw()
-		return
+		return true
 	var action := interaction_command(event,
 		{KEY_S:"stabilize",KEY_U:"pickup",KEY_J:"drop",KEY_V:"cycle"},
 		{"cycle":CASUALTY_RECT,"stabilize":STABILIZE_RECT,"pickup":PICKUP_RECT,"drop":DROP_RECT})
@@ -303,7 +305,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		"pickup": try_pickup()
 		"drop": request_drop()
 		"cycle": cycle_casualty()
-	if action != "": return
+	if action != "": return true
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
 		var index := soldier_at(local_to_cell(point))
@@ -311,8 +313,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			rescue_target = index
 			status_text = "%s selected for rescue. Choose an adjacent rescuer, then S or U." % soldiers[index]["name"]
 			queue_redraw()
-			return
-	super._unhandled_input(event)
+			return true
+	return false
 
 func _draw() -> void:
 	super._draw()

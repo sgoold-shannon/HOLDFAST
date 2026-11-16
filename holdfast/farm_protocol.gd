@@ -170,16 +170,18 @@ func load_encounter(path: String = PROTOCOL_SLOT) -> bool:
 	return true
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_protocol_input(event): super._unhandled_input(event)
+
+func handle_protocol_input(event: InputEvent) -> bool:
 	if isolate_pending:
-		super._unhandled_input(event)
-		return
+		return false
 	var action := interaction_command(event,
 		{KEY_O:"observe",KEY_P:"transmit",KEY_A:"authenticate",KEY_D:"divert"},
 		{"observe":OBSERVE_RECT,"transmit":TRANSMIT_RECT,"authenticate":AUTH_RECT,"divert":DIVERT_RECT})
 	if action != "":
 		protocol_action(action)
-		return
-	super._unhandled_input(event)
+		return true
+	return false
 
 func _draw() -> void:
 	super._draw()

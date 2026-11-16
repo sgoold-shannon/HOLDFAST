@@ -1,4 +1,5 @@
 extends "res://farm_return.gd"
+const InputRouter = preload("res://systems/encounter_input.gd")
 const Snapshot = preload("res://systems/encounter_snapshot.gd")
 const ViewRouter = preload("res://presentation/view_router.gd")
 const EndingOverlay = preload("res://presentation/ending_overlay.gd")
@@ -21,16 +22,23 @@ func open_ending_test() -> bool:
 	return true
 
 func _unhandled_input(event: InputEvent) -> void:
+	InputRouter.dispatch(event,{
+		"ending":handle_ending_input,"return":handle_return_input,"roster":handle_roster_input,
+		"story":handle_story_input,"results":handle_results_input,"rescue":handle_rescue_input,
+		"protocol":handle_protocol_input,"breaker":handle_breaker_input,"civilian":handle_civilian_input,
+		"tactical":handle_tactical_input})
+
+func handle_ending_input(event: InputEvent) -> bool:
 	if ending_available():
 		if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_Z or (roster_open and event.keycode == KEY_ENTER)):
 			open_ending_test()
-			return
+			return true
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
 			if (roster_open and DEPLOY_RECT.has_point(point)) or (not roster_open and scene_view == "" and ENDING_RECT.has_point(point)):
 				open_ending_test()
-				return
-	super._unhandled_input(event)
+				return true
+	return false
 
 func _draw() -> void:
 	ViewRouter.render(ViewRouter.screen(roster_open,scene_view,result_ready),{

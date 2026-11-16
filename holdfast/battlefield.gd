@@ -402,6 +402,9 @@ func sight_target() -> Vector2i:
 	return pinned_target if pinned_target != NONE else hovered_cell
 
 func _unhandled_input(event: InputEvent) -> void:
+	handle_tactical_input(event)
+
+func handle_tactical_input(event: InputEvent) -> bool:
 	var command := TacticalInput.key_command(event)
 	if command != "":
 		run_tactical_command(command)
@@ -413,12 +416,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			command = TacticalInput.button_command(local_position,tactical_buttons())
 			if command != "":
 				run_tactical_command(command)
-				return
+				return true
 			if not cell_is_in_bounds(hovered_cell):
-				return
+				return true
 			if sight_mode and active_soldier >= 0:
 				pinned_target = hovered_cell if pinned_target != hovered_cell else NONE
-				return
+				return true
 			var index := soldier_at(hovered_cell)
 			if index >= 0:
 				select_soldier(index)
@@ -426,6 +429,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				try_move(hovered_cell)
 			else:
 				try_select_cell(hovered_cell)
+	return true
 
 func soldier_role(index: int) -> String:
 	return {"MSG":"PSYOP", "Ortiz":"MEDIC", "Bell":"ENGINEER", "Park":"RECON"}.get(soldiers[index]["name"], "RIFLE")

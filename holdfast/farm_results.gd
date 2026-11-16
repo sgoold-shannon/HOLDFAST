@@ -177,14 +177,16 @@ func restart_attempt() -> void:
 	get_tree().reload_current_scene()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_results_input(event): super._unhandled_input(event)
+
+func handle_results_input(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_H:
 		load_encounter(report_path)
-		return
+		return true
 	if not ended:
-		super._unhandled_input(event)
-		return
+		return false
 	if not result_ready:
-		return
+		return true
 	var point := Vector2.ZERO
 	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
 	var action := ResultInput.command(event,point,{KEY_Q:"retry",KEY_L:"load",KEY_K:"save"},
@@ -196,6 +198,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			save_encounter()
 			result_feedback = save_feedback
 	queue_redraw()
+	return true
 
 func result_line(y: float, text: String, color: Color = Color("d6ded9"), size: int = 19) -> void:
 	draw_string(font,Vector2(60,y),text,HORIZONTAL_ALIGNMENT_LEFT,1024,size,color)

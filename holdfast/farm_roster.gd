@@ -230,19 +230,21 @@ func open_roster() -> void:
 	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_roster_input(event): super._unhandled_input(event)
+
+func handle_roster_input(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_G:
 		if roster_open: roster_open = false
 		else: open_roster()
 		queue_redraw()
-		return
+		return true
 	if not roster_open:
 		if result_ready and scene_view == "" and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
 			if ROSTER_RECT.has_point(point):
 				open_roster()
-				return
-		super._unhandled_input(event)
-		return
+				return true
+		return false
 	var rows := []
 	for index in range(campaign["members"].size()): rows.append(Rect2(60,210+index*67,300,58))
 	var point := Vector2.ZERO
@@ -266,6 +268,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				roster_index = int(action.get_slice(":",1))
 				history_page = 0
 	queue_redraw()
+	return true
 
 func roster_details(actor: Dictionary) -> Array[String]:
 	var lines: Array[String] = []

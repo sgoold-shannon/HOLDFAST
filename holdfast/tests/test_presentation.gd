@@ -253,6 +253,20 @@ func run() -> void:
 		for layer in expected_layers[screen_name]: callbacks[layer] = func(): calls.append(layer)
 		router.render(screen_name,callbacks)
 		expect(calls==expected_layers[screen_name],"Composed layers preserve ordering for "+screen_name)
+
+	var input_router = preload("res://systems/encounter_input.gd")
+	var priorities := ["ending","return","roster","story","results","rescue","protocol","breaker","civilian","tactical"]
+	for stop in range(priorities.size()+1):
+		var visited := []
+		var handlers := {}
+		for index in range(priorities.size()):
+			var layer: String = priorities[index]
+			handlers[layer] = func(_event: InputEvent) -> bool:
+				visited.append(layer)
+				return index==stop
+		var consumed: bool = input_router.dispatch(InputEventMouseMotion.new(),handlers)
+		expect(visited==priorities.slice(0,mini(stop+1,priorities.size())),"Dispatcher stops at consuming layer")
+		expect(consumed==(stop<priorities.size()),"Dispatcher reports event consumption")
 	farm.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

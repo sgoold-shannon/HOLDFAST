@@ -270,15 +270,18 @@ func load_encounter(path: String = EVAC_SLOT) -> bool:
 	return true
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_civilian_input(event): super._unhandled_input(event)
+
+func handle_civilian_input(event: InputEvent) -> bool:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
 		var action := interaction_command(event,{}, {"exit":EXIT_ORDER_RECT,"follow":FOLLOW_RECT})
 		if action == "exit":
 			order_exit(cohort_selected)
-			return
+			return true
 		if action == "follow":
 			order_cohort(cohort_selected,"follow")
-			return
+			return true
 		var clicked_cell := local_to_cell(point)
 		if soldier_at(clicked_cell) < 0 and not sight_mode:
 			for index in range(3):
@@ -286,7 +289,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					cohort_selected = index
 					status_text = "Group %s selected. Choose Move to Exit or Follow Soldier at right." % cohorts[index]["id"]
 					queue_redraw()
-					return
+					return true
 		var rows := []
 		for index in range(3): rows.append(Rect2(876,132+index*112,248,100))
 		# Cards retain priority over the route/closure controls.
@@ -294,14 +297,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		if action.begins_with("row:"):
 			cohort_selected = int(action.get_slice(":",1))
 			queue_redraw()
-			return
+			return true
 		action = interaction_command(event,{}, {"north":NORTH_RECT,"south":SOUTH_RECT,"hold":HOLD_RECT,"close":CLOSE_RECT,"cancel":CANCEL_RECT})
 		if action in ["north","south","hold"]: order_cohort(cohort_selected,action)
 		elif action == "close": request_close()
 		elif action == "cancel":
 			close_pending = false
 			queue_redraw()
-		if action != "": return
+		if action != "": return true
 	if ended:
 		if event is InputEventKey and event.pressed and not event.echo:
 			if event.keycode == KEY_K:
@@ -314,8 +317,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				save_encounter()
 			elif LOAD_RECT.has_point(point):
 				load_encounter()
-		return
-	super._unhandled_input(event)
+		return true
+	return false
 
 func _draw() -> void:
 	super._draw()

@@ -131,17 +131,20 @@ func load_encounter(path: String = OPTIONS_SLOT) -> bool:
 	return true
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not handle_breaker_input(event): super._unhandled_input(event)
+
+func handle_breaker_input(event: InputEvent) -> bool:
 	if isolate_pending:
 		var action := interaction_command(event,{KEY_I:"confirm",KEY_ESCAPE:"cancel"},{"confirm":CONFIRM_RECT,"cancel":ABORT_RECT})
 		if action == "confirm": try_breaker(true)
 		elif action == "cancel": isolate_pending = false
 		queue_redraw()
-		return
+		return true
 	var buttons := {} if sight_mode else {"breaker":BREAKER_RECT}
 	if interaction_command(event,{KEY_I:"breaker"},buttons) == "breaker":
 		try_breaker()
-		return
-	super._unhandled_input(event)
+		return true
+	return false
 
 func _draw() -> void:
 	super._draw()

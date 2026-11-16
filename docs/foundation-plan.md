@@ -205,12 +205,18 @@ Saved-field audit: `combat` → CombatState; `machine`, `breaker`, `protocol` �
 
 The dedicated-live-state acceptance criteria are met: eight committed suites and twelve regression checks pass, all model families have instance/deep-copy tests, save round trips and migration remain valid, and all 119 binary snapshot hashes match. Controllers still expose forwarding properties and mutate these models through existing rules. This completes state ownership, not the composed-controller or final cleanup milestones.
 
+## Completed: explicit main-scene input routing
+
+`systems/encounter_input.gd` dispatches events in the existing priority order: ending, return, roster, story, results, rescue, protocol, breaker, civilian, tactical. Each handler reports consumption, including modal blocking. The main scene no longer traverses inherited input entry points. Earlier gate scenes retain compatibility wrappers around the same handlers.
+
+Eight committed suites and twelve regressions pass. Routing tests verify each stopping position and unconsumed events; real-scene checks cover roster/story blocking, isolation confirmation, drop cancellation, civilian orders and aim interactions. All 119 recorded gameplay snapshots and route outcomes match. Gameplay handlers and other lifecycle orchestration still live in inherited adapters, so the composed-controller milestone remains open.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
 
 1. **Dedicated live state — complete.** Combat, machine/protocol, evacuation, story, campaign/return and rescue/result records have independent owners. Instance isolation, detached snapshots, exact RNG restoration, save/migration checks and 119-action parity pass. UI compatibility data remains explicitly separate (see inventory above).
-2. **Composed encounter controller — pending.** Replace the main scene's inherited gameplay/input orchestration with explicit services and state owners. Acceptance: no gate-to-gate dependency in the main controller; preserve modal priorities, action costs, outcome timing, save slots and earlier fixture behavior.
+2. **Composed encounter controller — in progress.** Replace the main scene's inherited gameplay/input orchestration with explicit services and state owners. Acceptance: no gate-to-gate dependency in the main controller; preserve modal priorities, action costs, outcome timing, save slots and earlier fixture behavior.
 3. **Retire redundant adapters and close foundation — pending.** Remove compatibility code only after replacement coverage exists; retain useful gate fixtures. Acceptance: complete automated suite, recorded-route parity, successful save/migration checks and a focused visual/playable smoke test. Record remaining usability issues separately; do not call automated checks human playtesting.
 
 No new mission, balance change or final isometric conversion belongs to these steps. After foundation acceptance, choose the next gameplay or presentation milestone explicitly. Each pass must name its completed acceptance criteria and outstanding work; moving files alone does not close a step.
