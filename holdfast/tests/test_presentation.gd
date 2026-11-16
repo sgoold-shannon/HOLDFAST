@@ -195,6 +195,33 @@ func run() -> void:
 	expect(farm.phase==prior_phase,"Roster consumes gameplay keys")
 	press(farm,KEY_ESCAPE)
 	expect(not farm.roster_open and farm.scene_view=="opening","Closing roster preserves underlying dialogue")
+
+	farm.scene_view = ""
+	farm.roster_open = false
+	farm.isolate_pending = true
+	var state_before: Dictionary = farm.encounter_snapshot()
+	press(farm,KEY_S)
+	press(farm,KEY_O)
+	press(farm,KEY_N)
+	expect(farm.encounter_snapshot()==state_before,"Isolation confirmation blocks rescue, protocol and end-turn actions")
+	press(farm,KEY_ESCAPE)
+	expect(not farm.isolate_pending,"Escape cancels isolation")
+	farm.sight_mode = true
+	var progress_before: int = farm.breaker_progress
+	click(farm,farm.BREAKER_RECT.get_center())
+	expect(farm.breaker_progress==progress_before and not farm.isolate_pending,"Aim mode does not activate breaker button")
+	farm.sight_mode = false
+	click(farm,Vector2(900,132+112+20))
+	expect(farm.cohort_selected==1,"Civilian card selects group B")
+	farm.order_used = false
+	click(farm,farm.HOLD_RECT.get_center())
+	expect(farm.cohorts[1]["order"]=="hold" and farm.order_used,"Civilian button dispatches persistent order")
+	farm.drop_mode = true
+	var phase_before_drop: int = farm.phase
+	press(farm,KEY_N)
+	expect(farm.phase==phase_before_drop,"Drop targeting consumes end-turn input")
+	press(farm,KEY_ESCAPE)
+	expect(not farm.drop_mode,"Escape cancels drop targeting")
 	farm.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

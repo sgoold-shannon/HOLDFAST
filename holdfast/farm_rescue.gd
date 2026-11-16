@@ -319,34 +319,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			try_drop(local_to_cell(point))
 		queue_redraw()
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_S:
-				try_stabilize()
-				return
-			KEY_U:
-				try_pickup()
-				return
-			KEY_J:
-				request_drop()
-				return
-			KEY_V:
-				cycle_casualty()
-				return
+	var action := interaction_command(event,
+		{KEY_S:"stabilize",KEY_U:"pickup",KEY_J:"drop",KEY_V:"cycle"},
+		{"cycle":CASUALTY_RECT,"stabilize":STABILIZE_RECT,"pickup":PICKUP_RECT,"drop":DROP_RECT})
+	match action:
+		"stabilize": try_stabilize()
+		"pickup": try_pickup()
+		"drop": request_drop()
+		"cycle": cycle_casualty()
+	if action != "": return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-		if CASUALTY_RECT.has_point(point):
-			cycle_casualty()
-			return
-		if STABILIZE_RECT.has_point(point):
-			try_stabilize()
-			return
-		if PICKUP_RECT.has_point(point):
-			try_pickup()
-			return
-		if DROP_RECT.has_point(point):
-			request_drop()
-			return
 		var index := soldier_at(local_to_cell(point))
 		if casualty_available(index) and not ended:
 			rescue_target = index

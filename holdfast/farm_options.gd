@@ -150,27 +150,15 @@ func load_encounter(path: String = OPTIONS_SLOT) -> bool:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if isolate_pending:
-		if event is InputEventKey and event.pressed and not event.echo:
-			if event.keycode == KEY_I:
-				try_breaker(true)
-			elif event.keycode == KEY_ESCAPE:
-				isolate_pending = false
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-			if CONFIRM_RECT.has_point(point):
-				try_breaker(true)
-			elif ABORT_RECT.has_point(point):
-				isolate_pending = false
+		var action := interaction_command(event,{KEY_I:"confirm",KEY_ESCAPE:"cancel"},{"confirm":CONFIRM_RECT,"cancel":ABORT_RECT})
+		if action == "confirm": try_breaker(true)
+		elif action == "cancel": isolate_pending = false
 		queue_redraw()
 		return
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_I:
+	var buttons := {} if sight_mode else {"breaker":BREAKER_RECT}
+	if interaction_command(event,{KEY_I:"breaker"},buttons) == "breaker":
 		try_breaker()
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and not sight_mode:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-		if BREAKER_RECT.has_point(point):
-			try_breaker()
-			return
 	super._unhandled_input(event)
 
 func _draw() -> void:

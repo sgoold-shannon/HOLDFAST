@@ -283,11 +283,12 @@ func load_encounter(path: String = EVAC_SLOT) -> bool:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-		if EXIT_ORDER_RECT.has_point(point):
+		var action := interaction_command(event,{}, {"exit":EXIT_ORDER_RECT,"follow":FOLLOW_RECT})
+		if action == "exit":
 			order_exit(cohort_selected)
 			return
-		if FOLLOW_RECT.has_point(point):
-			order_cohort(cohort_selected, "follow")
+		if action == "follow":
+			order_cohort(cohort_selected,"follow")
 			return
 		var clicked_cell := local_to_cell(point)
 		if soldier_at(clicked_cell) < 0 and not sight_mode:
@@ -297,27 +298,21 @@ func _unhandled_input(event: InputEvent) -> void:
 					status_text = "Group %s selected. Choose Move to Exit or Follow Soldier at right." % cohorts[index]["id"]
 					queue_redraw()
 					return
-		for index in range(3):
-			if Rect2(876, 132 + index * 112, 248, 100).has_point(point):
-				cohort_selected = index
-				queue_redraw()
-				return
-		if NORTH_RECT.has_point(point):
-			order_cohort(cohort_selected, "north")
-			return
-		if SOUTH_RECT.has_point(point):
-			order_cohort(cohort_selected, "south")
-			return
-		if HOLD_RECT.has_point(point):
-			order_cohort(cohort_selected, "hold")
-			return
-		if CLOSE_RECT.has_point(point):
-			request_close()
-			return
-		if CANCEL_RECT.has_point(point):
-			close_pending = false
+		var rows := []
+		for index in range(3): rows.append(Rect2(876,132+index*112,248,100))
+		# Cards retain priority over the route/closure controls.
+		action = interaction_command(event,{}, {},rows)
+		if action.begins_with("row:"):
+			cohort_selected = int(action.get_slice(":",1))
 			queue_redraw()
 			return
+		action = interaction_command(event,{}, {"north":NORTH_RECT,"south":SOUTH_RECT,"hold":HOLD_RECT,"close":CLOSE_RECT,"cancel":CANCEL_RECT})
+		if action in ["north","south","hold"]: order_cohort(cohort_selected,action)
+		elif action == "close": request_close()
+		elif action == "cancel":
+			close_pending = false
+			queue_redraw()
+		if action != "": return
 	if ended:
 		if event is InputEventKey and event.pressed and not event.echo:
 			if event.keycode == KEY_K:

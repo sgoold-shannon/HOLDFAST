@@ -1,4 +1,5 @@
 extends Node2D
+const InteractionInput = preload("res://presentation/modal_input.gd")
 const TacticalPanel = preload("res://presentation/tactical_panel.gd")
 ## HOLDFAST A6. Public cell coordinates follow GDD v3.1 section 26 (one-based).
 const SandboxMission = preload("res://missions/tactical_sandbox.tres")
@@ -551,3 +552,8 @@ func tactical_panel_snapshot(path: Array[Vector2i], target: Vector2i) -> Diction
 		"colors":colors,
 		"intent":enemy_intent(),
 		"fire_reason":fire_block_reason()}
+
+func interaction_command(event: InputEvent, keys: Dictionary, buttons: Dictionary, rows: Array = []) -> String:
+	var point := Vector2.ZERO
+	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
+	return InteractionInput.command(event,point,keys,buttons,rows)

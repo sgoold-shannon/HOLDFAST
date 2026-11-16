@@ -194,17 +194,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if isolate_pending:
 		super._unhandled_input(event)
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		var actions := {KEY_O:"observe",KEY_P:"transmit",KEY_A:"authenticate",KEY_D:"divert"}
-		if actions.has(event.keycode):
-			protocol_action(actions[event.keycode])
-			return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-		for item in [[OBSERVE_RECT,"observe"],[TRANSMIT_RECT,"transmit"],[AUTH_RECT,"authenticate"],[DIVERT_RECT,"divert"]]:
-			if item[0].has_point(point):
-				protocol_action(item[1])
-				return
+	var action := interaction_command(event,
+		{KEY_O:"observe",KEY_P:"transmit",KEY_A:"authenticate",KEY_D:"divert"},
+		{"observe":OBSERVE_RECT,"transmit":TRANSMIT_RECT,"authenticate":AUTH_RECT,"divert":DIVERT_RECT})
+	if action != "":
+		protocol_action(action)
+		return
 	super._unhandled_input(event)
 
 func _draw() -> void:

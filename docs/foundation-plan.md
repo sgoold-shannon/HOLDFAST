@@ -131,6 +131,12 @@ Validation: all five committed suites and seven targeted B3–B6/C1/C2/staging-c
 
 All five committed suites and six targeted narrative/roster/results/return/ending/staging-care regressions pass. Added checks cover modal key isolation, roster selection and underlying dialogue restoration, click precedence, ignored events and overlay data isolation. All 119 recorded action snapshots match the prior build. No visual screenshot comparison was performed.
 
+## Completed: interaction intent translation
+
+Civilian order/card controls, breaker confirmation, protocol actions and casualty action buttons now share the event-to-intent decoder through `interaction_command`. Controllers retain gameplay dispatch, map selection, drop targeting and the exact inherited priority. Civilian exit/follow buttons still precede map selection; cards precede route/closure buttons. Isolation confirmation still consumes competing inputs, and aiming still disables the breaker mouse button. Existing drop-mode Escape and post-closure save/load semantics are unchanged.
+
+All five committed suites and B2–B5 regression checks pass. New direct input tests cover isolation blocking rescue/protocol/end-turn, cancellation, aim-mode breaker exclusion, civilian card/order dispatch and drop-targeting isolation. All 119 action snapshots match the preceding build. The small overlays, remaining outer routing and deeper controller/save restructuring are still outstanding.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
