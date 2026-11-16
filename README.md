@@ -65,3 +65,13 @@ The test uses legal game actions and button/key handlers to complete:
 Expected output includes `FOLLOW END-TO-END FAILURES: 0`; a failed expectation produces a nonzero exit code. Test saves go into a separate `holdfast-tests-*` folder in the operating system cache. Tests neither resume nor replace the player's campaign. Set `HOLDFAST_TEST_OUTPUT` to a writable directory to override the cache location.
 
 These checks validate rules and progression. Human playtesting is still needed to assess clarity, tension, character recognition, and balance.
+
+## Foundation work
+
+The [foundation plan and decisions](docs/foundation-plan.md) track the gradual move away from gate-by-gate inheritance. Civilian pathfinding and movement now run in an independent component; the remaining encounter layers are still being separated. Overwatch is deferred to the first armed-enemy encounter after Gates A–D.
+
+Test the civilian component independently of any mission scene:
+
+```sh
+godot --headless --path holdfast --script res://tests/test_civilian_rules.gd
+```
