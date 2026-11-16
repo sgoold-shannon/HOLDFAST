@@ -1,4 +1,6 @@
 extends "res://battlefield.gd"
+const MachineState = preload("res://state/machine_state.gd")
+var machine_state := MachineState.new()
 const MachineStatus = preload("res://presentation/machine_status.gd")
 const MachineView = preload("res://presentation/machine_view.gd")
 ## B1: route, occupied-cell impacts, and fixed-cell defensive shots.
@@ -10,7 +12,9 @@ var ROUTE: Array[Vector2i]:
 	get: return mission_definition().machine_patrol
 var FIXTURES: Array[Vector2i]:
 	get: return mission_definition().fixtures
-var machine := {"stage": 0, "hostile": false, "pending_shot": Vector2i(-1, -1), "collected_round": 0, "departed": false}
+var machine: Dictionary:
+	get: return machine_state.machine
+	set(value): machine_state.machine = value
 
 func _ready() -> void:
 	super._ready()
@@ -191,4 +195,4 @@ func apply_loaded_encounter(snapshot: Dictionary) -> void:
 	EncounterRestore.apply(snapshot,{"machine":restore_machine_section,"tactical":restore_tactical_section})
 
 func restore_machine_section(snapshot: Dictionary) -> void:
-	machine = snapshot["machine"].duplicate(true)
+	machine_state.restore_machine(snapshot["machine"])

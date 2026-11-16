@@ -9,7 +9,9 @@ var GATES: Array[Vector2i]:
 const BREAKER_RECT := Rect2(40, 773, 250, 48)
 const CONFIRM_RECT := Rect2(160, 490, 260, 46)
 const ABORT_RECT := Rect2(440, 490, 260, 46)
-var breaker_progress := 0
+var breaker_progress: int:
+	get: return machine_state.breaker_progress
+	set(value): machine_state.breaker_progress = value
 var isolate_pending := false
 
 func _ready() -> void:

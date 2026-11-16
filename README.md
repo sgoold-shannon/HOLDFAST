@@ -129,3 +129,5 @@ Combat state now has a scene-independent owner for actors, rounds, RNG and shot 
 ```sh
 godot --headless --path holdfast --script res://tests/test_combat_state.gd
 ```
+
+Machine/protocol and civilian evacuation state now have independent owners, with transient UI selections kept in controllers. `tests/test_mission_state.gd` checks instance isolation and detached nested data.

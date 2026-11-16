@@ -1,4 +1,6 @@
 extends "res://farm_road.gd"
+const EvacuationState = preload("res://state/evacuation_state.gd")
+var evacuation_state := EvacuationState.new()
 const CivilianPanel = preload("res://presentation/civilian_panel.gd")
 const CivilianView = preload("res://presentation/civilian_view.gd")
 ## B2: one cohort order each player phase, safe routes, closure after civilian phase.
@@ -19,17 +21,23 @@ const SOUTH_RECT := Rect2(1004, 654, 120, 36)
 const HOLD_RECT := Rect2(876, 606, 248, 40)
 const CLOSE_RECT := Rect2(876, 936, 248, 44)
 const CANCEL_RECT := Rect2(876, 988, 248, 36)
-var cohorts: Array[Dictionary] = [
-	{"id": "A", "cell": Vector2i.ZERO, "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["A-01","A-02","A-03","A-04"]},
-	{"id": "B", "cell": Vector2i.ZERO, "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["B-01","B-02","B-03","B-04"]},
-	{"id": "C", "cell": Vector2i.ZERO, "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["C-01","C-02","C-03","C-04"]}
-]
+var cohorts: Array[Dictionary]:
+	get: return evacuation_state.cohorts
+	set(value): evacuation_state.cohorts = value
 var cohort_selected := 0
-var order_used := false
-var ended := false
-var end_reason := ""
+var order_used: bool:
+	get: return evacuation_state.order_used
+	set(value): evacuation_state.order_used = value
+var ended: bool:
+	get: return evacuation_state.ended
+	set(value): evacuation_state.ended = value
+var end_reason: String:
+	get: return evacuation_state.end_reason
+	set(value): evacuation_state.end_reason = value
 var close_pending := false
-var last_civilian_phase := 0
+var last_civilian_phase: int:
+	get: return evacuation_state.last_civilian_phase
+	set(value): evacuation_state.last_civilian_phase = value
 
 func _ready() -> void:
 	super._ready()
@@ -375,10 +383,6 @@ func evac_state_snapshot() -> Dictionary:
 
 func restore_evac_section(snapshot: Dictionary) -> void:
 	var evac: Dictionary = snapshot["evac"]
-	cohorts.assign(evac["cohorts"].duplicate(true))
+	evacuation_state.restore(evac)
 	cohort_selected = evac["selected"]
-	order_used = evac["order_used"]
-	ended = evac["ended"]
-	end_reason = evac["reason"]
-	last_civilian_phase = evac["last_phase"]
 	close_pending = false

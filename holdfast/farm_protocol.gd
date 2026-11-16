@@ -12,9 +12,9 @@ const OBSERVE_RECT := Rect2(40,1136,180,40)
 const TRANSMIT_RECT := Rect2(230,1136,180,40)
 const AUTH_RECT := Rect2(420,1136,190,40)
 const DIVERT_RECT := Rect2(620,1136,204,40)
-var protocol := {"observed": false, "acknowledged": false, "pause_pending": false,
-	"pause_used": false, "authenticated": false, "route_set": false,
-	"diverted": false, "waypoint": 0, "component_collected": false, "betrayed": false}
+var protocol: Dictionary:
+	get: return machine_state.protocol
+	set(value): machine_state.protocol = value
 
 func _ready() -> void:
 	super._ready()
@@ -218,4 +218,4 @@ func apply_loaded_encounter(snapshot: Dictionary) -> void:
 	EncounterRestore.apply(snapshot,{"protocol":restore_protocol_section,"breaker":restore_breaker_section,"evac":restore_evac_section,"machine":restore_machine_section,"tactical":restore_tactical_section})
 
 func restore_protocol_section(snapshot: Dictionary) -> void:
-	protocol = snapshot["protocol"].duplicate(true)
+	machine_state.restore_protocol(snapshot["protocol"])
