@@ -76,6 +76,9 @@ func load_encounter(path: String = STORY_SLOT) -> bool:
 
 func record_rescue(kind: String, actor: int, casualty: int) -> void:
 	super.record_rescue(kind,actor,casualty)
+	apply_rescue_knowledge(actor)
+
+func apply_rescue_knowledge(actor: int) -> void:
 	rescue_events[-1]["closure_warning"] = closure_warning
 	# The acting soldier knows the action; an unconscious patient is not assumed to.
 	knowledge[actor].append(rescue_events[-1]["id"])

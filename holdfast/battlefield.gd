@@ -120,6 +120,9 @@ func extraction_cell(cell: Vector2i) -> bool:
 	return MissionObjectives.squad_exit(mission_definition(),cell)
 
 func try_extract() -> bool:
+	return extract_selected_soldier()
+
+func extract_selected_soldier() -> bool:
 	if not soldier_can_act(active_soldier):
 		status_text = "Select an active soldier to extract."
 	elif not extraction_cell(soldiers[active_soldier]["cell"]):

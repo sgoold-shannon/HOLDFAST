@@ -241,6 +241,12 @@ The main scene now selects origin-machine activation or peaceful return staging 
 
 Nine committed suites and twelve regressions pass; all 119 recorded states and six route outcomes match. Main-scene checks verify duplicate activation protection, invalid-command AP preservation and return-map machine/protocol immutability. This removes inherited orchestration for these two actions, not the underlying compatibility-class dependency. Weapon attacks, damage/rescue/extraction and remaining mission policy adapters still need composition before final cleanup and visual acceptance.
 
+## Completed: explicit attack, damage, rescue and extraction orchestration
+
+The main scene now directly sequences machine firing, protocol betrayal and recovery/finalization; casualty damage and deferred recovery checks; stabilization/pickup and verified rescue records; and soldier/passenger extraction with knowledge and return-map feedback. Earlier gate scenes retain compatibility entry points around shared rule adapters. Action costs, RNG draws, blast order, passenger-link updates and rescue knowledge remain unchanged.
+
+Ten committed suites and twelve regressions pass. The new main-scene action suite verifies a lethal multi-cell machine blast completes before results are saved, carrier extraction costs one AP and clears links, rescue events/knowledge are recorded once, and rejected repeat actions add no events. All 119 recorded states and six route outcomes match the preceding build. Gameplay predicates, movement, breaker/civilian commands and remaining compatibility-class dependencies still require consolidation before the controller milestone and final visual acceptance can close.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

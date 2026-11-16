@@ -166,3 +166,56 @@ func protocol_action(action: String) -> bool:
 	var success := execute_protocol_action(action)
 	update_protocol_observation(action,success)
 	return success
+
+func try_fire() -> bool:
+	if return_state["active"]: return reject_return_fire()
+	var was_diverted: bool = protocol["diverted"]
+	var success := fire_at_machine()
+	apply_protocol_betrayal(success,was_diverted)
+	check_recovery_failure()
+	finalize_result()
+	return success
+
+func damage_cell(cell: Vector2i, amount: int) -> String:
+	var report := apply_casualty_damage(cell,amount)
+	# Recovery must wait for every cell in the enclosing blast to resolve.
+	call_deferred("check_recovery_failure")
+	return report
+
+func record_rescue(kind: String, actor: int, casualty: int) -> void:
+	append_rescue_record(kind,actor,casualty)
+	apply_rescue_knowledge(actor)
+
+func try_stabilize() -> bool:
+	var actor := active_soldier
+	var casualty := target_for_rescue()
+	var success := stabilize_casualty()
+	if success: record_rescue("stabilized",actor,casualty)
+	return success
+
+func try_pickup() -> bool:
+	var actor := active_soldier
+	var casualty := rescue_target
+	var success := pick_up_casualty()
+	if success: record_rescue("picked_up",actor,casualty)
+	return success
+
+func try_extract() -> bool:
+	var actor := active_soldier
+	var passenger: int = soldiers[actor]["carrying"] if actor >= 0 else -1
+	close_pending = false
+	var success := false
+	if not ended:
+		success = extract_selected_soldier()
+		# Preserve the original status evaluation before passenger extraction.
+		if success and all_extracted():
+			status_text = "Squad extracted. %d civilians remain; continue turns or close operation." % remaining_civilians()
+	if success and passenger >= 0:
+		soldiers[passenger]["extracted"] = true
+		soldiers[passenger]["carried_by"] = -1
+		soldiers[actor]["carrying"] = -1
+		status_text = "%s and %s extracted together for 1 AP." % [soldiers[actor]["name"],soldiers[passenger]["name"]]
+		record_rescue("extracted_with",actor,passenger)
+	if not success and return_state["active"]:
+		status_text = "North extraction: (9,1) through (11,1), 1 AP; carriers extract both."
+	return success

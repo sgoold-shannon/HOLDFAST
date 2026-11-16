@@ -64,6 +64,9 @@ func kill_soldier(index: int) -> void:
 		selected_cell = NONE
 
 func damage_cell(cell: Vector2i, amount: int) -> String:
+	return apply_casualty_damage(cell,amount)
+
+func apply_casualty_damage(cell: Vector2i, amount: int) -> String:
 	var reports: Array[String] = []
 	for index in range(soldiers.size()):
 		var soldier: Dictionary = soldiers[index]
@@ -124,6 +127,9 @@ func target_for_rescue() -> int:
 	return rescue_target
 
 func try_stabilize() -> bool:
+	return stabilize_casualty()
+
+func stabilize_casualty() -> bool:
 	var target := target_for_rescue()
 	if ended or not casualty_in_reach(target) or soldiers[active_soldier]["ap"] < 1:
 		status_text = "Stabilize: select a rescuer with 1 AP and an adjacent or carried casualty."
@@ -144,6 +150,9 @@ func try_stabilize() -> bool:
 	return false
 
 func try_pickup() -> bool:
+	return pick_up_casualty()
+
+func pick_up_casualty() -> bool:
 	var target := rescue_target
 	if ended or not casualty_in_reach(target) or soldiers[active_soldier]["ap"] < 1:
 		status_text = "Pick up: select a rescuer with 1 AP and an adjacent casualty."

@@ -136,13 +136,16 @@ func enemy_intent() -> String:
 func try_fire() -> bool:
 	var was_diverted: bool = protocol["diverted"]
 	var fired := super.try_fire()
+	apply_protocol_betrayal(fired,was_diverted)
+	return fired
+
+func apply_protocol_betrayal(fired: bool, was_diverted: bool) -> void:
 	if fired and was_diverted:
 		protocol["diverted"] = false
 		protocol["betrayed"] = true
 		machine["hostile"] = true
 		if machine_present():
 			status_text += " Safe routing canceled; returning to skid."
-	return fired
 
 func machine_outcome() -> String:
 	if enemies[0]["hp"] > 0 and not disabled() and protocol["diverted"]:

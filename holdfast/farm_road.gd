@@ -92,6 +92,9 @@ func fire_block_reason() -> String:
 	return reason.replace("enemy (red E)", "machine (D)").replace("enemy", "machine")
 
 func try_fire() -> bool:
+	return fire_at_machine()
+
+func fire_at_machine() -> bool:
 	var reason := fire_block_reason()
 	if reason != "":
 		status_text = reason

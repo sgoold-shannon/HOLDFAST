@@ -65,6 +65,9 @@ func load_encounter(path: String = RESULT_SLOT) -> bool:
 	return success
 
 func record_rescue(kind: String, actor: int, casualty: int) -> void:
+	append_rescue_record(kind,actor,casualty)
+
+func append_rescue_record(kind: String, actor: int, casualty: int) -> void:
 	rescue_events.append({"id":"rescue-%d" % (rescue_events.size()+1),
 		"kind":kind,"actor":actor,"casualty":casualty,"phase":phase})
 

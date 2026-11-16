@@ -225,6 +225,9 @@ func use_cooling_move() -> bool:
 
 func try_fire() -> bool:
 	if not return_state["active"]: return super.try_fire()
+	return reject_return_fire()
+
+func reject_return_fire() -> bool:
 	status_text = "No hostile targets in this return-map test."
 	queue_redraw()
 	return false
