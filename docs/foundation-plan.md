@@ -163,6 +163,14 @@ Six committed suites plus B1–B6/C1/C2/D1/D2, clarity and staging-care regressi
 godot --headless --path holdfast --script res://tests/test_persistence.gd
 ```
 
+## Completed: ordered campaign persistence and migration policy
+
+16 November 2026: `systems/campaign_persistence.gd` owns ordered report/completion and campaign/report/completion writes. It captures state for each attempted write, stops on the first error, and omits completion writes for retry-required outcomes. Already successful files remain saved; this preserves the existing non-transactional multi-file behavior.
+
+`systems/save_migration.gd` owns the existing C2-to-D1 upgrade: copy legacy state, add initial return-map state, write through the validated store, and select the campaign slot only on success. Unreadable and non-C2 saves still go through the normal loader. Live restoration, feedback and snapshot assembly remain in scene adapters. No save format, balance or slot changes.
+
+All six committed suites and B6/C1/C2/D1/D2/staging-care regressions pass. New injected-failure tests cover every checkpoint write position, completion-slot exclusion, snapshot capture order, migration source isolation and write failure. The existing D1 regression exercises actual legacy migration. All 119 recorded action snapshots match.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

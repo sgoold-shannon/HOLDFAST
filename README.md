@@ -117,3 +117,5 @@ Encounter save/load now passes through a shared validation boundary before resto
 ```sh
 godot --headless --path holdfast --script res://tests/test_persistence.gd
 ```
+
+Campaign/report/completion write ordering and the existing C2-to-D1 migration now have dedicated services. Persistence tests cover failures at each write step and migration source isolation. Successful earlier writes remain intact if a later file fails, matching existing behavior.

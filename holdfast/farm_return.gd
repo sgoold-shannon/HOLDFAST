@@ -1,4 +1,5 @@
 extends "res://farm_roster.gd"
+const SaveMigration = preload("res://systems/save_migration.gd")
 const ReturnOverlay = preload("res://presentation/return_overlay.gd")
 const NorthboundMission = preload("res://missions/northbound_return.tres")
 const ReturnRules = preload("res://return_rules.gd")
@@ -43,16 +44,11 @@ func save_encounter(path: String = RETURN_SLOT) -> bool:
 
 func load_encounter(path: String = RETURN_SLOT) -> bool:
 	if [TACTICAL_SLOT,STORY_SLOT,RESULT_SLOT].has(path): path = RETURN_SLOT
-	var result := Persistence.read(path)
-	if result["error"] == "" and result["snapshot"]["layout"] == "gdd3.1-c2-roster":
-		var upgraded: Dictionary = result["snapshot"].duplicate(true)
-		upgraded["layout"] = rescue_layout()
-		upgraded["return_map"] = ReturnRules.initial()
-		var problem := Persistence.write(upgraded,campaign_path)
-		if problem != "":
-			save_feedback = problem
-			return false
-		path = campaign_path
+	var migration := SaveMigration.return_slot(path,campaign_path,rescue_layout())
+	if migration["error"] != "":
+		save_feedback = migration["error"]
+		return false
+	path = migration["path"]
 	var success := super.load_encounter(path)
 	if success: save_feedback = "D1 restored: original outcome, repair progress and one-use cooling record."
 	return success

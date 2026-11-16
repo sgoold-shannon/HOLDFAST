@@ -1,4 +1,5 @@
 extends "res://farm_rescue.gd"
+const CampaignPersistence = preload("res://systems/campaign_persistence.gd")
 const ResultInput = preload("res://presentation/modal_input.gd")
 const ResultsPanel = preload("res://presentation/results_panel.gd")
 ## B6 derives results from the resolved encounter, never from predicted outcomes.
@@ -123,9 +124,7 @@ func finalize_result() -> void:
 	for soldier in soldiers:
 		soldier["left_behind"] = not soldier["extracted"] and soldier["condition"] != "dead"
 	result_ready = true
-	var problem := Persistence.write(encounter_snapshot(),report_path)
-	if problem == "" and not retry_required():
-		problem = Persistence.write(encounter_snapshot(),completion_path)
+	var problem := CampaignPersistence.report(encounter_snapshot,report_path,completion_path,not retry_required())
 	result_feedback = "Mission record saved automatically." if problem == "" else problem
 	queue_redraw()
 

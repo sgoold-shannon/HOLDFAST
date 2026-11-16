@@ -151,9 +151,7 @@ func finalize_result() -> void:
 	persist_campaign_result()
 
 func persist_campaign_result() -> void:
-	var problem := checkpoint()
-	if problem == "": problem = Persistence.write(encounter_snapshot(),report_path)
-	if problem == "" and not retry_required(): problem = Persistence.write(encounter_snapshot(),completion_path)
+	var problem := CampaignPersistence.campaign_result(encounter_snapshot,campaign_path,report_path,completion_path,not retry_required())
 	result_feedback = "Mission and roster saved. G: review service records." if problem == "" else problem
 
 func persist_story_report() -> void:

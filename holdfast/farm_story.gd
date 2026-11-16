@@ -102,8 +102,7 @@ func deliver_briefing() -> void:
 
 func persist_story_report() -> void:
 	if not ended or retry_required(): return
-	var problem := Persistence.write(encounter_snapshot(),report_path)
-	if problem == "": problem = Persistence.write(encounter_snapshot(),completion_path)
+	var problem := CampaignPersistence.report(encounter_snapshot,report_path,completion_path,true)
 	result_feedback = "Debrief choices and knowledge saved." if problem == "" else problem
 
 func opening_pages() -> Array:
