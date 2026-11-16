@@ -85,3 +85,20 @@ func encounter_snapshot() -> Dictionary:
 func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	Snapshot.restore_extras(snapshot,{"return_map":restore_return_state,"results":restore_results_state,
 		"story":restore_story_state,"campaign":restore_campaign_state})
+
+func close_result_operation(reason: String) -> void:
+	close_evacuation(reason)
+	close_rescue()
+
+func finalize_result() -> void:
+	Completion.finalize(result_state,soldiers,close_result_operation,save_mission_result,
+		commit_roster,persist_campaign_result)
+
+func commit_roster() -> void:
+	record_campaign_result()
+	record_return_result()
+
+func after_turn_resolution() -> void:
+	check_recovery_failure()
+	finalize_result()
+	update_closure_knowledge()

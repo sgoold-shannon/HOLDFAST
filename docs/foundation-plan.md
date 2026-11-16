@@ -211,6 +211,14 @@ The dedicated-live-state acceptance criteria are met: eight committed suites and
 
 Eight committed suites and twelve regressions pass. Routing tests verify each stopping position and unconsumed events; real-scene checks cover roster/story blocking, isolation confirmation, drop cancellation, civilian orders and aim interactions. All 119 recorded gameplay snapshots and route outcomes match. Gameplay handlers and other lifecycle orchestration still live in inherited adapters, so the composed-controller milestone remains open.
 
+## Completed: explicit encounter completion and post-turn hooks
+
+`systems/encounter_completion.gd` owns the pending/ready guard and the ordered completion sequence: close the operation, clear the pending reason, finalize soldier dispositions, mark results ready, save the report, commit campaign history, then save campaign results. Campaign callbacks are optional for the earlier B6 result fixture. Existing save-failure behavior remains unchanged; this does not add a transaction across files.
+
+The main scene directly composes evacuation/rescue closure, campaign/return history recording and post-turn recovery/finalization/knowledge hooks. These paths no longer traverse gate-to-gate overrides. Completion remains deferred until the enclosing action resolves, with the existing explicit action-end calls preserved. Other gameplay actions, startup and save/load adapters remain inherited; the composed-controller milestone is still open.
+
+Eight committed suites and twelve regressions pass. Completion checks cover pending/ready guards, exact callback order, living/dead/extracted dispositions, finalized report state, repeated calls and earlier-gate compatibility. All 119 recorded gameplay states and six route outcomes match the previous build. No visual playtest was performed for this change.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

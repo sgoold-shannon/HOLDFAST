@@ -241,6 +241,9 @@ func feeder_result() -> String:
 
 func commit_roster() -> void:
 	super.commit_roster()
+	record_return_result()
+
+func record_return_result() -> void:
 	if return_state["active"] and campaign["committed"]:
 		campaign["missions"][-1]["return_map"] = return_state.duplicate(true)
 

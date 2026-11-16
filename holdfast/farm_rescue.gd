@@ -233,6 +233,9 @@ func try_extract() -> bool:
 
 func finish_operation(reason: String) -> void:
 	super.finish_operation(reason)
+	close_rescue()
+
+func close_rescue() -> void:
 	for soldier in soldiers:
 		if soldier.get("condition","active") == "dead":
 			soldier["left_behind"] = false

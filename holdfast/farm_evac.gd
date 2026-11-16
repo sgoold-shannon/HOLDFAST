@@ -155,6 +155,9 @@ func damage_cell(cell: Vector2i, amount: int) -> String:
 	return report
 
 func finish_operation(reason: String) -> void:
+	close_evacuation(reason)
+
+func close_evacuation(reason: String) -> void:
 	if ended:
 		return
 	ended = true

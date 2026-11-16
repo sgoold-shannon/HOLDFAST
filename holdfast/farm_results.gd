@@ -1,4 +1,5 @@
 extends "res://farm_rescue.gd"
+const Completion = preload("res://systems/encounter_completion.gd")
 const ResultState = preload("res://state/result_state.gd")
 var result_state := ResultState.new()
 const CampaignPersistence = preload("res://systems/campaign_persistence.gd")
@@ -125,14 +126,12 @@ func finish_operation(reason: String) -> void:
 	call_deferred("finalize_result")
 
 func finalize_result() -> void:
-	if pending_finish_reason == "" or result_ready:
-		return
-	super.finish_operation(pending_finish_reason)
-	pending_finish_reason = ""
-	# All scheduled damage has resolved before dispositions are finalized.
-	for soldier in soldiers:
-		soldier["left_behind"] = not soldier["extracted"] and soldier["condition"] != "dead"
-	result_ready = true
+	Completion.finalize(result_state,soldiers,close_result_operation,save_mission_result)
+
+func close_result_operation(reason: String) -> void:
+	super.finish_operation(reason)
+
+func save_mission_result() -> void:
 	var problem := CampaignPersistence.report(encounter_snapshot,report_path,completion_path,not retry_required())
 	result_feedback = "Mission record saved automatically." if problem == "" else problem
 	queue_redraw()

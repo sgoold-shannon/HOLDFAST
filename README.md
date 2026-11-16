@@ -135,3 +135,5 @@ Machine/protocol and civilian evacuation state now have independent owners, with
 Story knowledge/choices, campaign and return history, and rescue/result records now also have independent state owners. The dedicated-state milestone is complete; composed gameplay/input control and final cleanup/playtesting remain.
 
 The main scene now dispatches input through an explicit priority router, preserving modal blocking and earlier gate compatibility. Gameplay composition and final foundation acceptance remain in progress.
+
+Mission completion now has an explicit sequence for closure, dispositions, reports and campaign history, with repeated-call protection. Main-scene post-turn completion hooks also bypass inherited orchestration. Other gameplay and startup adapters still need composition.

@@ -83,6 +83,9 @@ func on_civilian_step(cohort: Dictionary, cell: Vector2i) -> void:
 
 func after_turn_resolution() -> void:
 	super.after_turn_resolution()
+	update_closure_knowledge()
+
+func update_closure_knowledge() -> void:
 	if not ended and phase >= 3: closure_warning = true
 
 func protocol_action(action: String) -> bool:

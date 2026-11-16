@@ -119,6 +119,32 @@ func run() -> void:
 	expect(not board.drop_mode and not board.isolate_pending and not board.close_pending and not board.roster_open and board.hovered_cell==board.NONE,"Restore clears stale input modes")
 	expect(board.encounter_snapshot()==before,"Shared section restoration preserves saved state")
 	expect(board.load_encounter(path) and board.encounter_snapshot()==before,"Repeated restore is stable")
+	var completion = preload("res://systems/encounter_completion.gd")
+	var result = preload("res://state/result_state.gd").new()
+	var dispositions := [{"extracted":false,"condition":"active"},
+		{"extracted":false,"condition":"dead"},{"extracted":true,"condition":"stable"}]
+	var completion_order := []
+	var close := func(reason: String):
+		expect(reason=="Road closed","Completion passes the pending reason unchanged")
+		completion_order.append("close")
+	var report := func():
+		expect(result.result_ready and result.pending_finish_reason=="","Report captures finalized state")
+		expect(dispositions[0]["left_behind"] and not dispositions[1]["left_behind"] and not dispositions[2]["left_behind"],"Only living unextracted soldiers are left behind")
+		completion_order.append("report")
+	var commit := func(): completion_order.append("commit")
+	var save := func(): completion_order.append("campaign")
+	expect(not completion.finalize(result,dispositions,close,report,commit,save),"No pending completion is a no-op")
+	expect(completion_order.is_empty(),"No-op completion performs no writes")
+	result.pending_finish_reason = "Road closed"
+	expect(completion.finalize(result,dispositions,close,report,commit,save),"Pending completion finalizes")
+	expect(completion_order==["close","report","commit","campaign"],"Report precedes roster commit and campaign persistence")
+	result.pending_finish_reason = "duplicate"
+	expect(not completion.finalize(result,dispositions,close,report,commit,save) and completion_order.size()==4,"Repeated deferred completion cannot duplicate history or writes")
+	result.result_ready = false
+	result.pending_finish_reason = "Road closed"
+	completion_order.clear()
+	expect(completion.finalize(result,dispositions,close,report),"Earlier result gate needs no campaign callbacks")
+	expect(completion_order==["close","report"],"Earlier gate writes only its report")
 	sandbox.free()
 	board.free()
 	print("PERSISTENCE BOUNDARY FAILURES: ",failures)

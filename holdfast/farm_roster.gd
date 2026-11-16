@@ -119,6 +119,9 @@ func sync_knowledge() -> void:
 		append_unique(patient["relationships"][rescuer_id],"Stabilized me during deployment %d." % campaign["deployment"])
 
 func commit_roster() -> void:
+	record_campaign_result()
+
+func record_campaign_result() -> void:
 	if not result_ready or retry_required() or campaign["committed"]: return
 	var mission := {"id":"deployment-%d" % campaign["deployment"],"machine":machine_outcome(),
 		"feeder":feeder_result(),"cohorts":cohorts.duplicate(true),"soldiers":[]}
