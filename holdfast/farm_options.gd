@@ -42,6 +42,9 @@ func breaker_reason() -> String:
 	return ""
 
 func try_breaker(confirm: bool = false) -> bool:
+	return operate_origin_breaker(confirm)
+
+func operate_origin_breaker(confirm: bool = false) -> bool:
 	var reason := breaker_reason()
 	if reason != "":
 		status_text = reason

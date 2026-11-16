@@ -219,3 +219,23 @@ func try_extract() -> bool:
 	if not success and return_state["active"]:
 		status_text = "North extraction: (9,1) through (11,1), 1 AP; carriers extract both."
 	return success
+
+func try_move(cell: Vector2i) -> bool:
+	var actor := active_soldier
+	close_pending = false
+	if ended: return false
+	var success := move_selected_soldier(cell)
+	if success and soldiers[actor]["carrying"] >= 0:
+		soldiers[soldiers[actor]["carrying"]]["cell"] = cell
+	return success
+
+func order_cohort(index: int, order: String) -> bool:
+	if return_state["active"] and order == "north" and not cooling_ready():
+		status_text = "Cooling route unavailable. Choose the manual route; disabled equipment needs two repairs."
+		queue_redraw()
+		return false
+	return issue_civilian_order(index,order)
+
+func try_breaker(confirm: bool = false) -> bool:
+	if return_state["active"]: return repair_return_machine()
+	return operate_origin_breaker(confirm)

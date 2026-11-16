@@ -184,6 +184,9 @@ func order_cohort(index: int, order: String) -> bool:
 
 func try_breaker(confirm: bool = false) -> bool:
 	if not return_state["active"]: return super.try_breaker(confirm)
+	return repair_return_machine()
+
+func repair_return_machine() -> bool:
 	if ended or return_state["source"] != "disabled" or return_state["repair"] == 2:
 		status_text = "Repairs apply only to the retained disabled machine, once per step."
 	elif not soldier_can_act(active_soldier) or soldiers[active_soldier]["ap"] < 1:

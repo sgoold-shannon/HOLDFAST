@@ -145,3 +145,5 @@ Main-scene save/load now calls persistence and migration directly, retaining exi
 Machine turns and protocol commands now use explicit main-scene orchestration, preserving once-per-phase activation, recovery/finalization ordering and peaceful return-map restrictions.
 
 Attack, damage, rescue and extraction now use explicit main-scene orchestration. `tests/test_actions.gd` checks lethal blast finalization, carrier costs/links and rescue record integrity. The foundation refactor remains in progress.
+
+Movement, civilian orders and breaker/return-repair actions now use explicit main-scene orchestration. Checks preserve carrying behavior, order limits, confirmation costs and cooling-route eligibility.

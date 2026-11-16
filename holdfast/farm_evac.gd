@@ -67,6 +67,9 @@ func civilian_waypoint(order: String) -> Vector2i:
 	return NORTH_WAYPOINT if order == "north" else SOUTH_WAYPOINT
 
 func order_cohort(index: int, order: String) -> bool:
+	return issue_civilian_order(index,order)
+
+func issue_civilian_order(index: int, order: String) -> bool:
 	close_pending = false
 	if ended or order_used or index < 0 or index >= 3 or cohorts[index]["status"] != "active" or not ["hold", "north", "south", "follow"].has(order):
 		status_text = "Order unavailable: one free group order per player phase."

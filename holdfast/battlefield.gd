@@ -372,6 +372,9 @@ func select_soldier(index: int) -> void:
 	rebuild_movement()
 
 func try_move(cell: Vector2i) -> bool:
+	return move_selected_soldier(cell)
+
+func move_selected_soldier(cell: Vector2i) -> bool:
 	var cost := move_cost(cell)
 	if cost == 0 or cost > soldiers[active_soldier]["ap"]:
 		status_text = "Cannot move there: blocked, occupied, or beyond remaining AP."

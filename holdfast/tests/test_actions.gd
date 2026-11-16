@@ -26,6 +26,10 @@ func run() -> void:
 	rescue.rescue_target = 0
 	expect(rescue.try_stabilize() and rescue.try_pickup(),"Treat and pick up MSG")
 	rescue.soldiers[1]["ap"] = 1
+	rescue.rebuild_movement()
+	expect(rescue.try_move(Vector2i(4,7)),"Carrier can move to an adjacent clear cell")
+	expect(rescue.soldiers[0]["cell"]==rescue.soldiers[1]["cell"] and rescue.soldiers[1]["ap"]==0,"Passenger follows the carrier and movement costs one AP")
+	rescue.soldiers[1]["ap"] = 1
 	rescue.soldiers[1]["cell"] = Vector2i(19,8)
 	rescue.soldiers[0]["cell"] = Vector2i(19,8)
 	expect(rescue.try_extract(),"Carried MSG extraction")
@@ -36,6 +40,27 @@ func run() -> void:
 	var recorded: Array = rescue.rescue_events.duplicate(true)
 	expect(not rescue.try_extract() and not rescue.try_stabilize() and not rescue.try_pickup(),"No active rescuer cannot repeat successful actions")
 	expect(rescue.rescue_events==recorded,"Rejected rescue actions create no records")
+	var orders = new_board("orders")
+	orders.select_soldier(0)
+	var ap: int = orders.soldiers[0]["ap"]
+	expect(orders.order_cohort(0,"follow") and orders.cohorts[0]["leader"]==0,"Follow binds the selected soldier")
+	expect(orders.soldiers[0]["ap"]==ap and not orders.order_cohort(1,"hold"),"Civilian order is free but limited to one each phase")
+	orders.soldiers[0]["cell"] = Vector2i(9,3)
+	orders.select_soldier(0)
+	expect(orders.try_breaker() and orders.soldiers[0]["ap"]==ap-1,"Opening breaker costs one AP")
+	expect(not orders.try_breaker() and orders.isolate_pending and orders.soldiers[0]["ap"]==ap-1,"Isolation preview spends no AP")
+	expect(orders.try_breaker(true) and orders.breaker_progress==2 and orders.soldiers[0]["ap"]==ap-2,"Confirmed isolation costs one AP")
+	orders.return_state["active"] = true
+	orders.return_state["source"] = "disabled"
+	orders.return_state["repair"] = 0
+	orders.order_used = false
+	expect(not orders.order_cohort(1,"north") and not orders.order_used,"Unavailable cooling route does not consume the order")
+	orders.soldiers[0]["cell"] = Vector2i(10,7)
+	orders.soldiers[0]["ap"] = 2
+	orders.select_soldier(0)
+	expect(orders.try_breaker() and orders.try_breaker() and orders.cooling_ready(),"Return breaker action performs both repair steps")
+	expect(orders.soldiers[0]["ap"]==0 and orders.order_cohort(1,"north"),"Two repairs cost two AP and unlock the cooling route")
+	orders.free()
 	blast.free()
 	rescue.free()
 	print("ACTION ORCHESTRATION FAILURES: ",failures)

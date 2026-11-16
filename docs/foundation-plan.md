@@ -247,6 +247,12 @@ The main scene now directly sequences machine firing, protocol betrayal and reco
 
 Ten committed suites and twelve regressions pass. The new main-scene action suite verifies a lethal multi-cell machine blast completes before results are saved, carrier extraction costs one AP and clears links, rescue events/knowledge are recorded once, and rejected repeat actions add no events. All 119 recorded states and six route outcomes match the preceding build. Gameplay predicates, movement, breaker/civilian commands and remaining compatibility-class dependencies still require consolidation before the controller milestone and final visual acceptance can close.
 
+## Completed: explicit movement, civilian orders and breaker control
+
+The main scene now directly coordinates movement with encounter closure and carried passengers, civilian orders with return-route eligibility, and origin breaker controls versus return repairs. Shared rule adapters retain earlier fixture entry points. The existing ordering of rejection, confirmation reset, AP spending, passenger movement and feedback is preserved.
+
+Ten committed suites and twelve regressions pass; all 119 recorded gameplay states and six outcomes match. Expanded main-scene action checks cover carrier movement/AP, free Follow orders and the per-phase limit, breaker opening/preview/confirmation costs, unavailable-route rejection without consuming an order, and two repair actions unlocking cooling. Gameplay predicates and the underlying compatibility-class dependency remain; removing those dependencies and final visual acceptance are still required before foundation completion.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
