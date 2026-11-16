@@ -1,7 +1,13 @@
 extends "res://tests/test_support.gd"
 const InputMapView = preload("res://presentation/tactical_input.gd")
+const ActorView = preload("res://presentation/actor_view.gd")
+const OverlayView = preload("res://presentation/tactical_overlay.gd")
 const BoardView = preload("res://presentation/board_view.gd")
 class RecordingCanvas extends RefCounted:
+	var polygons: Array = []
+	var arcs: Array = []
+	func draw_colored_polygon(points, color): polygons.append([points,color])
+	func draw_arc(center, radius, start, finish, count, color, width): arcs.append([center,radius,start,finish,count,color,width])
 	var rectangles: Array = []
 	var strings: Array = []
 	var lines: Array = []
@@ -48,6 +54,36 @@ func run() -> void:
 	expect(not board.sight_mode,"Mode button returns to movement")
 	press(board,KEY_ESCAPE)
 	expect(board.active_soldier==-1 and board.pinned_target==board.NONE,"Clear action retains behavior")
+
+	board.select_soldier(0)
+	before = board.encounter_snapshot()
+	for index in range(4):
+		var actor_canvas := RecordingCanvas.new()
+		ActorView.soldier(actor_canvas,board.font,Vector2(100,100),board.soldier_marker_snapshot(index))
+		expect(actor_canvas.strings[0][1]==board.soldiers[index]["mark"],"Soldier label preserved")
+		expect(actor_canvas.arcs.size()==(1 if index==0 else 0),"Selection ring only on active soldier")
+		expect(actor_canvas.polygons.size()==(1 if index in [0,3] else 0),"Distinct soldier shapes preserved")
+	var route: Array[Vector2i] = [Vector2i(3,6),Vector2i(4,6),Vector2i(5,6)]
+	var overlay: Dictionary = board.tactical_overlay_snapshot(route,board.NONE)
+	var route_canvas := RecordingCanvas.new()
+	OverlayView.render(route_canvas,board.board_projection,overlay)
+	expect(route_canvas.lines.size()==6,"Two route segments plus four cover edges")
+	expect(route_canvas.lines[0][0]==board.cell_to_local(route[0])+Vector2(18,18),"Route begins at cell center")
+	overlay["path"].clear()
+	overlay["cover"].clear()
+	expect(route.size()==3 and board.mission_definition().cover_edges.size()==4,"Overlay data detached")
+	expect(board.encounter_snapshot()==before,"Markers and route display cannot mutate gameplay")
+	board.sight_mode = true
+	var target := Vector2i(14,6)
+	var empty_path: Array[Vector2i] = []
+	overlay = board.tactical_overlay_snapshot(empty_path,target)
+	var aim_canvas := RecordingCanvas.new()
+	OverlayView.render(aim_canvas,board.board_projection,overlay)
+	expect(not overlay["aim"]["clear"] and not overlay["aim"]["blockers"].is_empty(),"Wall blocker supplied by tactical rules")
+	expect(aim_canvas.lines[0][2]==Color("f27b79"),"Blocked aim uses warning color")
+	expect(aim_canvas.rectangles.size()==overlay["aim"]["cells"].size()+overlay["aim"]["blockers"].size()+1,"Aim cells, blockers and target outline drawn")
+	overlay = board.tactical_overlay_snapshot(empty_path,Vector2i(-1,-1))
+	expect(overlay["aim"].is_empty(),"Out-of-bounds target has no aim overlay")
 	board.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

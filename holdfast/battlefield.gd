@@ -2,6 +2,8 @@ extends Node2D
 ## HOLDFAST A6. Public cell coordinates follow GDD v3.1 section 26 (one-based).
 const SandboxMission = preload("res://missions/tactical_sandbox.tres")
 const MissionObjectives = preload("res://systems/mission_objectives.gd")
+const ActorView = preload("res://presentation/actor_view.gd")
+const OverlayView = preload("res://presentation/tactical_overlay.gd")
 const BoardView = preload("res://presentation/board_view.gd")
 const TacticalInput = preload("res://presentation/tactical_input.gd")
 const GridProjection = preload("res://presentation/grid_projection.gd")
@@ -432,17 +434,7 @@ func soldier_color(index: int) -> Color:
 	return [Color("e9c66a"),Color("8ce0c1"),Color("8fb9ff"),Color("d7a2ed")][index % 4]
 
 func draw_soldier_marker(index: int, center: Vector2) -> void:
-	var color := soldier_color(index) if soldiers[index]["hp"] > 0 else Color("b36b6b")
-	draw_rect(Rect2(center-Vector2(12,10),Vector2(24,24)),Color("14221d"))
-	match index % 4:
-		0: draw_colored_polygon(PackedVector2Array([center+Vector2(0,-15),center+Vector2(14,0),center+Vector2(0,15),center+Vector2(-14,0)]),color)
-		1:
-			draw_rect(Rect2(center-Vector2(5,14),Vector2(10,28)),color)
-			draw_rect(Rect2(center-Vector2(14,5),Vector2(28,10)),color)
-		2: draw_rect(Rect2(center-Vector2(13,13),Vector2(26,26)),color)
-		3: draw_colored_polygon(PackedVector2Array([center+Vector2(0,-15),center+Vector2(15,13),center+Vector2(-15,13)]),color)
-	draw_string(font,center+Vector2(-12,6),soldiers[index]["mark"],HORIZONTAL_ALIGNMENT_CENTER,24,17,Color("14221d"))
-	if index == active_soldier: draw_arc(center,17,0,TAU,24,Color.WHITE,2)
+	ActorView.soldier(self,font,center,soldier_marker_snapshot(index))
 
 func _draw() -> void:
 	draw_string(font, Vector2(40, 36), "HOLDFAST  /  A6 SAVE & REPLAY", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
@@ -451,25 +443,8 @@ func _draw() -> void:
 	var path: Array[Vector2i] = []
 	if not sight_mode:
 		path = path_to(hovered_cell)
-	for i in range(1, path.size()):
-		draw_line(cell_to_local(path[i - 1]) + Vector2(18, 18), cell_to_local(path[i]) + Vector2(18, 18), Color("f7cd6c"), 3.0)
 	var target := sight_target()
-	if sight_mode and active_soldier >= 0 and cell_is_in_bounds(target):
-		var source: Vector2i = soldiers[active_soldier]["cell"]
-		var info := sight_preview(source, target)
-		for cell in info["cells"]:
-			draw_rect(Rect2(cell_to_local(cell) + Vector2(2, 2), Vector2(32, 32)), Color(0.85, 0.8, 0.4, 0.18))
-		for cell in info["blockers"]:
-			draw_rect(Rect2(cell_to_local(cell) + Vector2(2, 2), Vector2(32, 32)), Color("f27b79"), false, 3)
-		draw_line(cell_to_local(source) + Vector2(18, 18), cell_to_local(target) + Vector2(18, 18), Color("9ae2c4") if info["clear"] else Color("f27b79"), 2)
-		draw_rect(Rect2(cell_to_local(target) + Vector2(4, 4), Vector2(28, 28)), Color("ffffff"), false, 2)
-	for cell in mission_definition().cover_edges:
-		var origin := cell_to_local(cell)
-		var edge_y: float = 2.0 if mission_definition().cover_edges[cell] == "north" else CELL_SIZE - 2.0
-		var color := Color("7ed4ee")
-		if sight_mode and active_soldier >= 0 and target == cell and sight_preview(soldiers[active_soldier]["cell"], target)["protected"]:
-			color = Color("f7cd6c")
-		draw_line(origin + Vector2(3, edge_y), origin + Vector2(33, edge_y), color, 5)
+	OverlayView.render(self,board_projection,tactical_overlay_snapshot(path,target))
 	draw_targets()
 	for i in range(soldiers.size()):
 		if not soldier_visible(i):
@@ -591,3 +566,16 @@ func run_tactical_command(command: String) -> void:
 			pinned_target = NONE
 			status_text = "Selection cleared. Click a soldier or inspect a ground cell."
 			rebuild_movement()
+
+func soldier_marker_snapshot(index: int) -> Dictionary:
+	return {"shape":index%4,"mark":soldiers[index]["mark"],"selected":index==active_soldier,
+		"color":soldier_color(index) if soldiers[index]["hp"] > 0 else Color("b36b6b")}
+
+func tactical_overlay_snapshot(path: Array[Vector2i], target: Vector2i) -> Dictionary:
+	var aim := {}
+	if sight_mode and active_soldier >= 0 and cell_is_in_bounds(target):
+		var source: Vector2i = soldiers[active_soldier]["cell"]
+		var info := sight_preview(source,target)
+		aim = {"source":source,"target":target,"cells":info["cells"].duplicate(),
+			"blockers":info["blockers"].duplicate(),"clear":info["clear"],"protected":info["protected"]}
+	return {"path":path.duplicate(),"aim":aim,"cover":mission_definition().cover_edges.duplicate(true),"cell_size":CELL_SIZE}

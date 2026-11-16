@@ -97,3 +97,5 @@ Terrain drawing now receives a detached display snapshot, and tactical keys/butt
 ```sh
 godot --headless --path holdfast --script res://tests/test_presentation.gd
 ```
+
+Soldier markers and movement/aim/cover overlays now also use separate renderers with detached display data. The presentation test covers their drawing output and isolation from game state. Mission-specific machine/civilian art and the larger panels remain to be extracted.

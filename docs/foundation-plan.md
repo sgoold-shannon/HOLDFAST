@@ -92,6 +92,14 @@ Validation: all 119 recorded gameplay snapshots match the prior version. Indepen
 godot --headless --path holdfast --script res://tests/test_presentation.gd
 ```
 
+## Completed: soldier markers and tactical overlays
+
+`presentation/actor_view.gd` renders soldier shapes, initials, health tint and the selection ring from marker data. `presentation/tactical_overlay.gd` renders movement paths, sight cells, wall blockers, aim lines and cover edges from detached display data. The controller still computes paths, sight and eligibility; the renderers cannot issue gameplay actions. Drawing order and square-tile dimensions are unchanged.
+
+The tactical HUD, mission-specific machine/civilian drawing, hazard overlays and opening/roster/debrief panels still remain in scene layers. This pass extracts soldier markers, not every actor in the encounter. It does not enable an isometric renderer.
+
+All five committed test suites pass, including new marker, route, blocked-aim, invalid-target and display-data isolation checks. All 119 recorded gameplay snapshots match the preceding build. These are automated checks; visual playtesting remains useful.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
