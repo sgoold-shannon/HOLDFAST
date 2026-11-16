@@ -123,9 +123,9 @@ func finalize_result() -> void:
 	for soldier in soldiers:
 		soldier["left_behind"] = not soldier["extracted"] and soldier["condition"] != "dead"
 	result_ready = true
-	var problem := SaveStore.save(encounter_snapshot(),report_path)
+	var problem := Persistence.write(encounter_snapshot(),report_path)
 	if problem == "" and not retry_required():
-		problem = SaveStore.save(encounter_snapshot(),completion_path)
+		problem = Persistence.write(encounter_snapshot(),completion_path)
 	result_feedback = "Mission record saved automatically." if problem == "" else problem
 	queue_redraw()
 

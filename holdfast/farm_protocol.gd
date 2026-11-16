@@ -152,7 +152,7 @@ func encounter_snapshot() -> Dictionary:
 func save_encounter(path: String = PROTOCOL_SLOT) -> bool:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT,OPTIONS_SLOT].has(path):
 		path = PROTOCOL_SLOT
-	var error := SaveStore.save(encounter_snapshot(),path)
+	var error := Persistence.write(encounter_snapshot(),path)
 	save_feedback = "B4 saved: acknowledgement, pause, authentication and route progress." if error == "" else error
 	queue_redraw()
 	return error == ""
@@ -160,32 +160,11 @@ func save_encounter(path: String = PROTOCOL_SLOT) -> bool:
 func load_encounter(path: String = PROTOCOL_SLOT) -> bool:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT,OPTIONS_SLOT].has(path):
 		path = PROTOCOL_SLOT
-	var result := SaveStore.load_snapshot(path)
-	if result["error"] != "" or result.get("snapshot",{}).get("layout") != "gdd3.1-b4-protocol":
-		save_feedback = result["error"] if result["error"] != "" else "Save belongs to another encounter."
+	var error := Persistence.restore(path,"gdd3.1-b4-protocol","Save belongs to another encounter.",apply_loaded_encounter)
+	if error != "":
+		save_feedback = error
 		queue_redraw()
 		return false
-	var snapshot: Dictionary = result["snapshot"]
-	protocol = snapshot["protocol"].duplicate(true)
-	breaker_progress = snapshot["breaker"]
-	isolate_pending = false
-	var evac: Dictionary = snapshot["evac"]
-	cohorts.assign(evac["cohorts"].duplicate(true))
-	cohort_selected = evac["selected"]
-	order_used = evac["order_used"]
-	ended = evac["ended"]
-	end_reason = evac["reason"]
-	last_civilian_phase = evac["last_phase"]
-	close_pending = false
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
 	save_feedback = "B4 loaded: protocol and machine route restored exactly."
 	queue_redraw()
 	return true
@@ -234,3 +213,25 @@ func protocol_panel_snapshot() -> Dictionary:
 		"disabled":disabled(),
 		"path":machine_path(enemies[0]["cell"],SKID_CELL,false).duplicate() if machine["collected_round"] == 0 and machine_present() and not disabled() and not protocol["diverted"] else [],
 		"deadline":deadline()}
+
+func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	protocol = snapshot["protocol"].duplicate(true)
+	breaker_progress = snapshot["breaker"]
+	isolate_pending = false
+	var evac: Dictionary = snapshot["evac"]
+	cohorts.assign(evac["cohorts"].duplicate(true))
+	cohort_selected = evac["selected"]
+	order_used = evac["order_used"]
+	ended = evac["ended"]
+	end_reason = evac["reason"]
+	last_civilian_phase = evac["last_phase"]
+	close_pending = false
+	machine = snapshot["machine"].duplicate(true)
+	var ui: Dictionary = snapshot["ui"]
+	active_soldier = ui["active"]
+	restore_combat(snapshot["combat"])
+	selected_cell = ui["selected"]
+	pinned_target = ui["pinned"]
+	sight_mode = ui["sight"]
+	status_text = ui["status"]
+	hovered_cell = NONE

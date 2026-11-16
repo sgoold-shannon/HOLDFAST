@@ -81,7 +81,7 @@ func load_encounter(path: String = TACTICAL_SLOT) -> bool:
 	return success
 
 func checkpoint() -> String:
-	return SaveStore.save(encounter_snapshot(),campaign_path)
+	return Persistence.write(encounter_snapshot(),campaign_path)
 
 func original_actor(index: int, original_name: String) -> bool:
 	return soldiers[index].get("actor_id","") == original_name.to_lower()
@@ -152,8 +152,8 @@ func finalize_result() -> void:
 
 func persist_campaign_result() -> void:
 	var problem := checkpoint()
-	if problem == "": problem = SaveStore.save(encounter_snapshot(),report_path)
-	if problem == "" and not retry_required(): problem = SaveStore.save(encounter_snapshot(),completion_path)
+	if problem == "": problem = Persistence.write(encounter_snapshot(),report_path)
+	if problem == "" and not retry_required(): problem = Persistence.write(encounter_snapshot(),completion_path)
 	result_feedback = "Mission and roster saved. G: review service records." if problem == "" else problem
 
 func persist_story_report() -> void:

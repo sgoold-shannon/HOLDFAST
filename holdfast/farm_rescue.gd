@@ -266,7 +266,7 @@ func encounter_snapshot() -> Dictionary:
 func save_encounter(path: String = RESCUE_SLOT) -> bool:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT,OPTIONS_SLOT,PROTOCOL_SLOT,RESCUE_SLOT].has(path):
 		path = rescue_slot()
-	var error := SaveStore.save(encounter_snapshot(),path)
+	var error := Persistence.write(encounter_snapshot(),path)
 	save_feedback = "B5 saved: wounds, timers, medical charges and carried casualties." if error == "" else error
 	queue_redraw()
 	return error == ""
@@ -274,35 +274,11 @@ func save_encounter(path: String = RESCUE_SLOT) -> bool:
 func load_encounter(path: String = RESCUE_SLOT) -> bool:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT,OPTIONS_SLOT,PROTOCOL_SLOT,RESCUE_SLOT].has(path):
 		path = rescue_slot()
-	var result := SaveStore.load_snapshot(path)
-	if result["error"] != "" or result.get("snapshot",{}).get("layout") != rescue_layout():
-		save_feedback = result["error"] if result["error"] != "" else "Save belongs to another encounter."
+	var error := Persistence.restore(path,rescue_layout(),"Save belongs to another encounter.",apply_loaded_encounter)
+	if error != "":
+		save_feedback = error
 		queue_redraw()
 		return false
-	var snapshot: Dictionary = result["snapshot"]
-	restore_extra_snapshot(snapshot)
-	rescue_target = snapshot["rescue_target"]
-	drop_mode = false
-	protocol = snapshot["protocol"].duplicate(true)
-	breaker_progress = snapshot["breaker"]
-	isolate_pending = false
-	var evac: Dictionary = snapshot["evac"]
-	cohorts.assign(evac["cohorts"].duplicate(true))
-	cohort_selected = evac["selected"]
-	order_used = evac["order_used"]
-	ended = evac["ended"]
-	end_reason = evac["reason"]
-	last_civilian_phase = evac["last_phase"]
-	close_pending = false
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
 	save_feedback = "B5 loaded: casualty timers and carrier links restored."
 	queue_redraw()
 	return true
@@ -362,3 +338,28 @@ func rescue_panel_snapshot() -> Dictionary:
 		"target":target,
 		"target_available":casualty_available(target),
 		"can_act":soldier_can_act(active_soldier)}
+
+func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	restore_extra_snapshot(snapshot)
+	rescue_target = snapshot["rescue_target"]
+	drop_mode = false
+	protocol = snapshot["protocol"].duplicate(true)
+	breaker_progress = snapshot["breaker"]
+	isolate_pending = false
+	var evac: Dictionary = snapshot["evac"]
+	cohorts.assign(evac["cohorts"].duplicate(true))
+	cohort_selected = evac["selected"]
+	order_used = evac["order_used"]
+	ended = evac["ended"]
+	end_reason = evac["reason"]
+	last_civilian_phase = evac["last_phase"]
+	close_pending = false
+	machine = snapshot["machine"].duplicate(true)
+	var ui: Dictionary = snapshot["ui"]
+	active_soldier = ui["active"]
+	restore_combat(snapshot["combat"])
+	selected_cell = ui["selected"]
+	pinned_target = ui["pinned"]
+	sight_mode = ui["sight"]
+	status_text = ui["status"]
+	hovered_cell = NONE

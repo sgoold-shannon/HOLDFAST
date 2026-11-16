@@ -111,7 +111,7 @@ func encounter_snapshot() -> Dictionary:
 func save_encounter(path: String = OPTIONS_SLOT) -> bool:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT].has(path):
 		path = OPTIONS_SLOT
-	var error := SaveStore.save(encounter_snapshot(),path)
+	var error := Persistence.write(encounter_snapshot(),path)
 	save_feedback = "B3 saved, including breaker progress and civilian bypasses." if error == "" else error
 	queue_redraw()
 	return error == ""
@@ -119,31 +119,11 @@ func save_encounter(path: String = OPTIONS_SLOT) -> bool:
 func load_encounter(path: String = OPTIONS_SLOT) -> bool:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT].has(path):
 		path = OPTIONS_SLOT
-	var result := SaveStore.load_snapshot(path)
-	if result["error"] != "" or result.get("snapshot",{}).get("layout") != "gdd3.1-b3-options":
-		save_feedback = result["error"] if result["error"] != "" else "Save belongs to an earlier encounter."
+	var error := Persistence.restore(path,"gdd3.1-b3-options","Save belongs to an earlier encounter.",apply_loaded_encounter)
+	if error != "":
+		save_feedback = error
 		queue_redraw()
 		return false
-	var snapshot: Dictionary = result["snapshot"]
-	breaker_progress = snapshot["breaker"]
-	isolate_pending = false
-	var evac: Dictionary = snapshot["evac"]
-	cohorts.assign(evac["cohorts"].duplicate(true))
-	cohort_selected = evac["selected"]
-	order_used = evac["order_used"]
-	ended = evac["ended"]
-	end_reason = evac["reason"]
-	last_civilian_phase = evac["last_phase"]
-	close_pending = false
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
 	save_feedback = "B3 loaded: breaker, gates, hazards and civilian routes restored."
 	queue_redraw()
 	return true
@@ -191,3 +171,24 @@ func breaker_panel_snapshot() -> Dictionary:
 		"victims":blast_victims(),
 		"outcome":machine_outcome(),
 		"deadline":deadline()}
+
+func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	breaker_progress = snapshot["breaker"]
+	isolate_pending = false
+	var evac: Dictionary = snapshot["evac"]
+	cohorts.assign(evac["cohorts"].duplicate(true))
+	cohort_selected = evac["selected"]
+	order_used = evac["order_used"]
+	ended = evac["ended"]
+	end_reason = evac["reason"]
+	last_civilian_phase = evac["last_phase"]
+	close_pending = false
+	machine = snapshot["machine"].duplicate(true)
+	var ui: Dictionary = snapshot["ui"]
+	active_soldier = ui["active"]
+	restore_combat(snapshot["combat"])
+	selected_cell = ui["selected"]
+	pinned_target = ui["pinned"]
+	sight_mode = ui["sight"]
+	status_text = ui["status"]
+	hovered_cell = NONE

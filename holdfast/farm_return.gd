@@ -43,12 +43,12 @@ func save_encounter(path: String = RETURN_SLOT) -> bool:
 
 func load_encounter(path: String = RETURN_SLOT) -> bool:
 	if [TACTICAL_SLOT,STORY_SLOT,RESULT_SLOT].has(path): path = RETURN_SLOT
-	var result := SaveStore.load_snapshot(path)
+	var result := Persistence.read(path)
 	if result["error"] == "" and result["snapshot"]["layout"] == "gdd3.1-c2-roster":
 		var upgraded: Dictionary = result["snapshot"].duplicate(true)
 		upgraded["layout"] = rescue_layout()
 		upgraded["return_map"] = ReturnRules.initial()
-		var problem := SaveStore.save(upgraded,campaign_path)
+		var problem := Persistence.write(upgraded,campaign_path)
 		if problem != "":
 			save_feedback = problem
 			return false

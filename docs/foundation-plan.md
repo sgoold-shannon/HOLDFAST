@@ -151,6 +151,18 @@ This removes inherited drawing traversal from the main scene, not gameplay inher
 
 Validation: five committed suites and C1/C2/D1/D2 regressions pass; all 119 recorded action snapshots match. Router tests cover all 16 roster/dialogue/results flag combinations and exact layer call order for the four screen types. No visual screenshot comparison was performed.
 
+## Completed: validated persistence boundary
+
+`systems/encounter_persistence.gd` provides encounter read/write and checked restoration. It reads through the existing binary store, checks the expected encounter layout, and only then invokes the explicit `apply_loaded_encounter` adapter. Base and B1–B5 loaders now separate validation from applying live state. Main-scene checkpoint/report writes and the existing C2-to-D1 migration use the same persistence entry points.
+
+The binary format, checksum/engine checks, validators, save paths, success/error text and state-application order remain unchanged. Missing, corrupt and wrong-encounter data never reaches the apply callback. Invalid state cannot overwrite a previously valid slot. Application callbacks are trusted adapters; this does not introduce rollback for arbitrary callback errors or atomic transactions across multiple files.
+
+Six committed suites plus B1–B6/C1/C2/D1/D2, clarity and staging-care regressions pass. The new persistence suite checks rejected-load isolation, exact round trips and preservation of existing save bytes. All 119 gameplay snapshots match. Campaign checkpoint ordering, migration policy and layered snapshot assembly remain in controller adapters and are the next persistence work.
+
+```sh
+godot --headless --path holdfast --script res://tests/test_persistence.gd
+```
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

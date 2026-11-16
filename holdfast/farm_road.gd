@@ -121,22 +121,11 @@ func save_encounter(path: String = FARM_SLOT) -> bool:
 
 func load_encounter(path: String = FARM_SLOT) -> bool:
 	path = FARM_SLOT if path == SaveStore.SAVE_PATH else path
-	var result := SaveStore.load_snapshot(path)
-	if result["error"] != "" or result.get("snapshot", {}).get("layout") != "gdd3.1-b1-farm-road":
-		save_feedback = result["error"] if result["error"] != "" else "This save belongs to Gate A. Open battlefield.tscn to load it."
+	var error := Persistence.restore(path,"gdd3.1-b1-farm-road","This save belongs to Gate A. Open battlefield.tscn to load it.",apply_loaded_encounter)
+	if error != "":
+		save_feedback = error
 		queue_redraw()
 		return false
-	var snapshot: Dictionary = result["snapshot"]
-	# Restore route state before movement is rebuilt by the base loader.
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
 	save_feedback = "Loaded Farm Road phase %d, including pending hazards." % phase
 	queue_redraw()
 	return true
@@ -197,3 +186,15 @@ func machine_status_snapshot() -> Dictionary:
 		"danger":danger_summary(),
 		"present":machine_present(),
 		"intent":enemy_intent()}
+
+func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	# Restore route state before movement is rebuilt by the base loader.
+	machine = snapshot["machine"].duplicate(true)
+	var ui: Dictionary = snapshot["ui"]
+	active_soldier = ui["active"]
+	restore_combat(snapshot["combat"])
+	selected_cell = ui["selected"]
+	pinned_target = ui["pinned"]
+	sight_mode = ui["sight"]
+	status_text = ui["status"]
+	hovered_cell = NONE

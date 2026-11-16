@@ -245,7 +245,7 @@ func encounter_snapshot() -> Dictionary:
 func save_encounter(path: String = EVAC_SLOT) -> bool:
 	if path == SaveStore.SAVE_PATH or path == FARM_SLOT:
 		path = EVAC_SLOT
-	var error := SaveStore.save(encounter_snapshot(), path)
+	var error := Persistence.write(encounter_snapshot(), path)
 	save_feedback = "B2 saved: orders, civilians, deadlines and hazards." if error == "" else error
 	queue_redraw()
 	return error == ""
@@ -253,29 +253,11 @@ func save_encounter(path: String = EVAC_SLOT) -> bool:
 func load_encounter(path: String = EVAC_SLOT) -> bool:
 	if path == SaveStore.SAVE_PATH or path == FARM_SLOT:
 		path = EVAC_SLOT
-	var result := SaveStore.load_snapshot(path)
-	if result["error"] != "" or result.get("snapshot", {}).get("layout") != "gdd3.1-b2-evac":
-		save_feedback = result["error"] if result["error"] != "" else "Save belongs to an earlier encounter."
+	var error := Persistence.restore(path,"gdd3.1-b2-evac","Save belongs to an earlier encounter.",apply_loaded_encounter)
+	if error != "":
+		save_feedback = error
 		queue_redraw()
 		return false
-	var snapshot: Dictionary = result["snapshot"]
-	var evac: Dictionary = snapshot["evac"]
-	cohorts.assign(evac["cohorts"].duplicate(true))
-	cohort_selected = evac["selected"]
-	order_used = evac["order_used"]
-	ended = evac["ended"]
-	end_reason = evac["reason"]
-	last_civilian_phase = evac["last_phase"]
-	close_pending = false
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
 	save_feedback = "B2 loaded: all civilian orders and closure state restored."
 	queue_redraw()
 	return true
@@ -384,3 +366,22 @@ func civilian_panel_snapshot() -> Dictionary:
 		"deadline":deadline(),
 		"remaining":remaining_civilians(),
 		"present":machine_present()}
+
+func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	var evac: Dictionary = snapshot["evac"]
+	cohorts.assign(evac["cohorts"].duplicate(true))
+	cohort_selected = evac["selected"]
+	order_used = evac["order_used"]
+	ended = evac["ended"]
+	end_reason = evac["reason"]
+	last_civilian_phase = evac["last_phase"]
+	close_pending = false
+	machine = snapshot["machine"].duplicate(true)
+	var ui: Dictionary = snapshot["ui"]
+	active_soldier = ui["active"]
+	restore_combat(snapshot["combat"])
+	selected_cell = ui["selected"]
+	pinned_target = ui["pinned"]
+	sight_mode = ui["sight"]
+	status_text = ui["status"]
+	hovered_cell = NONE

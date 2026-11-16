@@ -111,3 +111,9 @@ Civilian order/card controls, casualty actions and machine interaction buttons n
 Shared headers/navigation decorations and machine status/footer drawing now live in presentation helpers. Remaining foundation work is controller/view routing, save orchestration and reducing the inherited scene chain.
 
 The main encounter now uses an explicit view router rather than traversing the inherited drawing chain. Roster, dialogue, results and tactical screen priority and layer order are tested. Earlier gate scenes retain compatibility drawing adapters; gameplay inheritance and save orchestration remain to be simplified.
+
+Encounter save/load now passes through a shared validation boundary before restoring live state. Existing save formats and migration behavior are retained. Test rejected-load isolation and save round trips with:
+
+```sh
+godot --headless --path holdfast --script res://tests/test_persistence.gd
+```
