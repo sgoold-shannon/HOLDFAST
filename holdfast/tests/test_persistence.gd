@@ -3,6 +3,20 @@ const Persistence = preload("res://systems/encounter_persistence.gd")
 func run() -> void:
 	var board = new_board("persistence")
 	var before: Dictionary = board.encounter_snapshot()
+	for alias in [board.SaveStore.SAVE_PATH,board.FARM_SLOT,board.EVAC_SLOT,board.OPTIONS_SLOT,
+		board.PROTOCOL_SLOT,board.RESCUE_SLOT,board.RESULT_SLOT,board.STORY_SLOT,board.TACTICAL_SLOT]:
+		expect(board.encounter_slot(alias)==board.RETURN_SLOT,"Legacy slot alias maps to active encounter")
+	expect(board.encounter_slot(test_path("custom.save"))==test_path("custom.save"),"Custom save path remains unchanged")
+	var campaign_slot: String = board.campaign_path
+	board.campaign_path = test_path("absent-directory/checkpoint.save")
+	var partial_path := test_path("partial-success.save")
+	expect(board.save_encounter(partial_path),"Requested save success remains true when checkpoint fails")
+	expect(Persistence.read(partial_path)["snapshot"]==before,"Requested slot survives checkpoint failure")
+	expect(board.save_feedback!="C2 saved: deployment, roster, service history and current actions.","Checkpoint failure is shown in feedback")
+	board.campaign_path = campaign_slot
+	expect(not board.save_encounter(test_path("absent-directory/request.save")),"Requested-slot failure returns false")
+	expect(not FileAccess.file_exists(campaign_slot),"Requested-slot failure does not attempt checkpoint")
+
 	var path := test_path("valid.save")
 	expect(Persistence.write(before,path)=="","Existing format writes successfully")
 	var applied := []
@@ -145,6 +159,21 @@ func run() -> void:
 	completion_order.clear()
 	expect(completion.finalize(result,dispositions,close,report),"Earlier result gate needs no campaign callbacks")
 	expect(completion_order==["close","report"],"Earlier gate writes only its report")
+	var legacy_snapshot := before.duplicate(true)
+	legacy_snapshot["layout"] = "gdd3.1-c2-roster"
+	legacy_snapshot.erase("return_map")
+	var legacy_path := test_path("legacy-c2.save")
+	expect(Persistence.write(legacy_snapshot,legacy_path)=="","Legacy campaign fixture is valid")
+	var legacy_bytes := FileAccess.get_file_as_bytes(legacy_path)
+	board.campaign_path = test_path("upgraded-campaign.save")
+	expect(board.load_encounter(legacy_path),"Main entry point upgrades and loads older campaign")
+	expect(board.encounter_snapshot()==before,"Migration retains campaign data and initializes return state")
+	expect(Persistence.read(board.campaign_path)["snapshot"]==before,"Upgraded campaign is persisted in the current slot")
+	expect(FileAccess.get_file_as_bytes(legacy_path)==legacy_bytes,"Migration leaves legacy source untouched")
+	board.campaign_path = test_path("absent-directory/upgrade.save")
+	board.result_feedback = "unchanged"
+	expect(not board.load_encounter(legacy_path),"Failed migration write stops loading")
+	expect(board.encounter_snapshot()==before and board.result_feedback=="unchanged","Migration failure preserves encounter and existing result feedback")
 	sandbox.free()
 	board.free()
 	print("PERSISTENCE BOUNDARY FAILURES: ",failures)

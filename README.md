@@ -139,3 +139,5 @@ The main scene now dispatches input through an explicit priority router, preserv
 Mission completion now has an explicit sequence for closure, dispositions, reports and campaign history, with repeated-call protection. Main-scene post-turn completion hooks also bypass inherited orchestration. Other gameplay and startup adapters still need composition.
 
 Main-scene startup now follows an explicit initialization sequence and restores saved progress only after roster and return-map setup. Startup checks cover fresh-state parity, automatic resume, disabled resume and corrupt saves (`tests/test_startup.gd`).
+
+Main-scene save/load now calls persistence and migration directly, retaining existing slots, campaign checkpoints and error behavior. Regression checks include older campaign upgrades and failed writes.

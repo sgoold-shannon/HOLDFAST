@@ -227,6 +227,14 @@ Return configuration and report paths are established before automatic campaign 
 
 Gameplay action composition, save/load entry-point consolidation and final adapter cleanup/visual acceptance remain outstanding. Startup adapters are still defined in the compatibility classes; explicit orchestration is a step toward removing that dependency, not completion of the composed-controller milestone.
 
+## Completed: explicit main-scene save/load entry points
+
+The main scene now calls the existing persistence and migration services directly rather than traversing inherited save/load overrides. Slot aliases, custom paths, migration-before-lower-alias resolution, validated restoration, campaign checkpoints and success/error feedback retain their previous behavior. Earlier fixtures retain their existing entry points.
+
+Requested-slot success still returns true if the subsequent campaign checkpoint fails, with the checkpoint error shown in feedback; a failed requested write does not attempt that checkpoint. Migration failure leaves live state and result feedback untouched. This preserves the existing contract and does not add multi-file atomicity.
+
+Nine committed suites and twelve regressions pass, with all 119 recorded states and six outcomes unchanged. Direct main-scene tests cover aliases, custom paths, write/checkpoint failures, C2 upgrade and persisted D1 data, unchanged legacy source bytes and migration-write failure. Gameplay actions and remaining compatibility dependencies still need composition before foundation acceptance.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

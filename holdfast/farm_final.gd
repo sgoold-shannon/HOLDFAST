@@ -116,3 +116,41 @@ func after_turn_resolution() -> void:
 	check_recovery_failure()
 	finalize_result()
 	update_closure_knowledge()
+
+func encounter_slot(path: String) -> String:
+	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT,OPTIONS_SLOT,PROTOCOL_SLOT,RESCUE_SLOT,
+		RESULT_SLOT,STORY_SLOT,TACTICAL_SLOT].has(path):
+		return rescue_slot()
+	return path
+
+func save_encounter(path: String = RETURN_SLOT) -> bool:
+	var error := Persistence.write(encounter_snapshot(),encounter_slot(path))
+	if error != "":
+		save_feedback = error
+		queue_redraw()
+		return false
+	# Preserve the existing contract: the requested slot succeeded even if its
+	# separate campaign checkpoint fails. Feedback reports the checkpoint error.
+	var problem := checkpoint()
+	save_feedback = "C2 saved: deployment, roster, service history and current actions." if problem == "" else problem
+	queue_redraw()
+	return true
+
+func load_encounter(path: String = RETURN_SLOT) -> bool:
+	# Migration historically examines the requested source before lower-gate
+	# aliases are mapped. Keep that order for existing legacy saves.
+	if [TACTICAL_SLOT,STORY_SLOT,RESULT_SLOT].has(path): path = RETURN_SLOT
+	var migration := SaveMigration.return_slot(path,campaign_path,rescue_layout())
+	if migration["error"] != "":
+		save_feedback = migration["error"]
+		return false
+	var error := Persistence.restore(encounter_slot(migration["path"]),rescue_layout(),
+		"Save belongs to another encounter.",apply_loaded_encounter)
+	if error != "":
+		save_feedback = error
+		result_feedback = error
+		queue_redraw()
+		return false
+	save_feedback = "D1 restored: original outcome, repair progress and one-use cooling record."
+	queue_redraw()
+	return true
