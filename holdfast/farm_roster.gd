@@ -61,6 +61,9 @@ func encounter_snapshot() -> Dictionary:
 
 func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	super.restore_extra_snapshot(snapshot)
+	restore_campaign_state(snapshot)
+
+func restore_campaign_state(snapshot: Dictionary) -> void:
 	campaign = snapshot["campaign"].duplicate(true)
 	roster_open = false
 	roster_index = 0

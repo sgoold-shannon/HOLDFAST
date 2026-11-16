@@ -238,8 +238,7 @@ func try_extract() -> bool:
 func encounter_snapshot() -> Dictionary:
 	var result := super.encounter_snapshot()
 	result["layout"] = "gdd3.1-b2-evac"
-	result["evac"] = {"cohorts": cohorts.duplicate(true), "selected": cohort_selected,
-		"order_used": order_used, "ended": ended, "reason": end_reason, "last_phase": last_civilian_phase}
+	result["evac"] = evac_state_snapshot()
 	return result
 
 func save_encounter(path: String = EVAC_SLOT) -> bool:
@@ -385,3 +384,7 @@ func apply_loaded_encounter(snapshot: Dictionary) -> void:
 	sight_mode = ui["sight"]
 	status_text = ui["status"]
 	hovered_cell = NONE
+
+func evac_state_snapshot() -> Dictionary:
+	return {"cohorts": cohorts.duplicate(true), "selected": cohort_selected,
+		"order_used": order_used, "ended": ended, "reason": end_reason, "last_phase": last_civilian_phase}

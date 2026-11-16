@@ -78,6 +78,26 @@ func run() -> void:
 	migrated.clear()
 	prepared = migration.return_slot("old","campaign","gdd3.1-d1-return",unreadable,migration_writer)
 	expect(prepared["path"]=="old" and migrated.is_empty(),"Unreadable source is left to normal loader without writing")
+
+	var snapshot_service = preload("res://systems/encounter_snapshot.gd")
+	var detached: Dictionary = board.encounter_snapshot()
+	var live_before: Dictionary = board.encounter_snapshot()
+	detached["combat"]["soldiers"][0]["hp"] = 0
+	detached["machine"]["stage"] = 99
+	detached["evac"]["cohorts"].clear()
+	detached["campaign"]["members"].clear()
+	detached["story"]["knowledge"].clear()
+	detached["return_map"].clear()
+	expect(board.encounter_snapshot()==live_before,"Assembled snapshot owns its nested state")
+	var restore_order := []
+	var adapters := {}
+	for section in ["return_map","results","story","campaign"]:
+		adapters[section] = func(data: Dictionary):
+			expect(data==live_before,"Restoration receives the validated snapshot")
+			restore_order.append(section)
+	snapshot_service.restore_extras(live_before,adapters)
+	expect(restore_order==["return_map","results","story","campaign"],"Extra-state restore order is explicit")
+	expect(live_before.keys()==["layout","combat","ui","machine","evac","breaker","protocol","rescue_target","rescue_events","story","campaign","return_map"],"Existing serialized field order preserved")
 	sandbox.free()
 	board.free()
 	print("PERSISTENCE BOUNDARY FAILURES: ",failures)

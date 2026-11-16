@@ -1,4 +1,5 @@
 extends "res://farm_return.gd"
+const Snapshot = preload("res://systems/encounter_snapshot.gd")
 const ViewRouter = preload("res://presentation/view_router.gd")
 const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
@@ -65,3 +66,14 @@ func ending_overlay_snapshot() -> Dictionary:
 		"DEPLOY_RECT":DEPLOY_RECT,
 		"ENDING_RECT":ENDING_RECT,
 		"available":ending_available()}
+
+func encounter_snapshot() -> Dictionary:
+	return Snapshot.assemble(rescue_layout(),{
+		"combat":combat_snapshot(),"ui":ui_state_snapshot(),"machine":machine,
+		"evac":evac_state_snapshot(),"breaker":breaker_progress,"protocol":protocol,
+		"rescue_target":rescue_target,"rescue_events":rescue_events,"story":story_state_snapshot(),
+		"campaign":campaign,"return_map":return_state})
+
+func restore_extra_snapshot(snapshot: Dictionary) -> void:
+	Snapshot.restore_extras(snapshot,{"return_map":restore_return_state,"results":restore_results_state,
+		"story":restore_story_state,"campaign":restore_campaign_state})

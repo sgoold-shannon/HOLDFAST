@@ -171,6 +171,14 @@ godot --headless --path holdfast --script res://tests/test_persistence.gd
 
 All six committed suites and B6/C1/C2/D1/D2/staging-care regressions pass. New injected-failure tests cover every checkpoint write position, completion-slot exclusion, snapshot capture order, migration source isolation and write failure. The existing D1 regression exercises actual legacy migration. All 119 recorded action snapshots match.
 
+## Completed: composed main snapshot and extra-state restoration
+
+The main scene now assembles its complete snapshot through `systems/encounter_snapshot.gd`, without traversing inherited `encounter_snapshot` methods. Section order matches the existing binary snapshot exactly. Shared UI, evacuation and story capture methods keep compatibility scenes aligned; all nested mutable values are copied into the result.
+
+Main-scene extra-state restoration now explicitly invokes return-map, results, story and campaign adapters in the original order. Earlier gate scenes retain their inherited compatibility entry points, using the same named state adapters. Common tactical restoration and live state ownership still remain in scene controllers; this is not the removal of gameplay inheritance.
+
+All six committed suites and B1–B6/C1/C2/D1/D2, clarity and staging-care checks pass. New checks verify nested snapshot isolation, serialized key order and extra-state application order. All 119 recorded binary snapshot hashes and route outcomes match the preceding build. Save format and migration policy are unchanged.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

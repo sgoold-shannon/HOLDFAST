@@ -32,6 +32,9 @@ func encounter_snapshot() -> Dictionary:
 	return snapshot
 
 func restore_extra_snapshot(snapshot: Dictionary) -> void:
+	restore_results_state(snapshot)
+
+func restore_results_state(snapshot: Dictionary) -> void:
 	rescue_events = snapshot["rescue_events"].duplicate(true)
 	pending_finish_reason = ""
 	result_ready = snapshot["evac"]["ended"]

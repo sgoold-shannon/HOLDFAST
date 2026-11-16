@@ -35,8 +35,11 @@ func encounter_snapshot() -> Dictionary:
 	return snapshot
 
 func restore_extra_snapshot(snapshot: Dictionary) -> void:
-	return_state = snapshot["return_map"].duplicate(true)
+	restore_return_state(snapshot)
 	super.restore_extra_snapshot(snapshot)
+
+func restore_return_state(snapshot: Dictionary) -> void:
+	return_state = snapshot["return_map"].duplicate(true)
 
 func save_encounter(path: String = RETURN_SLOT) -> bool:
 	if [TACTICAL_SLOT,STORY_SLOT,RESULT_SLOT].has(path): path = RETURN_SLOT

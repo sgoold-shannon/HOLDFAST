@@ -66,8 +66,7 @@ func _ready() -> void:
 
 func encounter_snapshot() -> Dictionary:
 	return {"layout": "gdd3.1-a5-10x7", "combat": combat_snapshot(),
-		"ui": {"active": active_soldier, "selected": selected_cell,
-			"pinned": pinned_target, "sight": sight_mode, "status": status_text}}
+		"ui": ui_state_snapshot()}
 
 func save_encounter(path: String = SaveStore.SAVE_PATH) -> bool:
 	# Actions and enemy turns resolve synchronously: inputs only run at stable boundaries.
@@ -558,3 +557,6 @@ func apply_loaded_encounter(snapshot: Dictionary) -> void:
 	sight_mode = ui["sight"]
 	status_text = ui["status"]
 	hovered_cell = NONE
+
+func ui_state_snapshot() -> Dictionary:
+	return {"active":active_soldier,"selected":selected_cell,"pinned":pinned_target,"sight":sight_mode,"status":status_text}

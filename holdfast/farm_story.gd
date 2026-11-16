@@ -30,14 +30,14 @@ func rescue_slot() -> String: return STORY_SLOT
 
 func encounter_snapshot() -> Dictionary:
 	var snapshot := super.encounter_snapshot()
-	snapshot["story"] = {"opening_done":opening_done,"opening_step":opening_step,
-		"preference":preference,"debrief_response":debrief_response,
-		"closure_warning":closure_warning,"powered_gate_groups":powered_gate_groups.duplicate(),
-		"knowledge":knowledge.duplicate(true)}
+	snapshot["story"] = story_state_snapshot()
 	return snapshot
 
 func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	super.restore_extra_snapshot(snapshot)
+	restore_story_state(snapshot)
+
+func restore_story_state(snapshot: Dictionary) -> void:
 	var story: Dictionary = snapshot["story"]
 	opening_done = story["opening_done"]
 	opening_step = story["opening_step"]
@@ -308,3 +308,9 @@ func story_panel_snapshot() -> Dictionary:
 		"save_feedback":save_feedback,
 		"pages":current_pages().duplicate(true),
 		"options":scene_options().duplicate()}
+
+func story_state_snapshot() -> Dictionary:
+	return {"opening_done":opening_done,"opening_step":opening_step,
+		"preference":preference,"debrief_response":debrief_response,
+		"closure_warning":closure_warning,"powered_gate_groups":powered_gate_groups.duplicate(),
+		"knowledge":knowledge.duplicate(true)}
