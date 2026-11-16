@@ -1,4 +1,5 @@
 extends Node2D
+const TacticalPanel = preload("res://presentation/tactical_panel.gd")
 ## HOLDFAST A6. Public cell coordinates follow GDD v3.1 section 26 (one-based).
 const SandboxMission = preload("res://missions/tactical_sandbox.tres")
 const MissionObjectives = preload("res://systems/mission_objectives.gd")
@@ -451,71 +452,7 @@ func _draw() -> void:
 			continue
 		var center := cell_to_local(soldiers[i]["cell"]) + Vector2(18, 18)
 		draw_soldier_marker(i, center)
-	var selection := "Select a soldier  |  Green 1 = move  |  Blue 2 = dash"
-	if active_soldier >= 0:
-		var soldier: Dictionary = soldiers[active_soldier]
-		selection = "%s / %s | HP %d/8 | AP %d | Ammo %d | Attack %s | (%d,%d)" % [soldier["name"], soldier_role(active_soldier), soldier["hp"], soldier["ap"], soldier["ammo"], "used" if soldier["attacked"] else "ready", soldier["cell"].x, soldier["cell"].y]
-	elif selected_cell != NONE:
-		selection = "Selected ground (%d, %d)" % [selected_cell.x, selected_cell.y]
-	draw_string(font, Vector2(40, 711), selection, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("f7cd6c"))
-	var preview := "Green 1: up to 4 squares / 1 AP. Blue 2: 5–8 squares / 2 AP."
-	if path.size() > 0:
-		preview = "Destination (%d, %d): %d orthogonal steps / %d AP" % [hovered_cell.x, hovered_cell.y, path.size() - 1, move_cost(hovered_cell)]
-	if sight_mode:
-		preview = "SIGHT PREVIEW: select a soldier, then hover a target cell."
-		if active_soldier >= 0 and cell_is_in_bounds(target):
-			var info := sight_preview(soldiers[active_soldier]["cell"], target)
-			preview = "%s (%d, %d) | Distance %d | %s" % ["Pinned" if pinned_target != NONE else "Target", target.x, target.y, info["distance"], "Sight clear" if info["clear"] else "WALL BLOCKS SHOT"]
-			var detail := "Aim 75 | Range %+d | Cover %+d | " % [info["range_modifier"], info["cover_modifier"]]
-			detail += "%d%% preview" % info["chance"] if info["can_fire"] else "Cannot fire"
-			draw_string(font, Vector2(40, 790), detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("f7cd6c"))
-			var explanation := "No cover edge at target."
-			if info["edge"] != "none":
-				explanation = "%s edge: %s" % [info["edge"].capitalize(), "protected (-25)" if info["protected"] else "flanked (0)"]
-			if not info["blockers"].is_empty():
-				explanation += " Wall touched: %s." % str(info["blockers"][0])
-			elif info["distance"] > 12:
-				explanation += " Beyond rifle range (12)."
-			elif info["distance"] == 0:
-				explanation += " Choose a different cell."
-			draw_string(font, Vector2(40, 820), explanation, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
-	draw_string(font, Vector2(40, 730), preview, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
-	draw_string(font, Vector2(40, 758), status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("d6ded9"))
-	for index in range(soldiers.size()):
-		var soldier: Dictionary = soldiers[index]
-		var origin := Vector2(40+index*196,837)
-		draw_rect(Rect2(origin,Vector2(190,38)),Color("22312a"))
-		draw_rect(Rect2(origin,Vector2(4,38)),soldier_color(index))
-		var health := "OUT" if soldier["extracted"] else "%d HP" % soldier["hp"]
-		if soldier.get("condition") == "critical": health = "CRIT %d" % soldier["bleed"]
-		elif soldier.get("condition") == "stable": health = "STABLE"
-		elif soldier.get("condition") == "dead": health = "DEAD"
-		if soldier.get("actor_id", "original") == "": health = "UNFILLED"
-		draw_string(font,origin+Vector2(10,16),"%s · %s" % [soldier["name"],health],HORIZONTAL_ALIGNMENT_LEFT,180,14,soldier_color(index))
-		draw_string(font,origin+Vector2(10,32),soldier_role(index)+" · %d AP" % soldier["ap"],HORIZONTAL_ALIGNMENT_LEFT,180,12,Color.WHITE)
-	draw_rect(NEXT_PHASE_RECT, Color("315b50"))
-	draw_string(font, NEXT_PHASE_RECT.position + Vector2(0, 26), "End round %d [N]" % phase, HORIZONTAL_ALIGNMENT_CENTER, NEXT_PHASE_RECT.size.x, 16, Color.WHITE)
-
-	draw_rect(MODE_RECT, Color("304965") if sight_mode else Color("315b50"))
-	draw_string(font, MODE_RECT.position + Vector2(0, 26), "Aim / sight [T]" if sight_mode else "Movement [T]", HORIZONTAL_ALIGNMENT_CENTER, MODE_RECT.size.x, 16, Color.WHITE)
-	draw_string(font, Vector2(40, 979), enemy_intent(), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("7ed4ee"))
-
-	var reason := fire_block_reason()
-	draw_rect(FIRE_RECT, Color("713f36") if reason == "" else Color("343b38"))
-	draw_string(font, FIRE_RECT.position + Vector2(0, 26), "Fire [F] · 1 AP", HORIZONTAL_ALIGNMENT_CENTER, FIRE_RECT.size.x, 16, Color.WHITE)
-	draw_rect(RELOAD_RECT, Color("315b50"))
-	draw_string(font, RELOAD_RECT.position + Vector2(0, 26), "Reload [R] · 1 AP", HORIZONTAL_ALIGNMENT_CENTER, RELOAD_RECT.size.x, 16, Color.WHITE)
-	draw_string(font, Vector2(40, 947), reason if reason != "" else "Ready: fire costs 1 AP + 1 round. Hit deals 4 damage.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("f7cd6c"))
-	draw_string(font, Vector2(40, 1005), enemy_message, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("aebbb6"))
-
-	draw_rect(EXTRACT_RECT, Color("315b50"))
-	draw_string(font, EXTRACT_RECT.position + Vector2(0, 26), "Extract [E] · 1 AP", HORIZONTAL_ALIGNMENT_CENTER, EXTRACT_RECT.size.x, 16, Color.WHITE)
-	draw_rect(SAVE_RECT, Color("304965"))
-	draw_string(font, SAVE_RECT.position + Vector2(0, 26), "Save [K]", HORIZONTAL_ALIGNMENT_CENTER, SAVE_RECT.size.x, 16, Color.WHITE)
-	draw_rect(LOAD_RECT, Color("304965"))
-	draw_string(font, LOAD_RECT.position + Vector2(0, 26), "Load [L]", HORIZONTAL_ALIGNMENT_CENTER, LOAD_RECT.size.x, 16, Color.WHITE)
-	draw_string(font, Vector2(635, 1046), "One save slot", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("aebbb6"))
-	draw_string(font, Vector2(40, 1090), save_feedback, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("aebbb6"))
+	TacticalPanel.render(self,font,board_projection,tactical_panel_snapshot(path,target))
 
 func draw_targets() -> void:
 	for dummy in enemies:
@@ -579,3 +516,38 @@ func tactical_overlay_snapshot(path: Array[Vector2i], target: Vector2i) -> Dicti
 		aim = {"source":source,"target":target,"cells":info["cells"].duplicate(),
 			"blockers":info["blockers"].duplicate(),"clear":info["clear"],"protected":info["protected"]}
 	return {"path":path.duplicate(),"aim":aim,"cover":mission_definition().cover_edges.duplicate(true),"cell_size":CELL_SIZE}
+
+func tactical_panel_snapshot(path: Array[Vector2i], target: Vector2i) -> Dictionary:
+	var roles := []
+	var colors := []
+	for index in range(soldiers.size()):
+		roles.append(soldier_role(index))
+		colors.append(soldier_color(index))
+	return {
+		"active_soldier":active_soldier,
+		"selected_cell":selected_cell,
+		"NONE":NONE,
+		"hovered_cell":hovered_cell,
+		"sight_mode":sight_mode,
+		"pinned_target":pinned_target,
+		"status_text":status_text,
+		"phase":phase,
+		"enemy_message":enemy_message,
+		"save_feedback":save_feedback,
+		"NEXT_PHASE_RECT":NEXT_PHASE_RECT,
+		"MODE_RECT":MODE_RECT,
+		"FIRE_RECT":FIRE_RECT,
+		"RELOAD_RECT":RELOAD_RECT,
+		"EXTRACT_RECT":EXTRACT_RECT,
+		"SAVE_RECT":SAVE_RECT,
+		"LOAD_RECT":LOAD_RECT,
+		"soldiers":soldiers.duplicate(true),
+		"path":path.duplicate(),
+		"target":target,
+		"cost":move_cost(hovered_cell),
+		"valid_target":cell_is_in_bounds(target),
+		"info":sight_preview(soldiers[active_soldier]["cell"],target).duplicate(true) if active_soldier >= 0 and cell_is_in_bounds(target) else {},
+		"roles":roles,
+		"colors":colors,
+		"intent":enemy_intent(),
+		"fire_reason":fire_block_reason()}

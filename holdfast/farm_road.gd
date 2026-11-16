@@ -1,4 +1,5 @@
 extends "res://battlefield.gd"
+const MachineView = preload("res://presentation/machine_view.gd")
 ## B1: route, occupied-cell impacts, and fixed-cell defensive shots.
 const MachineActivation = preload("res://systems/machine_activation.gd")
 var machine_behavior: MachineActivation
@@ -150,38 +151,7 @@ func _draw() -> void:
 	# Scene-specific title and footer replace the Gate A test labels.
 	draw_rect(Rect2(35, 10, 790, 34), Color("0e1412"))
 	draw_string(font, Vector2(40, 36), "HOLDFAST / B1 FARM ROAD MACHINE", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
-	var track := machine_track()
-	for i in range(1, track.size()):
-		draw_line(cell_to_local(track[i-1]) + Vector2(18, 27), cell_to_local(track[i]) + Vector2(18, 27), Color("d1b48a"), 2)
-	for fixture in FIXTURES:
-		draw_rect(Rect2(cell_to_local(fixture) + Vector2(4, 4), Vector2(28, 28)), Color("66727b"))
-		draw_string(font, cell_to_local(fixture) + Vector2(0, 24), "B" if fixture == mission_definition().breaker_cell else "C", HORIZONTAL_ALIGNMENT_CENTER, 36, 16, Color.WHITE)
-	if skid_visible():
-		draw_string(font, cell_to_local(mission_definition().skid_cell) + Vector2(0, 12), "SKID", HORIZONTAL_ALIGNMENT_CENTER, 36, 10, Color("e8d9b4"))
-	var next := next_machine_cell()
-	if next != NONE:
-		draw_rect(Rect2(cell_to_local(next) + Vector2(2, 2), Vector2(32, 32)), Color(1.0,0.5,0.1,0.3))
-		draw_rect(Rect2(cell_to_local(next) + Vector2(2, 2), Vector2(32, 32)), Color("ffb75a"), false, 3)
-		draw_string(font, cell_to_local(next) + Vector2(0, 12), "IMPACT", HORIZONTAL_ALIGNMENT_CENTER, 36, 9, Color("ffb75a"))
-	var shot: Vector2i = machine["pending_shot"]
-	if shot != NONE:
-		draw_rect(Rect2(cell_to_local(shot) + Vector2(3, 3), Vector2(30, 30)), Color(1.0,0.1,0.2,0.4))
-		draw_rect(Rect2(cell_to_local(shot) + Vector2(3, 3), Vector2(30, 30)), Color("ff6d78"), false, 3)
-		draw_line(cell_to_local(shot) + Vector2(4, 4), cell_to_local(shot) + Vector2(32, 32), Color("ff6d78"), 2)
-		draw_line(cell_to_local(shot) + Vector2(32, 4), cell_to_local(shot) + Vector2(4, 32), Color("ff6d78"), 2)
-	if machine_present():
-		var center := cell_to_local(enemies[0]["cell"]) + Vector2(18, 18)
-		var hull := PackedVector2Array([center+Vector2(-14,-8),center+Vector2(-8,-14),center+Vector2(8,-14),center+Vector2(14,-8),center+Vector2(14,10),center+Vector2(-14,10)])
-		draw_colored_polygon(hull, Color("b34b42") if machine["hostile"] else Color("607e8f"))
-		draw_rect(Rect2(center+Vector2(-17,-9),Vector2(5,23)),Color("192329"))
-		draw_rect(Rect2(center+Vector2(12,-9),Vector2(5,23)),Color("192329"))
-		draw_line(center,center+Vector2(-17,0),Color("f7cd6c"),5)
-		draw_circle(center,5,Color("ff6d78") if machine["hostile"] else Color("8be6de"))
-		draw_rect(Rect2(center+Vector2(-16,15),Vector2(32,3)),Color("17202a"))
-		draw_rect(Rect2(center+Vector2(-16,15),Vector2(32.0*enemies[0]["hp"]/16.0,3)),Color("f7cd6c"))
-		if sight_mode and pinned_target == enemies[0]["cell"]:
-			for direction in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-				draw_rect(Rect2(cell_to_local(enemies[0]["cell"] + direction) + Vector2(1, 1), Vector2(34, 34)), Color("e6a2c7"), false, 1)
+	MachineView.render(self,font,board_projection,machine_view_snapshot())
 	draw_rect(Rect2(35,672,800,20),Color("0e1412"))
 	draw_string(font,Vector2(40,687),danger_summary(),HORIZONTAL_ALIGNMENT_LEFT,790,14,Color("ffb75a"))
 	var forecast := "none (machine stopped)"
@@ -211,3 +181,18 @@ func machine_path(_start: Vector2i, _goal: Vector2i, _avoid_people: bool) -> Arr
 
 func mission_definition() -> Resource:
 	return mission_override if mission_override != null else FarmRoadMission
+
+func machine_view_snapshot() -> Dictionary:
+	return {
+		"track":machine_track().duplicate(),
+		"FIXTURES":FIXTURES.duplicate(),
+		"breaker":mission_definition().breaker_cell,
+		"skid":mission_definition().skid_cell,
+		"skid_visible":skid_visible(),
+		"next":next_machine_cell(),
+		"present":machine_present(),
+		"machine":machine.duplicate(true),
+		"enemies":enemies.duplicate(true),
+		"sight_mode":sight_mode,
+		"pinned_target":pinned_target,
+		"NONE":NONE}

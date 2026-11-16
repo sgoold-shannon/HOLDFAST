@@ -4,6 +4,8 @@ const ActorView = preload("res://presentation/actor_view.gd")
 const OverlayView = preload("res://presentation/tactical_overlay.gd")
 const BoardView = preload("res://presentation/board_view.gd")
 class RecordingCanvas extends RefCounted:
+	var circles: Array = []
+	func draw_circle(center, radius, color): circles.append([center,radius,color])
 	var polygons: Array = []
 	var arcs: Array = []
 	func draw_colored_polygon(points, color): polygons.append([points,color])
@@ -84,6 +86,49 @@ func run() -> void:
 	expect(aim_canvas.rectangles.size()==overlay["aim"]["cells"].size()+overlay["aim"]["blockers"].size()+1,"Aim cells, blockers and target outline drawn")
 	overlay = board.tactical_overlay_snapshot(empty_path,Vector2i(-1,-1))
 	expect(overlay["aim"].is_empty(),"Out-of-bounds target has no aim overlay")
+
 	board.free()
+	var farm = new_board("panels")
+	var unchanged: Dictionary = farm.encounter_snapshot()
+	var renderer_cases := [
+		[preload("res://presentation/machine_view.gd"),farm.machine_view_snapshot()],
+		[preload("res://presentation/civilian_view.gd"),farm.civilian_view_snapshot()],
+		[preload("res://presentation/civilian_panel.gd"),farm.civilian_panel_snapshot()],
+		[preload("res://presentation/tactical_panel.gd"),farm.tactical_panel_snapshot(empty_path,farm.NONE)]]
+	for entry in renderer_cases:
+		var recorder := RecordingCanvas.new()
+		var data: Dictionary = entry[1]
+		var copy := data.duplicate(true)
+		entry[0].render(recorder,farm.font,farm.board_projection,data)
+		expect(data==copy,"Renderer preserves its snapshot")
+		expect(not recorder.strings.is_empty(),"Renderer produces labels")
+	expect(farm.encounter_snapshot()==unchanged,"All four renderers leave encounter unchanged")
+	var machine_data: Dictionary = farm.machine_view_snapshot()
+	machine_data["machine"]["hostile"] = true
+	machine_data["machine"]["pending_shot"] = Vector2i(4,4)
+	var hostile := RecordingCanvas.new()
+	preload("res://presentation/machine_view.gd").render(hostile,farm.font,farm.board_projection,machine_data)
+	expect(hostile.polygons[0][1]==Color("b34b42"),"Hostile machine hull is red")
+	expect(not farm.machine["hostile"],"Machine display is detached")
+	machine_data["present"] = false
+	var absent := RecordingCanvas.new()
+	preload("res://presentation/machine_view.gd").render(absent,farm.font,farm.board_projection,machine_data)
+	expect(absent.polygons.is_empty(),"Absent machine has no hull")
+	var civilian_data: Dictionary = farm.civilian_view_snapshot()
+	civilian_data["cohorts"][0]["status"] = "extracted"
+	var civilians := RecordingCanvas.new()
+	preload("res://presentation/civilian_view.gd").render(civilians,farm.font,farm.board_projection,civilian_data)
+	var labels_found := []
+	for label in civilians.strings: labels_found.append(label[1])
+	expect(not labels_found.has("A") and labels_found.has("B") and labels_found.has("C"),"Only active civilian badges are drawn")
+	expect(farm.cohorts[0]["status"]=="active","Civilian display is detached")
+	var panel_data: Dictionary = farm.civilian_panel_snapshot()
+	panel_data["close_pending"] = true
+	var close_canvas := RecordingCanvas.new()
+	preload("res://presentation/civilian_panel.gd").render(close_canvas,farm.font,farm.board_projection,panel_data)
+	labels_found.clear()
+	for label in close_canvas.strings: labels_found.append(label[1])
+	expect(labels_found.has("Confirm: leave them behind") and labels_found.has("Cancel"),"Early-close confirmation controls preserved")
+	farm.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

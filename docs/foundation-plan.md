@@ -100,6 +100,21 @@ The tactical HUD, mission-specific machine/civilian drawing, hazard overlays and
 
 All five committed test suites pass, including new marker, route, blocked-aim, invalid-target and display-data isolation checks. All 119 recorded gameplay snapshots match the preceding build. These are automated checks; visual playtesting remains useful.
 
+## Completed: machine/civilian views and gameplay panels
+
+Four additional renderers receive detached snapshots rather than the encounter controller:
+
+- `machine_view.gd`: track, fixtures, skid, impact/charged-shot warnings, machine hull/HP and pinned blast outline.
+- `civilian_view.gd`: route waypoints, selected-group path, civilian exit and active group badges.
+- `tactical_panel.gd`: selection/aim details, squad cards, tactical action buttons and save feedback.
+- `civilian_panel.gd`: group cards, order controls, waiting reasons, evacuation totals, closure confirmation and deadline footer.
+
+Pathfinding, danger forecasts, eligibility, order labels and combat previews are still computed by the controller through the same existing policies. Input hit regions and modal priority are unchanged. Drawing remains in the same order, with square-tile dimensions and the existing interface layout.
+
+All five committed suites pass. Added renderer checks cover snapshot isolation, hostile/absent machine states, extracted-group visibility and early-close confirmation/cancel labels. All 119 recorded action snapshots match the preceding build. No visual screenshot comparison was performed.
+
+Opening, roster, debrief, rescue/interaction panels and mission-specific overlays remain in the inherited scene adapters. Their extraction and the removal of layered drawing are still outstanding; the final isometric renderer is not enabled.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

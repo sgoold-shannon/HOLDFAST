@@ -1,4 +1,6 @@
 extends "res://farm_road.gd"
+const CivilianPanel = preload("res://presentation/civilian_panel.gd")
+const CivilianView = preload("res://presentation/civilian_view.gd")
 ## B2: one cohort order each player phase, safe routes, closure after civilian phase.
 const TurnResolution = preload("res://systems/turn_resolution.gd")
 const EvacuationRules = preload("res://systems/civilian_evacuation.gd")
@@ -337,78 +339,52 @@ func _draw() -> void:
 	draw_string(font, Vector2(40, 36), "HOLDFAST / B2 CIVILIAN EVACUATION", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
 	draw_rect(Rect2(35,46,800,28),Color("0e1412"))
 	draw_string(font,Vector2(40,66),"RESCUE A + B + C: choose a group → Move to EXIT → End turn [N].",HORIZONTAL_ALIGNMENT_LEFT,790,18,Color("8be6de"))
-	for waypoint in [civilian_waypoint("north"), civilian_waypoint("south")]:
-		draw_rect(Rect2(cell_to_local(waypoint) + Vector2(2,2), Vector2(32,32)), Color("aabbe5"), false, 2)
-	var selected_group: Dictionary = cohorts[cohort_selected]
-	if selected_group["status"] == "active":
-		var route := route_preview(selected_group, selected_group["order"])
-		var previous: Vector2i = selected_group["cell"]
-		for step in route:
-			var a := cell_to_local(previous) + Vector2(18,18)
-			var b := cell_to_local(step) + Vector2(18,18)
-			draw_line(a, b, Color("8be6de"), 3)
-			draw_circle(b, 3, Color("8be6de"))
-			previous = step
-	var exit_origin := cell_to_local(civilian_exit())
-	draw_rect(Rect2(exit_origin, Vector2(36,36)), Color("178675"))
-	draw_rect(Rect2(exit_origin, Vector2(36,36)), Color.WHITE, false, 3)
-	draw_string(font, exit_origin + Vector2(0,24), "EXIT", HORIZONTAL_ALIGNMENT_CENTER, 36, 13, Color.WHITE)
-	for index in range(3):
-		var cohort: Dictionary = cohorts[index]
-		if cohort["status"] == "active":
-			if index == cohort_selected:
-				draw_rect(Rect2(cell_to_local(cohort["cell"])+Vector2(1,1),Vector2(34,34)), Color("8be6de"), false, 3)
-
-			# Corner badges remain distinguishable when groups share a cell or soldier.
-			var offset := Vector2(2 + index * 11, 2)
-			draw_rect(Rect2(cell_to_local(cohort["cell"]) + offset, Vector2(11,14)), Color("aabbe5"))
-			draw_string(font, cell_to_local(cohort["cell"]) + offset + Vector2(0,11), cohort["id"], HORIZONTAL_ALIGNMENT_CENTER, 11, 11, Color("17202a"))
-	draw_rect(Rect2(858, 86, 280, 1028), Color("18231f"))
-	draw_string(font, Vector2(876, 115), "CIVILIANS / 12 PEOPLE", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color.WHITE)
-	for index in range(3):
-		var cohort: Dictionary = cohorts[index]
-		var origin := Vector2(876, 132 + index * 112)
-		draw_rect(Rect2(origin, Vector2(248,100)), Color("34473e") if index == cohort_selected else Color("22312a"))
-		draw_string(font, origin + Vector2(10,24), "%s | 4 people | HP %d/4" % [cohort["id"],cohort["hp"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-		draw_string(font, origin + Vector2(10,47), cohort_order_label(cohort) if cohort["status"] == "active" else cohort["status"].to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("aabbe5"))
-		draw_string(font, origin + Vector2(10,70), (follow_wait_reason(cohort) if cohort["status"] == "active" and cohort["order"] == "follow" and follow_path(cohort).is_empty() else ("Waiting for your order" if cohort["order"] == "hold" and cohort["status"] == "active" else cohort["note"])), HORIZONTAL_ALIGNMENT_LEFT, 230, 13, Color("d4dfd8"))
-		draw_string(font, origin + Vector2(10,90), "%s through %s" % [cohort["manifest"][0],cohort["manifest"][3]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("9eaea4"))
-	draw_string(font, Vector2(876, 493), "Operation ended" if ended else ("Order spent this phase" if order_used else "One free group order available"), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("f7cd6c"))
-	var leader_name: String = soldiers[active_soldier]["name"] if soldier_can_act(active_soldier) else "select soldier"
-	for item in [[EXIT_ORDER_RECT,"Move to EXIT"],[FOLLOW_RECT,"Follow: " + leader_name],[HOLD_RECT,"Hold position"],[NORTH_RECT,route_label("north")],[SOUTH_RECT,route_label("south")]]:
-		draw_rect(item[0], Color("343b38") if order_used or ended or (item[0] == NORTH_RECT and not route_available("north")) else Color("304965"))
-		draw_string(font, item[0].position + Vector2(0,26), item[1], HORIZONTAL_ALIGNMENT_CENTER, item[0].size.x, 16, Color.WHITE)
-	for line in [[714,"1. Select group A, B or C."],[736,"2. Move to EXIT, or follow a soldier."],[758,"3. End turn [N]: groups move 3 cells."],[780,"Orders persist. Order B/C next turns."]]:
-		draw_string(font,Vector2(876,line[0]),line[1],HORIZONTAL_ALIGNMENT_LEFT,248,13,Color("d4dfd8"))
-	draw_string(font,Vector2(876,807),"EXIT %s: automatic rescue" % civilian_exit(),HORIZONTAL_ALIGNMENT_LEFT,248,14,Color("8be6de"))
-	draw_string(font,Vector2(876,831),"Road closes after round %d" % deadline(),HORIZONTAL_ALIGNMENT_LEFT,248,16,Color("f7cd6c"))
-	var evacuated := 0
-	var stranded := 0
-	for cohort in cohorts:
-		evacuated += 4 if cohort["status"] == "extracted" else 0
-		stranded += 4 if cohort["status"] == "stranded" else 0
-	draw_string(font, Vector2(876, 855), "Evacuated %d | Stranded %d" % [evacuated,stranded], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
-	var left := 0
-	for soldier in soldiers:
-		left += 0 if soldier["extracted"] else 1
-	if ended:
-		draw_string(font, Vector2(876, 878), end_reason, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("f7cd6c"))
-		draw_string(font, Vector2(876, 900), "Squad: %d out / %d left behind" % [4-left,left], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-		draw_string(font, Vector2(876, 922), "MSG missing: retry required" if not soldiers[0]["extracted"] else "MSG extracted", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("f7cd6c"))
-	elif close_pending:
-		draw_string(font, Vector2(876, 878), "Close operation now?", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("f7cd6c"))
-		draw_string(font, Vector2(876, 900), "%d civilians will be stranded." % remaining_civilians(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-		draw_string(font, Vector2(876, 922), "%d soldiers will be left behind." % left, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-	draw_rect(CLOSE_RECT, Color("713f36") if close_pending else Color("343b38"))
-	draw_string(font, CLOSE_RECT.position + Vector2(0,28), "Confirm: leave them behind" if close_pending else "Close operation early", HORIZONTAL_ALIGNMENT_CENTER,248,15,Color.WHITE)
-	if close_pending:
-		draw_rect(CANCEL_RECT,Color("304965"))
-		draw_string(font,CANCEL_RECT.position+Vector2(0,24),"Cancel",HORIZONTAL_ALIGNMENT_CENTER,248,15,Color.WHITE)
-	draw_rect(Rect2(35,1070,800,47),Color("0e1412"))
-	var forecast := str(machine["collected_round"] + 1) if machine["collected_round"] > 0 else (str(phase + 4 - machine["stage"]) if machine_present() else "none")
-	draw_string(font,Vector2(40,1088),"External closure 10 | Machine forecast %s | Current deadline %d" % [forecast,deadline()],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
-	draw_string(font,Vector2(40,1109),save_feedback,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
+	CivilianView.render(self,font,board_projection,civilian_view_snapshot())
+	CivilianPanel.render(self,font,board_projection,civilian_panel_snapshot())
 
 func mission_completion_reason(round_number: int) -> String:
 	return MissionObjectives.completion_reason(mission_definition(),round_number,
 		machine["collected_round"],all_extracted(),remaining_civilians())
+
+func civilian_view_snapshot() -> Dictionary:
+	return {
+		"cohorts":cohorts.duplicate(true),
+		"cohort_selected":cohort_selected,
+		"waypoints":[civilian_waypoint("north"),civilian_waypoint("south")],
+		"route":route_preview(cohorts[cohort_selected],cohorts[cohort_selected]["order"]).duplicate() if cohorts[cohort_selected]["status"] == "active" else [],
+		"exit":civilian_exit()}
+
+func civilian_panel_snapshot() -> Dictionary:
+	var labels := []
+	var notes := []
+	for cohort in cohorts:
+		labels.append(cohort_order_label(cohort))
+		notes.append(follow_wait_reason(cohort) if cohort["status"] == "active" and cohort["order"] == "follow" and follow_path(cohort).is_empty() else ("Waiting for your order" if cohort["order"] == "hold" and cohort["status"] == "active" else cohort["note"]))
+	return {
+		"cohort_selected":cohort_selected,
+		"ended":ended,
+		"order_used":order_used,
+		"close_pending":close_pending,
+		"end_reason":end_reason,
+		"phase":phase,
+		"save_feedback":save_feedback,
+		"EXIT_ORDER_RECT":EXIT_ORDER_RECT,
+		"FOLLOW_RECT":FOLLOW_RECT,
+		"HOLD_RECT":HOLD_RECT,
+		"NORTH_RECT":NORTH_RECT,
+		"SOUTH_RECT":SOUTH_RECT,
+		"CLOSE_RECT":CLOSE_RECT,
+		"CANCEL_RECT":CANCEL_RECT,
+		"cohorts":cohorts.duplicate(true),
+		"soldiers":soldiers.duplicate(true),
+		"machine":machine.duplicate(true),
+		"labels":labels,
+		"notes":notes,
+		"leader":soldiers[active_soldier]["name"] if soldier_can_act(active_soldier) else "select soldier",
+		"north_label":route_label("north"),
+		"south_label":route_label("south"),
+		"north_available":route_available("north"),
+		"exit":civilian_exit(),
+		"deadline":deadline(),
+		"remaining":remaining_civilians(),
+		"present":machine_present()}
