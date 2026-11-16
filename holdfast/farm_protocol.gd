@@ -109,26 +109,7 @@ func machine_path(start: Vector2i, goal: Vector2i, avoid_people: bool) -> Array[
 			frontier.append(next)
 	return result
 
-func next_machine_cell() -> Vector2i:
-	if not machine_present() or disabled():
-		return NONE
-	if protocol["diverted"]:
-		if protocol["component_collected"]:
-			return NONE
-		var index: int = protocol["waypoint"]
-		while index < DIVERSION.size() and enemies[0]["cell"] == DIVERSION[index]:
-			index += 1
-		if index >= DIVERSION.size():
-			return NONE
-		var path := machine_path(enemies[0]["cell"],DIVERSION[index],true)
-		return path[0] if not path.is_empty() else NONE
-	if protocol["betrayed"] and machine["collected_round"] == 0:
-		var path := machine_path(enemies[0]["cell"],SKID_CELL,false)
-		return path[0] if not path.is_empty() else NONE
-	return super.next_machine_cell()
 
-func enemy_target() -> int:
-	return -1 if protocol["diverted"] else super.enemy_target()
 
 func enemy_intent() -> String:
 	if not machine_present() or disabled():
@@ -141,72 +122,6 @@ func enemy_intent() -> String:
 		return "HOSTILE: safe route canceled; replanning toward skid (7,8)."
 	return super.enemy_intent()
 
-func resolve_enemy_turn() -> void:
-	if last_enemy_phase == phase:
-		return
-	if not machine_present() or disabled():
-		super.resolve_enemy_turn()
-		return
-	if protocol["pause_pending"]:
-		last_enemy_phase = phase
-		protocol["pause_pending"] = false
-		protocol["pause_used"] = true
-		enemy_message = "ACK-01 honored: one entire activation skipped."
-		return
-	if protocol["diverted"]:
-		last_enemy_phase = phase
-		machine["pending_shot"] = NONE
-		if protocol["component_collected"]:
-			machine["departed"] = true
-			enemy_message = "Diverted machine departed. Skid and feeder intact."
-			return
-		var moved := 0
-		for step in range(2):
-			while protocol["waypoint"] < 3 and enemies[0]["cell"] == DIVERSION[protocol["waypoint"]]:
-				protocol["waypoint"] += 1
-			if protocol["waypoint"] == 3:
-				protocol["component_collected"] = true
-				break
-			var path := machine_path(enemies[0]["cell"],DIVERSION[protocol["waypoint"]],true)
-			if path.is_empty():
-				break
-			enemies[0]["cell"] = path[0]
-			moved += 1
-			while protocol["waypoint"] < 3 and enemies[0]["cell"] == DIVERSION[protocol["waypoint"]]:
-				protocol["waypoint"] += 1
-			if protocol["waypoint"] == 3:
-				protocol["component_collected"] = true
-				break
-		enemy_message = "Alternate component collected at (14,8). Departure next activation." if protocol["component_collected"] else ("Safe route held: people block the chosen waypoint." if moved == 0 else "Safe route: moved %d/2 squares; people avoided." % moved)
-		rebuild_movement()
-		return
-	if protocol["betrayed"] and machine["collected_round"] == 0:
-		last_enemy_phase = phase
-		var shot: Vector2i = machine["pending_shot"]
-		machine["pending_shot"] = NONE
-		var report := ""
-		if shot != NONE:
-			report = "Shot %s: %s. " % [shot,damage_cell(shot,4)]
-		if enemies[0]["cell"] == SKID_CELL:
-			machine["collected_round"] = phase
-			machine["stage"] = 4
-			report += "Skid collected; feeder severed."
-		else:
-			var next := next_machine_cell()
-			if next == NONE:
-				report += "Recovery route blocked."
-			elif cell_occupied_by_people(next):
-				report += "Impact at %s: %s; held." % [next,damage_cell(next,4)]
-			else:
-				enemies[0]["cell"] = next
-				report += "Recovery moved to %s." % next
-		var index := enemy_target()
-		if index >= 0:
-			machine["pending_shot"] = soldiers[index]["cell"]
-		enemy_message = report
-		rebuild_movement()
-		return
-	super.resolve_enemy_turn()
 
 func try_fire() -> bool:
 	var was_diverted: bool = protocol["diverted"]
@@ -310,3 +225,10 @@ func _draw() -> void:
 		forecast = str(phase + path.size() + 1 + (1 if protocol["pause_pending"] else 0))
 	draw_rect(Rect2(35,1070,800,25),Color("0e1412"))
 	draw_string(font,Vector2(40,1088),"Machine closure forecast %s | External 10 | Deadline %d | %s" % [forecast,deadline(),"Safe route canceled" if protocol["betrayed"] else ("Diverted" if protocol["diverted"] else "Default recovery")],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
+
+func machine_plan() -> Dictionary:
+	var plan := super.machine_plan()
+	plan["protocol"] = protocol
+	plan["skid"] = SKID_CELL
+	plan["diversion"] = DIVERSION
+	return plan

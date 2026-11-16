@@ -1,5 +1,7 @@
 extends "res://battlefield.gd"
 ## B1: route, occupied-cell impacts, and fixed-cell defensive shots.
+const MachineActivation = preload("res://systems/machine_activation.gd")
+var machine_behavior: MachineActivation
 const FARM_SLOT := "user://holdfast_b1.save"
 const ROUTE: Array[Vector2i] = [Vector2i(10, 8), Vector2i(9, 8), Vector2i(8, 8), Vector2i(7, 8), Vector2i(7, 8), Vector2i(8, 8), Vector2i(9, 8), Vector2i(10, 8), Vector2i(11, 8)]
 const FIXTURES: Array[Vector2i] = [Vector2i(9, 4), Vector2i(11, 12)]
@@ -7,6 +9,7 @@ var machine := {"stage": 0, "hostile": false, "pending_shot": Vector2i(-1, -1), 
 
 func _ready() -> void:
 	super._ready()
+	machine_behavior = MachineActivation.new(next_machine_cell, enemy_target, cell_occupied_by_people, damage_cell, machine_path)
 	enemies.assign([{"cell": Vector2i(10, 8), "hp": 16, "ammo": 4}])
 	status_text = "Farm Road: neutral machine. Orange = next movement; red = charged shot."
 	enemy_message = "Observed route: (10,8) → (9,8) → (8,8) → skid (7,8), then return."
@@ -16,9 +19,7 @@ func machine_present() -> bool:
 	return enemies[0]["hp"] > 0 and not machine["departed"]
 
 func next_machine_cell() -> Vector2i:
-	if not machine_present() or machine["stage"] == 3 or machine["stage"] == 8:
-		return NONE
-	return ROUTE[machine["stage"] + 1]
+	return machine_behavior.next_cell(machine,enemies[0],ROUTE,machine_plan())
 
 func target_at(cell: Vector2i) -> int:
 	return 0 if machine_present() and enemies[0]["cell"] == cell else -1
@@ -27,18 +28,7 @@ func is_walkable(cell: Vector2i) -> bool:
 	return not FIXTURES.has(cell) and super.is_walkable(cell)
 
 func enemy_target() -> int:
-	if not machine_present() or not machine["hostile"]:
-		return -1
-	var best := -1
-	var nearest := 999
-	for index in range(soldiers.size()):
-		if not soldier_can_act(index):
-			continue
-		var info := Rules.preview(enemies[0]["cell"], soldiers[index]["cell"])
-		if info["clear"] and info["distance"] <= 6 and info["distance"] < nearest:
-			nearest = info["distance"]
-			best = index
-	return best
+	return machine_behavior.nearest_target(machine,enemies[0],soldiers,machine_plan(),soldier_can_act,Rules.preview)
 
 func enemy_intent() -> String:
 	if machine["departed"]:
@@ -76,36 +66,11 @@ func damage_cell(cell: Vector2i, amount: int) -> String:
 	return "%s -%d HP" % [soldiers[index]["name"], amount]
 
 func resolve_enemy_turn() -> void:
-	if last_enemy_phase == phase:
-		return
+	if last_enemy_phase == phase: return
 	last_enemy_phase = phase
-	if not machine_present():
-		enemy_message = "Machine: no activation."
-		return
-	var events: Array[String] = []
-	var shot: Vector2i = machine["pending_shot"]
-	machine["pending_shot"] = NONE
-	if shot != NONE:
-		events.append("Shot (%d,%d): %s" % [shot.x, shot.y, damage_cell(shot, 4)])
-	var next := next_machine_cell()
-	if machine["stage"] == 3:
-		machine["collected_round"] = phase
-		machine["stage"] = 4
-		events.append("Skid collected; feeder severed")
-	elif machine["stage"] == 8:
-		machine["departed"] = true
-		events.append("Machine departed")
-	elif cell_occupied_by_people(next):
-		events.append("Impact (%d,%d): %s; held" % [next.x, next.y, damage_cell(next, 4)])
-	else:
-		enemies[0]["cell"] = next
-		machine["stage"] += 1
-		events.append("Moved (%d,%d)" % [next.x, next.y])
-	var index := enemy_target()
-	if index >= 0:
-		machine["pending_shot"] = soldiers[index]["cell"]
-	enemy_message = "; ".join(events)
-	rebuild_movement()
+	var outcome := machine_behavior.activate(machine,enemies[0],soldiers,phase,machine_plan())
+	enemy_message = outcome["message"]
+	if outcome["rebuild"]: rebuild_movement()
 
 func fire_block_reason() -> String:
 	var reason := super.fire_block_reason()
@@ -233,3 +198,10 @@ func _draw() -> void:
 
 func draw_targets() -> void:
 	pass # Farm Road draws its machine after hazard overlays.
+
+func machine_plan() -> Dictionary:
+	return {"collect_stage":3,"depart_stage":ROUTE.size()-1,"disabled":false,
+		"protocol":{},"skid":NONE,"diversion":[]}
+
+func machine_path(_start: Vector2i, _goal: Vector2i, _avoid_people: bool) -> Array[Vector2i]:
+	return [] # Patrol-only gates do not request navigation; protocol supplies mission terrain.

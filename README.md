@@ -68,10 +68,16 @@ These checks validate rules and progression. Human playtesting is still needed t
 
 ## Foundation work
 
-The [foundation plan and decisions](docs/foundation-plan.md) track the gradual move away from gate-by-gate inheritance. Civilian pathfinding and movement now run in an independent component; the remaining encounter layers are still being separated. Overwatch is deferred to the first armed-enemy encounter after Gates A–D.
+The [foundation plan and decisions](docs/foundation-plan.md) track the gradual move away from gate-by-gate inheritance. Civilian movement, machine activation, and turn resolution now run in independent components; mission configuration and presentation are still being separated. Overwatch is deferred to the first armed-enemy encounter after Gates A–D.
 
 Test the civilian component independently of any mission scene:
 
 ```sh
 godot --headless --path holdfast --script res://tests/test_civilian_rules.gd
+```
+
+Test machine behavior and turn ordering without loading a mission scene:
+
+```sh
+godot --headless --path holdfast --script res://tests/test_machine_turns.gd
 ```

@@ -101,8 +101,8 @@ func try_fire() -> bool:
 	finalize_result()
 	return success
 
-func next_phase() -> void:
-	super.next_phase()
+func after_turn_resolution() -> void:
+	super.after_turn_resolution()
 	check_recovery_failure()
 	finalize_result()
 

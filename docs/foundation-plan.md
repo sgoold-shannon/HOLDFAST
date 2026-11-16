@@ -38,13 +38,36 @@ godot --headless --path holdfast --script res://tests/test_civilian_rules.gd
 godot --headless --path holdfast --script res://tests/test_follow_rescue.gd
 ```
 
+## Completed: machine activation and turn resolution
+
+`holdfast/systems/machine_activation.gd` now owns patrol activation, occupied-cell impacts, charged fixed-cell shots, nearest eligible target selection, next-cell prediction, disabling, one-time pause, diversion and betrayal recovery. It takes caller-owned state and a mission plan; terrain/pathfinding, occupancy and damage arrive through explicit callbacks. It returns an action message and whether movement previews need rebuilding. It does not advance rounds, finalize reports, draw, process input, or save.
+
+`farm_road.gd` retains the once-per-phase guard and delegates activation. Breaker and protocol layers now supply mission-plan fields rather than overriding activation or target selection. The peaceful return still supplies its explicit no-hostile-activation policy. Player weapon attacks and machine presentation remain outside this component.
+
+`holdfast/systems/turn_resolution.gd` makes the sequence explicit:
+
+1. Ignore gameplay resolution if the encounter is already ended.
+2. Run pre-machine casualty checks; halt if the MSG bleeds out.
+3. Clear pending early-close confirmation and resolve the machine action.
+4. If the action ended the encounter, skip civilian movement and AP reset.
+5. Move civilians, then evaluate the deadline before the complete-evacuation condition.
+6. Close the operation or begin the next player phase and refresh eligible AP/attack allowances.
+7. Run result/recovery/knowledge completion hooks, including on halted turns.
+
+The rescue, result and story layers now provide named before/after hooks instead of overriding `next_phase`. Damage can request completion during an activation, but the entire enclosing activation still resolves before final dispositions. Phase guards and save-state ownership remain in the controller; the components add no hidden persistent state.
+
+Validation: all 119 legal-action snapshot hashes and six route outcomes match the previous version. B1–B6, C1/C2, D1/D2, staging care and civilian guidance checks pass. The committed independent machine/turn test covers neutral versus hostile activation, fixed-cell damage after a target moves, target tie order and eligibility, pause/disable behavior, blocked and completed diversion, betrayal impacts and collection, destroyed/departed machines, deadline ordering, bleed-out and fatal-action halts, and finalization. Full Follow origin, return and wounded-leader runs also pass.
+
+```sh
+godot --headless --path holdfast --script res://tests/test_machine_turns.gd
+```
+
 ## Remaining sequence before a new mission
 
-1. Extract machine activation/intent and explicit turn resolution behind tested interfaces. Preserve the visible warning → player response opportunity → damage sequence.
-2. Separate mission layout and objective policies from the encounter controller. Origin and northbound return become data/configuration users of the same services.
-3. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
-4. Move save orchestration to a boundary that serializes the same checked state. Preserve old saves or provide an explicit tested migration before changing formats.
-5. Introduce a shallow encounter controller that composes the extracted services. Keep gate scenes as fixtures until parity checks pass, then retire redundant adapters deliberately.
+1. Separate mission layout and objective policies from the encounter controller. Origin and northbound return become data/configuration users of the same services.
+2. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
+3. Move save orchestration to a boundary that serializes the same checked state. Preserve old saves or provide an explicit tested migration before changing formats.
+4. Introduce a shallow encounter controller that composes the extracted services. Keep gate scenes as fixtures until parity checks pass, then retire redundant adapters deliberately.
 
 Each step should ship with equivalence and failure-path checks. File movement alone does not count as finishing the architecture work.
 

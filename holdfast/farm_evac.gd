@@ -1,5 +1,6 @@
 extends "res://farm_road.gd"
 ## B2: one cohort order each player phase, safe routes, closure after civilian phase.
+const TurnResolution = preload("res://systems/turn_resolution.gd")
 const EvacuationRules = preload("res://systems/civilian_evacuation.gd")
 var evacuation_rules: EvacuationRules
 const EVAC_SLOT := "user://holdfast_b2.save"
@@ -172,19 +173,30 @@ func request_close() -> bool:
 	return true
 
 func next_phase() -> void:
-	if ended:
-		return
+	TurnResolution.resolve(phase, {
+		"ended":func() -> bool: return ended,
+		"before_machine":before_turn_resolution,
+		"prepare_machine":prepare_machine_phase,
+		"machine":resolve_enemy_turn,
+		"civilians":resolve_civilian_phase,
+		"deadline":deadline,
+		"squad_out":all_extracted,
+		"remaining_civilians":remaining_civilians,
+		"finish":finish_operation,
+		"begin_player":begin_player_phase,
+		"after_turn":after_turn_resolution,
+	})
+
+func before_turn_resolution() -> bool:
+	return true
+
+func prepare_machine_phase() -> void:
 	close_pending = false
-	resolve_enemy_turn()
-	if ended:
-		return
-	resolve_civilian_phase()
-	if phase >= deadline():
-		finish_operation("Road closed")
-		return
-	if all_extracted() and remaining_civilians() == 0:
-		finish_operation("Evacuation resolved")
-		return
+
+func after_turn_resolution() -> void:
+	pass
+
+func begin_player_phase() -> void:
 	phase += 1
 	order_used = false
 	for index in range(soldiers.size()):

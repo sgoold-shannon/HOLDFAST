@@ -70,8 +70,8 @@ func on_civilian_step(cohort: Dictionary, cell: Vector2i) -> void:
 	if protocol["diverted"] and not disabled() and [Vector2i(11,7),Vector2i(11,10)].has(cell) and not powered_gate_groups.has(cohort["id"]):
 		powered_gate_groups.append(cohort["id"])
 
-func next_phase() -> void:
-	super.next_phase()
+func after_turn_resolution() -> void:
+	super.after_turn_resolution()
 	if not ended and phase >= 3: closure_warning = true
 
 func protocol_action(action: String) -> bool:

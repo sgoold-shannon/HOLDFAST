@@ -90,9 +90,7 @@ func damage_cell(cell: Vector2i, amount: int) -> String:
 		finish_operation("MSG killed: retry required")
 	return "empty cell" if reports.is_empty() else "; ".join(reports)
 
-func next_phase() -> void:
-	if ended:
-		return
+func before_turn_resolution() -> bool:
 	drop_mode = false
 	for index in range(soldiers.size()):
 		var soldier: Dictionary = soldiers[index]
@@ -102,8 +100,8 @@ func next_phase() -> void:
 				kill_soldier(index)
 	if soldiers[0]["condition"] == "dead":
 		finish_operation("MSG bled out: retry required")
-		return
-	super.next_phase()
+		return false
+	return super.before_turn_resolution()
 
 func casualty_available(index: int) -> bool:
 	return index >= 0 and index < soldiers.size() and not soldiers[index]["extracted"] and ["critical","stable"].has(soldiers[index]["condition"])

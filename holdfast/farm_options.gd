@@ -64,20 +64,8 @@ func try_breaker(confirm: bool = false) -> bool:
 	rebuild_movement()
 	return true
 
-func next_machine_cell() -> Vector2i:
-	return NONE if disabled() else super.next_machine_cell()
 
-func enemy_target() -> int:
-	return -1 if disabled() else super.enemy_target()
 
-func resolve_enemy_turn() -> void:
-	if disabled() and machine_present():
-		if last_enemy_phase != phase:
-			last_enemy_phase = phase
-			machine["pending_shot"] = NONE
-			enemy_message = "Disabled machine: no movement or defensive shot."
-		return
-	super.resolve_enemy_turn()
 
 func enemy_intent() -> String:
 	return "DISABLED | No movement or shot | Feeder unpowered" if disabled() and machine_present() else super.enemy_intent()
@@ -212,3 +200,8 @@ func _draw() -> void:
 		draw_rect(ABORT_RECT,Color("304965"))
 		draw_string(font,CONFIRM_RECT.position+Vector2(0,29),"Confirm isolate [I]",HORIZONTAL_ALIGNMENT_CENTER,260,16,Color.WHITE)
 		draw_string(font,ABORT_RECT.position+Vector2(0,29),"Cancel [Esc]",HORIZONTAL_ALIGNMENT_CENTER,260,16,Color.WHITE)
+
+func machine_plan() -> Dictionary:
+	var plan := super.machine_plan()
+	plan["disabled"] = disabled()
+	return plan
