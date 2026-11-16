@@ -10,7 +10,9 @@ var TUNNEL: Vector2i:
 var REPAIR_CELL: Vector2i:
 	get: return mission_definition().repair_cell
 const COOLING_BUTTON := Rect2(40,1136,784,40)
-var return_state := ReturnRules.initial()
+var return_state: Dictionary:
+	get: return campaign_state.return_state
+	set(value): campaign_state.return_state = value
 
 func _ready() -> void:
 	var resume := auto_resume
@@ -39,7 +41,7 @@ func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	super.restore_extra_snapshot(snapshot)
 
 func restore_return_state(snapshot: Dictionary) -> void:
-	return_state = snapshot["return_map"].duplicate(true)
+	campaign_state.restore_return(snapshot["return_map"])
 
 func save_encounter(path: String = RETURN_SLOT) -> bool:
 	if [TACTICAL_SLOT,STORY_SLOT,RESULT_SLOT].has(path): path = RETURN_SLOT

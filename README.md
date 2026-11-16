@@ -131,3 +131,5 @@ godot --headless --path holdfast --script res://tests/test_combat_state.gd
 ```
 
 Machine/protocol and civilian evacuation state now have independent owners, with transient UI selections kept in controllers. `tests/test_mission_state.gd` checks instance isolation and detached nested data.
+
+Story knowledge/choices, campaign and return history, and rescue/result records now also have independent state owners. The dedicated-state milestone is complete; composed gameplay/input control and final cleanup/playtesting remain.

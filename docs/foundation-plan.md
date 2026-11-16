@@ -197,11 +197,19 @@ Acceptance for this slice passes: independent model instances, detached captures
 
 Eight committed suites and twelve regressions pass, with all 119 gameplay snapshots unchanged. Model tests verify independent instances, nested manifest isolation and detached restore/capture. Dedicated-state acceptance remains partial: campaign/story/return history and remaining persistent rescue bookkeeping still need explicit ownership before the composed-controller step.
 
+## Completed: campaign/story/result owners and state inventory
+
+`state/story_state.gd` owns persistent dialogue progress, choices, gate evidence and soldier knowledge. `state/campaign_state.gd` owns campaign/roster history and return-map consequences. `state/result_state.gd` owns verified rescue events and result-finalization flags. UI pages, roster selection, feedback, targeting and file paths remain controller concerns.
+
+Saved-field audit: `combat` → CombatState; `machine`, `breaker`, `protocol` → MachineState; `evac` domain fields → EvacuationState; `rescue_events` and finalization → ResultState; `story` → StoryState; `campaign` and `return_map` → CampaignState. The layout identifier remains mission configuration. Legacy saved `ui`, `evac.selected` and `rescue_target` remain intentional UI compatibility data, not domain-state omissions. Casualty wounds, timers, carrying and medical charges reside on CombatState soldiers.
+
+The dedicated-live-state acceptance criteria are met: eight committed suites and twelve regression checks pass, all model families have instance/deep-copy tests, save round trips and migration remain valid, and all 119 binary snapshot hashes match. Controllers still expose forwarding properties and mutate these models through existing rules. This completes state ownership, not the composed-controller or final cleanup milestones.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
 
-1. **Dedicated live state — in progress.** Start with combat actors, phase, RNG and shot history in a scene-independent model. Acceptance: isolated instances, detached snapshots, exact RNG restoration, unchanged 119-action hashes and all gate regressions. Machine/protocol/evacuation owners are now implemented. Remaining: campaign/story/return history and persistent rescue bookkeeping. Keep transient selection, hover and view modes separate from domain state.
+1. **Dedicated live state — complete.** Combat, machine/protocol, evacuation, story, campaign/return and rescue/result records have independent owners. Instance isolation, detached snapshots, exact RNG restoration, save/migration checks and 119-action parity pass. UI compatibility data remains explicitly separate (see inventory above).
 2. **Composed encounter controller — pending.** Replace the main scene's inherited gameplay/input orchestration with explicit services and state owners. Acceptance: no gate-to-gate dependency in the main controller; preserve modal priorities, action costs, outcome timing, save slots and earlier fixture behavior.
 3. **Retire redundant adapters and close foundation — pending.** Remove compatibility code only after replacement coverage exists; retain useful gate fixtures. Acceptance: complete automated suite, recorded-route parity, successful save/migration checks and a focused visual/playable smoke test. Record remaining usability issues separately; do not call automated checks human playtesting.
 

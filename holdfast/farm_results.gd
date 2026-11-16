@@ -1,4 +1,6 @@
 extends "res://farm_rescue.gd"
+const ResultState = preload("res://state/result_state.gd")
+var result_state := ResultState.new()
 const CampaignPersistence = preload("res://systems/campaign_persistence.gd")
 const ResultInput = preload("res://presentation/modal_input.gd")
 const ResultsPanel = preload("res://presentation/results_panel.gd")
@@ -9,9 +11,15 @@ const COMPLETION_SLOT := "user://holdfast_b6_completed.save"
 const RETRY_RECT := Rect2(60,1080,320,54)
 const RESUME_RECT := Rect2(402,1080,320,54)
 const RECORD_RECT := Rect2(744,1080,320,54)
-var rescue_events: Array = []
-var result_ready := false
-var pending_finish_reason := ""
+var rescue_events: Array:
+	get: return result_state.rescue_events
+	set(value): result_state.rescue_events = value
+var result_ready: bool:
+	get: return result_state.result_ready
+	set(value): result_state.result_ready = value
+var pending_finish_reason: String:
+	get: return result_state.pending_finish_reason
+	set(value): result_state.pending_finish_reason = value
 var result_feedback := ""
 var report_path := REPORT_SLOT
 var completion_path := COMPLETION_SLOT
@@ -35,9 +43,7 @@ func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	restore_results_state(snapshot)
 
 func restore_results_state(snapshot: Dictionary) -> void:
-	rescue_events = snapshot["rescue_events"].duplicate(true)
-	pending_finish_reason = ""
-	result_ready = snapshot["evac"]["ended"]
+	result_state.restore(snapshot["rescue_events"],snapshot["evac"]["ended"])
 	result_feedback = "Recorded mission restored. Dispositions unchanged."
 
 func save_encounter(path: String = RESULT_SLOT) -> bool:

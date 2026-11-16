@@ -1,4 +1,6 @@
 extends "res://farm_story.gd"
+const CampaignState = preload("res://state/campaign_state.gd")
+var campaign_state := CampaignState.new()
 const RosterPanel = preload("res://presentation/roster_panel.gd")
 const Roster = preload("res://campaign_roster.gd")
 const CAMPAIGN_SLOT := "user://holdfast_c2_campaign.save"
@@ -7,7 +9,9 @@ const ROSTER_RECT := Rect2(402,945,320,40)
 const DEPLOY_RECT := Rect2(60,1080,480,58)
 const BACK_RECT := Rect2(560,1080,480,58)
 const CARE_RECT := Rect2(60,1002,1024,48)
-var campaign: Dictionary = {}
+var campaign: Dictionary:
+	get: return campaign_state.campaign
+	set(value): campaign_state.campaign = value
 var auto_resume := true
 var campaign_path := CAMPAIGN_SLOT
 var roster_open := false
@@ -64,7 +68,7 @@ func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	restore_campaign_state(snapshot)
 
 func restore_campaign_state(snapshot: Dictionary) -> void:
-	campaign = snapshot["campaign"].duplicate(true)
+	campaign_state.restore_campaign(snapshot["campaign"])
 	roster_open = false
 	roster_index = 0
 	history_page = 0

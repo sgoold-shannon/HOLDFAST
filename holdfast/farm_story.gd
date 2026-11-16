@@ -1,4 +1,6 @@
 extends "res://farm_results.gd"
+const StoryState = preload("res://state/story_state.gd")
+var story_state := StoryState.new()
 const ModalInput = preload("res://presentation/modal_input.gd")
 const StoryPanel = preload("res://presentation/story_panel.gd")
 ## C1: authored scenes consume recorded facts; dialogue never changes combat values.
@@ -7,13 +9,27 @@ const DEBRIEF_RECT := Rect2(744,945,320,40)
 const NEXT_RECT := Rect2(60,1030,480,58)
 const SKIP_RECT := Rect2(560,1030,480,58)
 const LOG_RECT := Rect2(560,1110,480,48)
-var opening_done := false
-var opening_step := 0
-var preference := "unset"
-var debrief_response := "unset"
-var closure_warning := false
-var powered_gate_groups: Array = []
-var knowledge: Array = [[],[],[],[]]
+var opening_done: bool:
+	get: return story_state.opening_done
+	set(value): story_state.opening_done = value
+var opening_step: int:
+	get: return story_state.opening_step
+	set(value): story_state.opening_step = value
+var preference: String:
+	get: return story_state.preference
+	set(value): story_state.preference = value
+var debrief_response: String:
+	get: return story_state.debrief_response
+	set(value): story_state.debrief_response = value
+var closure_warning: bool:
+	get: return story_state.closure_warning
+	set(value): story_state.closure_warning = value
+var powered_gate_groups: Array:
+	get: return story_state.powered_gate_groups
+	set(value): story_state.powered_gate_groups = value
+var knowledge: Array:
+	get: return story_state.knowledge
+	set(value): story_state.knowledge = value
 var scene_view := "opening"
 var scene_page := 0
 var return_view := ""
@@ -38,14 +54,7 @@ func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	restore_story_state(snapshot)
 
 func restore_story_state(snapshot: Dictionary) -> void:
-	var story: Dictionary = snapshot["story"]
-	opening_done = story["opening_done"]
-	opening_step = story["opening_step"]
-	preference = story["preference"]
-	debrief_response = story["debrief_response"]
-	closure_warning = story["closure_warning"]
-	powered_gate_groups = story["powered_gate_groups"].duplicate()
-	knowledge = story["knowledge"].duplicate(true)
+	story_state.restore(snapshot["story"])
 	scene_view = "" if opening_done else "opening"
 	scene_page = opening_step
 	return_view = ""
@@ -310,7 +319,4 @@ func story_panel_snapshot() -> Dictionary:
 		"options":scene_options().duplicate()}
 
 func story_state_snapshot() -> Dictionary:
-	return {"opening_done":opening_done,"opening_step":opening_step,
-		"preference":preference,"debrief_response":debrief_response,
-		"closure_warning":closure_warning,"powered_gate_groups":powered_gate_groups.duplicate(),
-		"knowledge":knowledge.duplicate(true)}
+	return story_state.snapshot()
