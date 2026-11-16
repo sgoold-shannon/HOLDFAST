@@ -91,3 +91,9 @@ Test mission definitions, objective rules and square/diamond coordinate conversi
 ```sh
 godot --headless --path holdfast --script res://tests/test_missions_projection.gd
 ```
+
+Terrain drawing now receives a detached display snapshot, and tactical keys/buttons translate into named actions. Character drawing, overlays and the larger interface panels still use the existing scene layers. Test this first presentation boundary with:
+
+```sh
+godot --headless --path holdfast --script res://tests/test_presentation.gd
+```

@@ -78,6 +78,20 @@ The intended final presentation is an angled/isometric tactical map inspired by 
 godot --headless --path holdfast --script res://tests/test_missions_projection.gd
 ```
 
+## Completed: terrain display boundary and tactical input translation
+
+`presentation/board_view.gd` draws terrain, coordinate labels, walls, squad exits, selection outlines and movement costs from a detached display snapshot. It receives no encounter controller or gameplay callbacks. The controller computes legal movement costs; the renderer only displays them. This is the first view extraction, not the completion of presentation restructuring. It still draws square tiles and assumes the current screen layout.
+
+`presentation/tactical_input.gd` translates keys and button hit tests into named intents. The controller dispatches those intents through its existing gameplay methods. Key release and repeated-key events remain ignored. Existing inherited modal handlers retain priority, and mouse coordinates are still converted through the current canvas transform before hit testing.
+
+Character/target drawing, path and sight overlays, the tactical HUD, civilian panel, opening, roster and debrief views remain in the scene layers. Those are the next extraction work; this pass does not enable isometric rendering or remove the inheritance chain.
+
+Validation: all 119 recorded gameplay snapshots match the prior version. Independent civilian, machine/turn, mission/projection and full Follow rescue tests pass. The new presentation test verifies key/button mapping, ignored releases/repeats, aim/clear dispatch, terrain labels and wall markers, detached display data and unchanged encounter state after drawing. Automated drawing checks do not replace a visual playtest.
+
+```sh
+godot --headless --path holdfast --script res://tests/test_presentation.gd
+```
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

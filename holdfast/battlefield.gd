@@ -2,6 +2,8 @@ extends Node2D
 ## HOLDFAST A6. Public cell coordinates follow GDD v3.1 section 26 (one-based).
 const SandboxMission = preload("res://missions/tactical_sandbox.tres")
 const MissionObjectives = preload("res://systems/mission_objectives.gd")
+const BoardView = preload("res://presentation/board_view.gd")
+const TacticalInput = preload("res://presentation/tactical_input.gd")
 const GridProjection = preload("res://presentation/grid_projection.gd")
 var mission_override: Resource
 var board_projection: GridProjection
@@ -398,51 +400,17 @@ func sight_target() -> Vector2i:
 	return pinned_target if pinned_target != NONE else hovered_cell
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_K:
-			save_encounter()
-		elif event.keycode == KEY_L:
-			load_encounter()
-		elif event.keycode == KEY_N:
-			next_phase()
-		elif event.keycode == KEY_E:
-			try_extract()
-		elif event.keycode == KEY_F:
-			try_fire()
-		elif event.keycode == KEY_R:
-			try_reload()
-		elif event.keycode == KEY_T:
-			toggle_sight()
-		elif event.keycode == KEY_ESCAPE:
-			active_soldier = -1
-			pinned_target = NONE
-			status_text = "Selection cleared. Click a soldier or inspect a ground cell."
-			rebuild_movement()
+	var command := TacticalInput.key_command(event)
+	if command != "":
+		run_tactical_command(command)
 	if event is InputEventMouse:
 		var local_position: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
 		hovered_cell = local_to_cell(local_position)
 		queue_redraw()
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if SAVE_RECT.has_point(local_position):
-				save_encounter()
-				return
-			if LOAD_RECT.has_point(local_position):
-				load_encounter()
-				return
-			if EXTRACT_RECT.has_point(local_position):
-				try_extract()
-				return
-			if FIRE_RECT.has_point(local_position):
-				try_fire()
-				return
-			if RELOAD_RECT.has_point(local_position):
-				try_reload()
-				return
-			if MODE_RECT.has_point(local_position):
-				toggle_sight()
-				return
-			if NEXT_PHASE_RECT.has_point(local_position):
-				next_phase()
+			command = TacticalInput.button_command(local_position,tactical_buttons())
+			if command != "":
+				run_tactical_command(command)
 				return
 			if not cell_is_in_bounds(hovered_cell):
 				return
@@ -479,32 +447,7 @@ func draw_soldier_marker(index: int, center: Vector2) -> void:
 func _draw() -> void:
 	draw_string(font, Vector2(40, 36), "HOLDFAST  /  A6 SAVE & REPLAY", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
 	draw_string(font, Vector2(40, 62), "T: move / aim | F: fire | R: reload | N: end turn | E: extract | Esc: clear", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("aebbb6"))
-	for y in range(1, GRID_SIZE.y + 1):
-		for x in range(1, GRID_SIZE.x + 1):
-			var cell := Vector2i(x, y)
-			var rect := Rect2(cell_to_local(cell), Vector2.ONE * CELL_SIZE)
-			var fill := Color("24352e") if (x + y) % 2 == 0 else Color("293b33")
-			var cost := 0 if sight_mode else move_cost(cell)
-			if cost > 0:
-				fill = Color("315b50") if cost == 1 else Color("304965")
-			if WALL_CELLS.has(cell):
-				fill = Color("66727b")
-			draw_rect(rect, fill)
-			draw_rect(rect, Color("42554a"), false, 1.0)
-			if WALL_CELLS.has(cell):
-				draw_line(rect.position + Vector2(10, 10), rect.end - Vector2(10, 10), Color("e4e8ec"), 2.0)
-				draw_line(rect.position + Vector2(26, 10), rect.position + Vector2(10, 26), Color("e4e8ec"), 2.0)
-			if cost > 0:
-				draw_string(font, rect.position + Vector2(3, 13), str(cost), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("b7c9c0"))
-			if extraction_cell(cell):
-				draw_rect(rect.grow(-2), Color("8be6de"), false, 2)
-				draw_string(font, rect.position + Vector2(0, 25), "EXIT", HORIZONTAL_ALIGNMENT_CENTER, CELL_SIZE, 10, Color("8be6de"))
-			if cell == selected_cell:
-				draw_rect(rect.grow(-3), Color("f7cd6c"), false, 3.0)
-	for x in range(1, GRID_SIZE.x + 1):
-		draw_string(font, Vector2(GRID_ORIGIN.x + (x - 1) * CELL_SIZE, 85), str(x), HORIZONTAL_ALIGNMENT_CENTER, CELL_SIZE, 16, Color("d6ded9"))
-	for y in range(1, GRID_SIZE.y + 1):
-		draw_string(font, Vector2(31, GRID_ORIGIN.y + (y - 1) * CELL_SIZE + 24), str(y), HORIZONTAL_ALIGNMENT_RIGHT, 28, 16, Color("d6ded9"))
+	BoardView.render(self,font,board_projection,board_view_snapshot())
 	var path: Array[Vector2i] = []
 	if not sight_mode:
 		path = path_to(hovered_cell)
@@ -617,3 +560,34 @@ func mission_definition() -> Resource:
 
 func sight_preview(shooter: Vector2i, target: Vector2i) -> Dictionary:
 	return Rules.preview(shooter,target,mission_definition())
+
+func board_view_snapshot() -> Dictionary:
+	var costs := {}
+	if not sight_mode:
+		for y in range(1,GRID_SIZE.y+1):
+			for x in range(1,GRID_SIZE.x+1):
+				var cell := Vector2i(x,y)
+				var cost := move_cost(cell)
+				if cost > 0: costs[cell] = cost
+	return {"size":GRID_SIZE,"cell_size":CELL_SIZE,"origin":GRID_ORIGIN,
+		"walls":WALL_CELLS.duplicate(),"exits":mission_definition().squad_exits.duplicate(),
+		"selected":selected_cell,"costs":costs}
+
+func tactical_buttons() -> Dictionary:
+	return {"save":SAVE_RECT,"load":LOAD_RECT,"extract":EXTRACT_RECT,
+		"fire":FIRE_RECT,"reload":RELOAD_RECT,"mode":MODE_RECT,"next":NEXT_PHASE_RECT}
+
+func run_tactical_command(command: String) -> void:
+	match command:
+		"save": save_encounter()
+		"load": load_encounter()
+		"extract": try_extract()
+		"fire": try_fire()
+		"reload": try_reload()
+		"mode": toggle_sight()
+		"next": next_phase()
+		"clear":
+			active_soldier = -1
+			pinned_target = NONE
+			status_text = "Selection cleared. Click a soldier or inspect a ground cell."
+			rebuild_movement()
