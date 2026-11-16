@@ -340,26 +340,8 @@ func rescue_panel_snapshot() -> Dictionary:
 		"can_act":soldier_can_act(active_soldier)}
 
 func apply_loaded_encounter(snapshot: Dictionary) -> void:
-	restore_extra_snapshot(snapshot)
+	EncounterRestore.apply(snapshot,{"extra":restore_extra_snapshot,"rescue":restore_rescue_section,"protocol":restore_protocol_section,"breaker":restore_breaker_section,"evac":restore_evac_section,"machine":restore_machine_section,"tactical":restore_tactical_section})
+
+func restore_rescue_section(snapshot: Dictionary) -> void:
 	rescue_target = snapshot["rescue_target"]
 	drop_mode = false
-	protocol = snapshot["protocol"].duplicate(true)
-	breaker_progress = snapshot["breaker"]
-	isolate_pending = false
-	var evac: Dictionary = snapshot["evac"]
-	cohorts.assign(evac["cohorts"].duplicate(true))
-	cohort_selected = evac["selected"]
-	order_used = evac["order_used"]
-	ended = evac["ended"]
-	end_reason = evac["reason"]
-	last_civilian_phase = evac["last_phase"]
-	close_pending = false
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE

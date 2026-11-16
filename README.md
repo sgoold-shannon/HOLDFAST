@@ -121,3 +121,5 @@ godot --headless --path holdfast --script res://tests/test_persistence.gd
 Campaign/report/completion write ordering and the existing C2-to-D1 migration now have dedicated services. Persistence tests cover failures at each write step and migration source isolation. Successful earlier writes remain intact if a later file fails, matching existing behavior.
 
 The main scene now composes its save snapshot and extra-state restore order explicitly, preserving binary field order and independent copies of nested state. Earlier gate scenes reuse the same state adapters through compatibility entry points.
+
+Shared restore sections now apply mission state before tactical movement rebuilding, clear transient input modes and preserve repeated-load behavior across compatibility scenes. Live state ownership still remains in the scene adapters.

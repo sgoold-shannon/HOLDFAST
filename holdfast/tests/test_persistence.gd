@@ -98,6 +98,27 @@ func run() -> void:
 	snapshot_service.restore_extras(live_before,adapters)
 	expect(restore_order==["return_map","results","story","campaign"],"Extra-state restore order is explicit")
 	expect(live_before.keys()==["layout","combat","ui","machine","evac","breaker","protocol","rescue_target","rescue_events","story","campaign","return_map"],"Existing serialized field order preserved")
+
+	var restorer = preload("res://systems/encounter_restore.gd")
+	var section_order := []
+	var sections := {}
+	# Deliberately register in reverse order; dependencies are enforced by the service.
+	for section in ["tactical","machine","evac","breaker","protocol","rescue","extra"]:
+		sections[section] = func(_data: Dictionary): section_order.append(section)
+	restorer.apply(before,sections)
+	expect(section_order==["extra","rescue","protocol","breaker","evac","machine","tactical"],"Mission state precedes tactical rebuild regardless of registration order")
+	section_order.clear()
+	restorer.apply(before,{"tactical":sections["tactical"]})
+	expect(section_order==["tactical"],"Sandbox restore needs only tactical state")
+	board.drop_mode = true
+	board.isolate_pending = true
+	board.close_pending = true
+	board.hovered_cell = Vector2i(4,4)
+	board.roster_open = true
+	expect(board.load_encounter(path),"Full restore succeeds with transient controls open")
+	expect(not board.drop_mode and not board.isolate_pending and not board.close_pending and not board.roster_open and board.hovered_cell==board.NONE,"Restore clears stale input modes")
+	expect(board.encounter_snapshot()==before,"Shared section restoration preserves saved state")
+	expect(board.load_encounter(path) and board.encounter_snapshot()==before,"Repeated restore is stable")
 	sandbox.free()
 	board.free()
 	print("PERSISTENCE BOUNDARY FAILURES: ",failures)

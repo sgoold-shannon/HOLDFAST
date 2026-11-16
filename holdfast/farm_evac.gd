@@ -367,6 +367,13 @@ func civilian_panel_snapshot() -> Dictionary:
 		"present":machine_present()}
 
 func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	EncounterRestore.apply(snapshot,{"evac":restore_evac_section,"machine":restore_machine_section,"tactical":restore_tactical_section})
+
+func evac_state_snapshot() -> Dictionary:
+	return {"cohorts": cohorts.duplicate(true), "selected": cohort_selected,
+		"order_used": order_used, "ended": ended, "reason": end_reason, "last_phase": last_civilian_phase}
+
+func restore_evac_section(snapshot: Dictionary) -> void:
 	var evac: Dictionary = snapshot["evac"]
 	cohorts.assign(evac["cohorts"].duplicate(true))
 	cohort_selected = evac["selected"]
@@ -375,16 +382,3 @@ func apply_loaded_encounter(snapshot: Dictionary) -> void:
 	end_reason = evac["reason"]
 	last_civilian_phase = evac["last_phase"]
 	close_pending = false
-	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
-
-func evac_state_snapshot() -> Dictionary:
-	return {"cohorts": cohorts.duplicate(true), "selected": cohort_selected,
-		"order_used": order_used, "ended": ended, "reason": end_reason, "last_phase": last_civilian_phase}

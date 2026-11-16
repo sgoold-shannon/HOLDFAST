@@ -188,13 +188,7 @@ func machine_status_snapshot() -> Dictionary:
 		"intent":enemy_intent()}
 
 func apply_loaded_encounter(snapshot: Dictionary) -> void:
-	# Restore route state before movement is rebuilt by the base loader.
+	EncounterRestore.apply(snapshot,{"machine":restore_machine_section,"tactical":restore_tactical_section})
+
+func restore_machine_section(snapshot: Dictionary) -> void:
 	machine = snapshot["machine"].duplicate(true)
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE

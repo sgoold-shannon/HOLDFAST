@@ -1,4 +1,5 @@
 extends Node2D
+const EncounterRestore = preload("res://systems/encounter_restore.gd")
 const Persistence = preload("res://systems/encounter_persistence.gd")
 const SceneChrome = preload("res://presentation/scene_chrome.gd")
 const InteractionInput = preload("res://presentation/modal_input.gd")
@@ -549,6 +550,12 @@ func interaction_command(event: InputEvent, keys: Dictionary, buttons: Dictionar
 	return InteractionInput.command(event,point,keys,buttons,rows)
 
 func apply_loaded_encounter(snapshot: Dictionary) -> void:
+	EncounterRestore.apply(snapshot,{"tactical":restore_tactical_section})
+
+func ui_state_snapshot() -> Dictionary:
+	return {"active":active_soldier,"selected":selected_cell,"pinned":pinned_target,"sight":sight_mode,"status":status_text}
+
+func restore_tactical_section(snapshot: Dictionary) -> void:
 	var ui: Dictionary = snapshot["ui"]
 	active_soldier = ui["active"]
 	restore_combat(snapshot["combat"])
@@ -557,6 +564,3 @@ func apply_loaded_encounter(snapshot: Dictionary) -> void:
 	sight_mode = ui["sight"]
 	status_text = ui["status"]
 	hovered_cell = NONE
-
-func ui_state_snapshot() -> Dictionary:
-	return {"active":active_soldier,"selected":selected_cell,"pinned":pinned_target,"sight":sight_mode,"status":status_text}

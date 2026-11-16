@@ -179,6 +179,12 @@ Main-scene extra-state restoration now explicitly invokes return-map, results, s
 
 All six committed suites and B1–B6/C1/C2/D1/D2, clarity and staging-care checks pass. New checks verify nested snapshot isolation, serialized key order and extra-state application order. All 119 recorded binary snapshot hashes and route outcomes match the preceding build. Save format and migration policy are unchanged.
 
+## Completed: shared tactical restore sections
+
+`systems/encounter_restore.gd` now sequences validated restoration: extra state, rescue selection, protocol, breaker, evacuation, machine, then tactical/UI state. Each section has one controller adapter reused by subsequent gates. The sandbox supplies only tactical restoration; B1–B5 add their supported sections. This removes repeated state-assignment blocks without changing when movement is rebuilt or which temporary controls are cleared.
+
+All six committed suites and twelve gate/clarity/staging-care regressions pass; all 119 action snapshots match. Added checks verify dependency order independent of callback registration, sandbox-only restoration, temporary input reset and repeated-load stability. The service operates only on validated snapshots and does not roll back callback errors. Live state still belongs to the scene adapters; introducing a dedicated state model and retiring gameplay inheritance remain outstanding.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
