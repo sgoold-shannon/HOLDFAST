@@ -123,3 +123,9 @@ Campaign/report/completion write ordering and the existing C2-to-D1 migration no
 The main scene now composes its save snapshot and extra-state restore order explicitly, preserving binary field order and independent copies of nested state. Earlier gate scenes reuse the same state adapters through compatibility entry points.
 
 Shared restore sections now apply mission state before tactical movement rebuilding, clear transient input modes and preserve repeated-load behavior across compatibility scenes. Live state ownership still remains in the scene adapters.
+
+Combat state now has a scene-independent owner for actors, rounds, RNG and shot history. Existing scene adapters forward to that model. Test model isolation and deterministic restoration with:
+
+```sh
+godot --headless --path holdfast --script res://tests/test_combat_state.gd
+```

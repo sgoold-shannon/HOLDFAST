@@ -1,4 +1,27 @@
 extends Node2D
+const CombatState = preload("res://state/combat_state.gd")
+var combat_state := CombatState.new()
+var shot_rng: RandomNumberGenerator:
+	get: return combat_state.shot_rng
+	set(value): combat_state.shot_rng = value
+var shot_history: Array[Dictionary]:
+	get: return combat_state.shot_history
+	set(value): combat_state.shot_history = value
+var enemies: Array[Dictionary]:
+	get: return combat_state.enemies
+	set(value): combat_state.enemies = value
+var last_enemy_phase: int:
+	get: return combat_state.last_enemy_phase
+	set(value): combat_state.last_enemy_phase = value
+var enemy_message: String:
+	get: return combat_state.enemy_message
+	set(value): combat_state.enemy_message = value
+var soldiers: Array[Dictionary]:
+	get: return combat_state.soldiers
+	set(value): combat_state.soldiers = value
+var phase: int:
+	get: return combat_state.phase
+	set(value): combat_state.phase = value
 const EncounterRestore = preload("res://systems/encounter_restore.gd")
 const Persistence = preload("res://systems/encounter_persistence.gd")
 const SceneChrome = preload("res://presentation/scene_chrome.gd")
@@ -22,12 +45,12 @@ const Rules = preload("res://tactical_rules.gd")
 const FIRE_RECT := Rect2(40, 880, 200, 40)
 const RELOAD_RECT := Rect2(250, 880, 220, 40)
 const COMBAT_SEED := 3104
-var shot_rng := RandomNumberGenerator.new()
-var shot_history: Array[Dictionary] = []
+
+
 # A5 test enemy: stationary, nearest visible active target, roster-order ties.
-var enemies: Array[Dictionary] = [{"cell": Vector2i.ZERO, "hp": 8, "ammo": 4}]
-var last_enemy_phase := 0
-var enemy_message := "Enemy has not acted yet."
+
+
+
 const EXTRACT_RECT := Rect2(40, 1020, 200, 40)
 
 var sight_mode := false
@@ -43,17 +66,12 @@ const NONE := Vector2i(-1, -1)
 var selected_cell := NONE
 var status_text := "Click a ground cell to select it."
 const DIRECTIONS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT]
-var soldiers: Array[Dictionary] = [
-	{"name": "MSG", "mark": "M", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
-	{"name": "Ortiz", "mark": "O", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
-	{"name": "Bell", "mark": "B", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
-	{"name": "Park", "mark": "P", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false}
-]
+
 var active_soldier := -1
 var hovered_cell := NONE
 var distances: Dictionary = {}
 var parents: Dictionary = {}
-var phase := 1
+
 const NEXT_PHASE_RECT := Rect2(668, 880, 156, 40)
 var font: Font = ThemeDB.fallback_font
 
@@ -250,19 +268,10 @@ func try_reload() -> bool:
 
 # Complete stable combat snapshot includes RNG state for later save integration (A6).
 func combat_snapshot() -> Dictionary:
-	return {"soldiers": soldiers.duplicate(true), "targets": enemies.duplicate(true),
-		"phase": phase, "rng_seed": shot_rng.seed, "rng_state": shot_rng.state, "history": shot_history.duplicate(true),
-		"last_enemy_phase": last_enemy_phase, "enemy_message": enemy_message}
+	return combat_state.snapshot()
 
 func restore_combat(snapshot: Dictionary) -> void:
-	soldiers.assign(snapshot["soldiers"].duplicate(true))
-	enemies.assign(snapshot["targets"].duplicate(true))
-	phase = snapshot["phase"]
-	last_enemy_phase = snapshot["last_enemy_phase"]
-	enemy_message = snapshot["enemy_message"]
-	shot_rng.seed = snapshot["rng_seed"]
-	shot_rng.state = snapshot["rng_state"]
-	shot_history.assign(snapshot["history"].duplicate(true))
+	combat_state.restore(snapshot)
 	if active_soldier >= 0:
 		selected_cell = soldiers[active_soldier]["cell"]
 	rebuild_movement()

@@ -185,13 +185,21 @@ All six committed suites and B1–B6/C1/C2/D1/D2, clarity and staging-care check
 
 All six committed suites and twelve gate/clarity/staging-care regressions pass; all 119 action snapshots match. Added checks verify dependency order independent of callback registration, sandbox-only restoration, temporary input reset and repeated-load stability. The service operates only on validated snapshots and does not roll back callback errors. Live state still belongs to the scene adapters; introducing a dedicated state model and retiring gameplay inheritance remain outstanding.
 
+## Completed: first live-state owner — combat
+
+`state/combat_state.gd` now owns soldiers, enemy actors, phase, shot RNG/history and enemy-activation record/message. It snapshots and restores that data without a scene, input, drawing or disk access. `battlefield.gd` exposes forwarding properties for existing adapters and delegates combat capture/restore to the model. Movement rebuilding and transient UI state remain controller responsibilities.
+
+Acceptance for this slice passes: independent model instances, detached captures/restores, deterministic RNG continuation, seven committed test suites, twelve gate/clarity/staging-care regressions and all 119 binary snapshot hashes unchanged. Machine/protocol/evacuation and campaign/story state still need owners; the dedicated-state step is only partially complete.
+
 ## Remaining sequence before a new mission
 
-1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
-2. Move save orchestration to a boundary that serializes the same checked state. Preserve old saves or provide an explicit tested migration before changing formats.
-3. Introduce a shallow encounter controller that composes the extracted services. Keep gate scenes as fixtures until parity checks pass, then retire redundant adapters deliberately.
+Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
 
-Each step should ship with equivalence and failure-path checks. File movement alone does not count as finishing the architecture work.
+1. **Dedicated live state — in progress.** Start with combat actors, phase, RNG and shot history in a scene-independent model. Acceptance: isolated instances, detached snapshots, exact RNG restoration, unchanged 119-action hashes and all gate regressions. Then move machine/protocol/evacuation state and campaign/story state into explicit owners. Keep transient selection, hover and view modes separate from domain state.
+2. **Composed encounter controller — pending.** Replace the main scene's inherited gameplay/input orchestration with explicit services and state owners. Acceptance: no gate-to-gate dependency in the main controller; preserve modal priorities, action costs, outcome timing, save slots and earlier fixture behavior.
+3. **Retire redundant adapters and close foundation — pending.** Remove compatibility code only after replacement coverage exists; retain useful gate fixtures. Acceptance: complete automated suite, recorded-route parity, successful save/migration checks and a focused visual/playable smoke test. Record remaining usability issues separately; do not call automated checks human playtesting.
+
+No new mission, balance change or final isometric conversion belongs to these steps. After foundation acceptance, choose the next gameplay or presentation milestone explicitly. Each pass must name its completed acceptance criteria and outstanding work; moving files alone does not close a step.
 
 ## Overwatch scheduling clarification
 
