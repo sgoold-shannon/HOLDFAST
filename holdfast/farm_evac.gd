@@ -330,10 +330,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
-	draw_rect(Rect2(35, 10, 790, 34), Color("0e1412"))
-	draw_string(font, Vector2(40, 36), "HOLDFAST / B2 CIVILIAN EVACUATION", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
-	draw_rect(Rect2(35,46,800,28),Color("0e1412"))
-	draw_string(font,Vector2(40,66),"RESCUE A + B + C: choose a group → Move to EXIT → End turn [N].",HORIZONTAL_ALIGNMENT_LEFT,790,18,Color("8be6de"))
+	SceneChrome.header(self,font,"HOLDFAST / B2 CIVILIAN EVACUATION",790,Color("e5e9e7"))
+	SceneChrome.rescue_guide(self,font)
 	CivilianView.render(self,font,board_projection,civilian_view_snapshot())
 	CivilianPanel.render(self,font,board_projection,civilian_panel_snapshot())
 

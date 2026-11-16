@@ -195,8 +195,7 @@ func result_line(y: float, text: String, color: Color = Color("d6ded9"), size: i
 func _draw() -> void:
 	if not result_ready:
 		super._draw()
-		draw_rect(Rect2(35,10,790,34),Color("0e1412"))
-		draw_string(font,Vector2(40,36),"HOLDFAST / B6 MISSION RESULTS",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
+		SceneChrome.header(self,font,"HOLDFAST / B6 MISSION RESULTS",790,Color.WHITE)
 		return
 	ResultsPanel.render(self,font,board_projection,results_panel_snapshot())
 

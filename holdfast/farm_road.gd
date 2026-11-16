@@ -1,4 +1,5 @@
 extends "res://battlefield.gd"
+const MachineStatus = preload("res://presentation/machine_status.gd")
 const MachineView = preload("res://presentation/machine_view.gd")
 ## B1: route, occupied-cell impacts, and fixed-cell defensive shots.
 const MachineActivation = preload("res://systems/machine_activation.gd")
@@ -149,25 +150,9 @@ func skid_visible() -> bool:
 func _draw() -> void:
 	super._draw()
 	# Scene-specific title and footer replace the Gate A test labels.
-	draw_rect(Rect2(35, 10, 790, 34), Color("0e1412"))
-	draw_string(font, Vector2(40, 36), "HOLDFAST / B1 FARM ROAD MACHINE", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
+	SceneChrome.header(self,font,"HOLDFAST / B1 FARM ROAD MACHINE",790,Color("e5e9e7"))
 	MachineView.render(self,font,board_projection,machine_view_snapshot())
-	draw_rect(Rect2(35,672,800,20),Color("0e1412"))
-	draw_string(font,Vector2(40,687),danger_summary(),HORIZONTAL_ALIGNMENT_LEFT,790,14,Color("ffb75a"))
-	var forecast := "none (machine stopped)"
-	if machine["collected_round"] > 0:
-		forecast = str(machine["collected_round"] + 1)
-	elif machine_present():
-		forecast = str(phase + 4 - machine["stage"])
-	draw_rect(Rect2(35, 966, 800, 52), Color("0e1412"))
-	draw_string(font, Vector2(40, 985), enemy_intent(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("ffb75a"))
-	draw_string(font, Vector2(40, 1008), enemy_message, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6ded9"))
-	draw_rect(Rect2(35, 1070, 800, 47), Color("0e1412"))
-	draw_string(font, Vector2(40, 1088), "Closure forecast: machine %s / external 10 (resolution in B2)." % forecast, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("aebbb6"))
-	draw_string(font, Vector2(40, 1109), save_feedback, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("aebbb6"))
-	if sight_mode and pinned_target == enemies[0]["cell"] and machine_present():
-		draw_rect(Rect2(35, 803, 800, 26), Color("0e1412"))
-		draw_string(font, Vector2(40, 822), "Machine HP %d/16 | No cover | Destruction: 4 blast damage in pink outline." % enemies[0]["hp"], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("e6a2c7"))
+	MachineStatus.render(self,font,board_projection,machine_status_snapshot())
 
 func draw_targets() -> void:
 	pass # Farm Road draws its machine after hazard overlays.
@@ -196,3 +181,16 @@ func machine_view_snapshot() -> Dictionary:
 		"sight_mode":sight_mode,
 		"pinned_target":pinned_target,
 		"NONE":NONE}
+
+func machine_status_snapshot() -> Dictionary:
+	return {
+		"phase":phase,
+		"enemy_message":enemy_message,
+		"save_feedback":save_feedback,
+		"sight_mode":sight_mode,
+		"pinned_target":pinned_target,
+		"machine":machine.duplicate(true),
+		"enemies":enemies.duplicate(true),
+		"danger":danger_summary(),
+		"present":machine_present(),
+		"intent":enemy_intent()}

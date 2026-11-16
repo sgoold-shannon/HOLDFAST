@@ -107,3 +107,5 @@ Opening/log/debrief dialogue, roster, mission results, casualty rescue, breaker 
 Dialogue, roster and results inputs now translate through a shared modal intent decoder. Controllers retain modal priority and action execution. Return-mission and ending-entry overlays also use detached display snapshots.
 
 Civilian order/card controls, casualty actions and machine interaction buttons now use the shared intent decoder while controller guards preserve confirmation, aiming and targeting priorities.
+
+Shared headers/navigation decorations and machine status/footer drawing now live in presentation helpers. Remaining foundation work is controller/view routing, save orchestration and reducing the inherited scene chain.

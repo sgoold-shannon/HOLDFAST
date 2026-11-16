@@ -304,14 +304,11 @@ func _draw() -> void:
 		super._draw()
 		if scene_view != "": return
 		if not result_ready:
-			draw_rect(Rect2(35,10,805,34),Color("0e1412"))
-			draw_string(font,Vector2(40,36),"HOLDFAST / C2 · DEPLOYMENT %d / 2" % campaign.get("deployment",1),HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
+			SceneChrome.header(self,font,"HOLDFAST / C2 · DEPLOYMENT %d / 2" % campaign.get("deployment",1),805,Color.WHITE)
 		else:
-			draw_rect(ROSTER_RECT,Color("344f46"))
-			draw_string(font,ROSTER_RECT.position+Vector2(0,27),"Roster / service history [G]",HORIZONTAL_ALIGNMENT_CENTER,320,17,Color.WHITE)
+			SceneChrome.button(self,font,ROSTER_RECT,"Roster / service history [G]",Color("344f46"),27,17)
 			if campaign["committed"]:
-				draw_rect(RETRY_RECT,Color("304965"))
-				draw_string(font,RETRY_RECT.position+Vector2(0,35),"Roster [Q / G]",HORIZONTAL_ALIGNMENT_CENTER,320,19,Color.WHITE)
+				SceneChrome.button(self,font,RETRY_RECT,"Roster [Q / G]",Color("304965"),35,19)
 		return
 	RosterPanel.render(self,font,board_projection,roster_panel_snapshot())
 

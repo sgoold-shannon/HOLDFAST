@@ -1,4 +1,5 @@
 extends Node2D
+const SceneChrome = preload("res://presentation/scene_chrome.gd")
 const InteractionInput = preload("res://presentation/modal_input.gd")
 const TacticalPanel = preload("res://presentation/tactical_panel.gd")
 ## HOLDFAST A6. Public cell coordinates follow GDD v3.1 section 26 (one-based).
@@ -439,8 +440,7 @@ func draw_soldier_marker(index: int, center: Vector2) -> void:
 	ActorView.soldier(self,font,center,soldier_marker_snapshot(index))
 
 func _draw() -> void:
-	draw_string(font, Vector2(40, 36), "HOLDFAST  /  A6 SAVE & REPLAY", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e5e9e7"))
-	draw_string(font, Vector2(40, 62), "T: move / aim | F: fire | R: reload | N: end turn | E: extract | Esc: clear", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("aebbb6"))
+	SceneChrome.sandbox_header(self,font)
 	BoardView.render(self,font,board_projection,board_view_snapshot())
 	var path: Array[Vector2i] = []
 	if not sight_mode:

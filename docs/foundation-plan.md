@@ -137,6 +137,12 @@ Civilian order/card controls, breaker confirmation, protocol actions and casualt
 
 All five committed suites and B2–B5 regression checks pass. New direct input tests cover isolation blocking rescue/protocol/end-turn, cancellation, aim-mode breaker exclusion, civilian card/order dispatch and drop-targeting isolation. All 119 action snapshots match the preceding build. The small overlays, remaining outer routing and deeper controller/save restructuring are still outstanding.
 
+## Completed: shared small overlays
+
+`scene_chrome.gd` centralizes base/scene headers, navigation buttons and the civilian instruction banner. `machine_status.gd` draws danger, intent, forecast, save feedback and pinned-machine details from a detached snapshot. Existing layer order, text, dimensions and screen visibility are preserved. Input/controller adapters still decide what is shown; inheritance and save orchestration remain future work.
+
+All five committed suites pass, including small-overlay geometry/text and snapshot-isolation checks. All 119 recorded gameplay snapshots match. Installed in the Desktop project and tracked on the HOLDFAST Trello board. No visual screenshot comparison was performed.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

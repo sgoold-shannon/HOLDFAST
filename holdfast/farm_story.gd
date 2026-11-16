@@ -293,11 +293,9 @@ func _draw() -> void:
 	if scene_view == "":
 		super._draw()
 		if not result_ready:
-			draw_rect(Rect2(35,10,790,34),Color("0e1412"))
-			draw_string(font,Vector2(40,36),"HOLDFAST / C1 · TAB: SCENE LOG",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
+			SceneChrome.header(self,font,"HOLDFAST / C1 · TAB: SCENE LOG",790,Color.WHITE)
 		elif not retry_required():
-			draw_rect(DEBRIEF_RECT,Color("344f46"))
-			draw_string(font,DEBRIEF_RECT.position+Vector2(0,27),"Debrief [B]",HORIZONTAL_ALIGNMENT_CENTER,320,18,Color.WHITE)
+			SceneChrome.button(self,font,DEBRIEF_RECT,"Debrief [B]",Color("344f46"),27,18)
 		return
 	StoryPanel.render(self,font,board_projection,story_panel_snapshot())
 
