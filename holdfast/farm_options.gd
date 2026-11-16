@@ -26,6 +26,9 @@ func disabled() -> bool:
 	return breaker_progress == 2
 
 func breaker_reason() -> String:
+	return origin_breaker_reason()
+
+func origin_breaker_reason() -> String:
 	if ended:
 		return "Operation ended."
 	if not machine_present():

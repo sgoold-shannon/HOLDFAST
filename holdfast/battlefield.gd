@@ -210,6 +210,9 @@ func target_at(cell: Vector2i) -> int:
 	return -1
 
 func fire_block_reason() -> String:
+	return rifle_block_reason()
+
+func rifle_block_reason() -> String:
 	if not soldier_can_act(active_soldier):
 		return "Select an active soldier."
 	var soldier: Dictionary = soldiers[active_soldier]

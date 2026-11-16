@@ -25,6 +25,9 @@ func initialize_protocol() -> void:
 	save_feedback = "B4 save slot. Protocol: HOLD / ONE CYCLE. Acknowledgement token: ACK-01."
 
 func protocol_reason(action: String) -> String:
+	return origin_protocol_reason(action)
+
+func origin_protocol_reason(action: String) -> String:
 	if ended or not machine_present() or disabled():
 		return "Protocol unavailable: encounter ended or machine stopped/departed."
 	if machine["collected_round"] > 0:

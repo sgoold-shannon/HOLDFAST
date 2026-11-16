@@ -239,3 +239,65 @@ func order_cohort(index: int, order: String) -> bool:
 func try_breaker(confirm: bool = false) -> bool:
 	if return_state["active"]: return repair_return_machine()
 	return operate_origin_breaker(confirm)
+
+func mission_definition() -> Resource:
+	if mission_override != null: return mission_override
+	return NorthboundMission if return_state["active"] else FarmRoadMission
+
+func soldier_can_act(index: int) -> bool:
+	return index >= 0 and index < soldiers.size() and not soldiers[index]["extracted"] and soldiers[index]["hp"] > 0 and soldiers[index].get("condition","active") == "active" and soldiers[index].get("carried_by",-1) == -1
+
+func target_at(cell: Vector2i) -> int:
+	if return_state["active"]: return -1
+	return 0 if machine_present() and enemies[0]["cell"] == cell else -1
+
+func next_machine_cell() -> Vector2i:
+	if return_state["active"]: return NONE
+	return machine_behavior.next_cell(machine,enemies[0],ROUTE,machine_plan())
+
+func machine_plan() -> Dictionary:
+	return {"collect_stage":mission_definition().machine_collect_stage,"depart_stage":ROUTE.size()-1,
+		"disabled":disabled(),"protocol":protocol,"skid":SKID_CELL,"diversion":DIVERSION}
+
+func is_walkable(cell: Vector2i) -> bool:
+	if return_state["active"] and enemies[0]["hp"] > 0 and cell == REPAIR_CELL: return false
+	if not cell_is_in_bounds(cell) or WALL_CELLS.has(cell) or FIXTURES.has(cell) or target_at(cell) >= 0:
+		return false
+	for index in range(soldiers.size()):
+		if soldier_visible(index) and ["critical","stable"].has(soldiers[index].get("condition","active")) and soldiers[index]["cell"] == cell:
+			return false
+	return true
+
+func civilian_safe(cell: Vector2i) -> bool:
+	if not cell_is_in_bounds(cell) or WALL_CELLS.has(cell) or FIXTURES.has(cell): return false
+	if return_state["active"]:
+		return not (enemies[0]["hp"] > 0 and cell == REPAIR_CELL)
+	return not (disabled() and GATES.has(cell)) and target_at(cell) < 0 and cell != next_machine_cell() and cell != machine["pending_shot"]
+
+func civilian_waypoint(order: String) -> Vector2i:
+	var route := "north" if order == "north" else "south"
+	if return_state["active"]: return mission_definition().civilian_routes[route]
+	if disabled(): return mission_definition().disabled_routes[route]
+	return NORTH_WAYPOINT if order == "north" else SOUTH_WAYPOINT
+
+func cell_occupied_by_people(cell: Vector2i) -> bool:
+	if soldier_at(cell) >= 0: return true
+	for cohort in cohorts:
+		if cohort["status"] == "active" and cohort["cell"] == cell: return true
+	return false
+
+func fire_block_reason() -> String:
+	if soldier_can_act(active_soldier) and soldiers[active_soldier].get("carrying",-1) >= 0:
+		return "Cannot fire while carrying a casualty."
+	if ended: return "Operation ended. Load a save or restart to retry."
+	return rifle_block_reason().replace("enemy (red E)","machine (D)").replace("enemy","machine")
+
+func breaker_reason() -> String:
+	if soldier_can_act(active_soldier) and soldiers[active_soldier].get("carrying",-1) >= 0:
+		return "Cannot operate the breaker while carrying."
+	return origin_breaker_reason()
+
+func protocol_reason(action: String) -> String:
+	if ["authenticate","divert"].has(action) and soldier_can_act(active_soldier) and soldiers[active_soldier].get("carrying",-1) >= 0:
+		return "Cannot operate the console while carrying."
+	return origin_protocol_reason(action)

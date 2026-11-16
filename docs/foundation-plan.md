@@ -253,6 +253,12 @@ The main scene now directly coordinates movement with encounter closure and carr
 
 Ten committed suites and twelve regressions pass; all 119 recorded gameplay states and six outcomes match. Expanded main-scene action checks cover carrier movement/AP, free Follow orders and the per-phase limit, breaker opening/preview/confirmation costs, unavailable-route rejection without consuming an order, and two repair actions unlocking cooling. Gameplay predicates and the underlying compatibility-class dependency remain; removing those dependencies and final visual acceptance are still required before foundation completion.
 
+## Completed: explicit mission and eligibility policies
+
+The main scene now defines mission selection, actor eligibility, targeting, machine plans/prediction, walkability, civilian safety/waypoints, occupancy and action rejection composition without traversing inherited overrides. Long rifle, breaker and protocol checks remain shared named adapters. Existing fixture behavior is preserved.
+
+Eleven committed suites and twelve regressions pass. New policy comparisons check every one of the 320 cells across origin, disabled, casualty, carrying, ended and return states, plus eligibility, waypoints, action rejection text, machine plans and mission selection. All 119 recorded states and six route outcomes match. Shared data/method ownership, narrative/presentation policies and remaining inherited hooks still prevent removal of the compatibility-class chain; this pass does not close the composed-controller milestone.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
