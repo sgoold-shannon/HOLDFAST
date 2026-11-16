@@ -1,4 +1,5 @@
 extends "res://farm_evac.gd"
+const BreakerPanel = preload("res://presentation/breaker_panel.gd")
 ## B3: persistent two-action breaker and explicit destroy/disable consequences.
 const OPTIONS_SLOT := "user://holdfast_b3.save"
 var BREAKER_CELL: Vector2i:
@@ -174,36 +175,28 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
-	draw_rect(Rect2(35,10,790,34),Color("0e1412"))
-	draw_string(font,Vector2(40,36),"HOLDFAST / B3 DESTROY OR DISABLE",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
-	if disabled():
-		for gate in GATES:
-			var origin := cell_to_local(gate)
-			draw_rect(Rect2(origin+Vector2(2,2),Vector2(32,32)),Color("ea9670"),false,2)
-			draw_string(font,origin+Vector2(0,24),"LOCK",HORIZONTAL_ALIGNMENT_CENTER,36,10,Color("ea9670"))
-	if not sight_mode:
-		draw_rect(BREAKER_RECT,Color("315b50") if breaker_reason() == "" else Color("343b38"))
-		draw_string(font,BREAKER_RECT.position+Vector2(0,29),"Open breaker [I] · 1 AP" if breaker_progress == 0 else ("Preview isolation [I]" if breaker_progress == 1 else "Drive isolated"),HORIZONTAL_ALIGNMENT_CENTER,250,16,Color.WHITE)
-		draw_string(font,Vector2(308,792),"Breaker (9,4): %d/2 steps" % breaker_progress,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("f7cd6c"))
-		draw_string(font,Vector2(308,816),breaker_reason() if breaker_reason() != "" else "Progress persists; any adjacent soldier may finish.",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
-	elif pinned_target == enemies[0]["cell"] and machine_present():
-		draw_rect(Rect2(35,803,800,28),Color("0e1412"))
-		draw_string(font,Vector2(40,821),"HP %d/16 | Destruction: 4 damage to %s. Cooling lost." % [enemies[0]["hp"], blast_victims()],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("e6a2c7"))
-	draw_rect(Rect2(35,1070,800,47),Color("0e1412"))
-	draw_string(font,Vector2(40,1088),machine_outcome()+" Closure: round %d." % deadline(),HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
-	draw_string(font,Vector2(40,1109),save_feedback,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
-	if isolate_pending:
-		draw_rect(Rect2(110,240,640,320),Color("111b17"))
-		draw_rect(Rect2(110,240,640,320),Color("f7cd6c"),false,2)
-		var lines := ["ISOLATE DRIVE? 1 AP", "Stops the machine and clears its charged shot.", "Feeder loses power. Civilian gates (11,7) and (11,10) lock.", "North route: (11,7) → (11,4). South: (11,10) → (11,11).", "Existing groups still approaching their waypoint use the bypass.", "Soldiers retain manual access. Machine retained for later repair.", "A collected skid and an advanced deadline are NOT reversed."]
-		for index in range(lines.size()):
-			draw_string(font,Vector2(134,275+index*29),lines[index],HORIZONTAL_ALIGNMENT_LEFT,-1,18 if index == 0 else 15,Color("f7cd6c") if index == 0 else Color.WHITE)
-		draw_rect(CONFIRM_RECT,Color("713f36"))
-		draw_rect(ABORT_RECT,Color("304965"))
-		draw_string(font,CONFIRM_RECT.position+Vector2(0,29),"Confirm isolate [I]",HORIZONTAL_ALIGNMENT_CENTER,260,16,Color.WHITE)
-		draw_string(font,ABORT_RECT.position+Vector2(0,29),"Cancel [Esc]",HORIZONTAL_ALIGNMENT_CENTER,260,16,Color.WHITE)
+	BreakerPanel.render(self,font,board_projection,breaker_panel_snapshot())
 
 func machine_plan() -> Dictionary:
 	var plan := super.machine_plan()
 	plan["disabled"] = disabled()
 	return plan
+
+func breaker_panel_snapshot() -> Dictionary:
+	return {
+		"sight_mode":sight_mode,
+		"breaker_progress":breaker_progress,
+		"pinned_target":pinned_target,
+		"isolate_pending":isolate_pending,
+		"BREAKER_RECT":BREAKER_RECT,
+		"CONFIRM_RECT":CONFIRM_RECT,
+		"ABORT_RECT":ABORT_RECT,
+		"save_feedback":save_feedback,
+		"GATES":GATES.duplicate(),
+		"enemies":enemies.duplicate(true),
+		"disabled":disabled(),
+		"reason":breaker_reason(),
+		"present":machine_present(),
+		"victims":blast_victims(),
+		"outcome":machine_outcome(),
+		"deadline":deadline()}

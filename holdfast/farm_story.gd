@@ -1,4 +1,5 @@
 extends "res://farm_results.gd"
+const StoryPanel = preload("res://presentation/story_panel.gd")
 ## C1: authored scenes consume recorded facts; dialogue never changes combat values.
 const STORY_SLOT := "user://holdfast_c1.save"
 const DEBRIEF_RECT := Rect2(744,945,320,40)
@@ -300,20 +301,15 @@ func _draw() -> void:
 			draw_rect(DEBRIEF_RECT,Color("344f46"))
 			draw_string(font,DEBRIEF_RECT.position+Vector2(0,27),"Debrief [B]",HORIZONTAL_ALIGNMENT_CENTER,320,18,Color.WHITE)
 		return
-	draw_rect(Rect2(0,0,1144,1224),Color("0e1412"))
-	var pages := current_pages()
-	var page: Dictionary = pages[clampi(scene_page,0,pages.size()-1)]
-	result_line(65,"HOLDFAST / "+("SCENE LOG" if scene_view == "log" else ("OPENING" if scene_view == "opening" else "FARM ROAD DEBRIEF")),Color("8be6de"),20)
-	result_line(125,page["speaker"],Color("f7cd6c"),26)
-	draw_multiline_string(font,Vector2(60,207),page["text"],HORIZONTAL_ALIGNMENT_LEFT,1000,25,-1,Color("e2e9e5"))
-	result_line(698,page["tag"],Color("8be6de"),17)
-	result_line(735,"%d / %d" % [scene_page+1,pages.size()],Color("aebbb6"),17)
-	var options := scene_options()
-	for index in range(options.size()):
-		var rect := Rect2(60,770+index*70,980,58)
-		draw_rect(rect,Color("304965"))
-		draw_string(font,rect.position+Vector2(18,37),"%d · %s" % [index+1,options[index]],HORIZONTAL_ALIGNMENT_LEFT,940,21,Color.WHITE)
-	for item in [[NEXT_RECT,"Choose 1–3 above" if scene_view == "opening" and scene_page == 0 else ("Next [Enter]" if scene_page+1 < pages.size() else ("Begin mission [Enter]" if scene_view == "opening" else "Return [Enter]"))],[SKIP_RECT,"Skip opening [Esc]" if scene_view == "opening" else "Return [Esc]"],[LOG_RECT,"Close log [Tab]" if scene_view == "log" else "Scene log / intelligence [Tab]"]]:
-		draw_rect(item[0],Color("34473e"))
-		draw_string(font,item[0].position+Vector2(15,34),item[1],HORIZONTAL_ALIGNMENT_LEFT,item[0].size.x-25,20,Color.WHITE)
-	result_line(1195,save_feedback,Color("aebbb6"),15)
+	StoryPanel.render(self,font,board_projection,story_panel_snapshot())
+
+func story_panel_snapshot() -> Dictionary:
+	return {
+		"scene_view":scene_view,
+		"scene_page":scene_page,
+		"NEXT_RECT":NEXT_RECT,
+		"SKIP_RECT":SKIP_RECT,
+		"LOG_RECT":LOG_RECT,
+		"save_feedback":save_feedback,
+		"pages":current_pages().duplicate(true),
+		"options":scene_options().duplicate()}

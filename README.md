@@ -101,3 +101,5 @@ godot --headless --path holdfast --script res://tests/test_presentation.gd
 Soldier markers and movement/aim/cover overlays now also use separate renderers with detached display data. The presentation test covers their drawing output and isolation from game state. Mission-specific machine/civilian art and the larger panels remain to be extracted.
 
 Machine hazards and appearance, civilian groups/routes, the tactical action panel and civilian-order panel now use separate snapshot-based renderers. Opening, roster, debrief and other mission-specific panels remain in the scene layers. The same presentation test covers the new renderers.
+
+Opening/log/debrief dialogue, roster, mission results, casualty rescue, breaker and protocol panel content now also render from detached snapshots. Scene adapters retain modal input/visibility and smaller mission overlays; the inheritance cleanup remains in progress.

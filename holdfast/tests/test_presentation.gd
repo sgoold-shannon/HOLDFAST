@@ -4,6 +4,7 @@ const ActorView = preload("res://presentation/actor_view.gd")
 const OverlayView = preload("res://presentation/tactical_overlay.gd")
 const BoardView = preload("res://presentation/board_view.gd")
 class RecordingCanvas extends RefCounted:
+	func draw_multiline_string(_font, point, value, alignment, width, size, _max_lines, color): strings.append([point,value,alignment,width,size,color])
 	var circles: Array = []
 	func draw_circle(center, radius, color): circles.append([center,radius,color])
 	var polygons: Array = []
@@ -129,6 +130,33 @@ func run() -> void:
 	labels_found.clear()
 	for label in close_canvas.strings: labels_found.append(label[1])
 	expect(labels_found.has("Confirm: leave them behind") and labels_found.has("Cancel"),"Early-close confirmation controls preserved")
+
+	for panel_name in ["story_panel","roster_panel","results_panel","rescue_panel","breaker_panel","protocol_panel"]:
+		var panel_data_new: Dictionary = farm.call(panel_name+"_snapshot")
+		var data_before := panel_data_new.duplicate(true)
+		var encounter_before: Dictionary = farm.encounter_snapshot()
+		var recorder := RecordingCanvas.new()
+		load("res://presentation/"+panel_name+".gd").render(recorder,farm.font,farm.board_projection,panel_data_new)
+		expect(not recorder.strings.is_empty(),panel_name+" renders content")
+		expect(panel_data_new==data_before,panel_name+" leaves input untouched")
+		expect(farm.encounter_snapshot()==encounter_before,panel_name+" cannot alter encounter")
+	farm.scene_view = "opening"
+	farm.scene_page = 0
+	var opening := RecordingCanvas.new()
+	preload("res://presentation/story_panel.gd").render(opening,farm.font,farm.board_projection,farm.story_panel_snapshot())
+	labels_found.clear()
+	for label in opening.strings: labels_found.append(label[1])
+	expect(labels_found.has("Choose 1–3 above"),"Opening choice prompt preserved")
+	farm.history_page = 999
+	var roster_data: Dictionary = farm.roster_panel_snapshot()
+	expect(roster_data["history_page"]==maxi(1,ceili(roster_data["details"].size()/9.0))-1,"Roster page is clamped before rendering")
+	var breaker_data: Dictionary = farm.breaker_panel_snapshot()
+	breaker_data["isolate_pending"] = true
+	var confirmation := RecordingCanvas.new()
+	preload("res://presentation/breaker_panel.gd").render(confirmation,farm.font,farm.board_projection,breaker_data)
+	labels_found.clear()
+	for label in confirmation.strings: labels_found.append(label[1])
+	expect(labels_found.has("Confirm isolate [I]") and labels_found.has("Cancel [Esc]"),"Breaker confirmation controls preserved")
 	farm.free()
 	print("PRESENTATION BOUNDARY FAILURES: ",failures)
 	quit(1 if failures else 0)

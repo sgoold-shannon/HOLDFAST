@@ -1,4 +1,5 @@
 extends "res://farm_options.gd"
+const ProtocolPanel = preload("res://presentation/protocol_panel.gd")
 ## B4 communication actions are deterministic; the pause is single-use.
 const PROTOCOL_SLOT := "user://holdfast_b4.save"
 var CONSOLE_CELL: Vector2i:
@@ -208,26 +209,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
-	draw_rect(Rect2(35,10,790,34),Color("0e1412"))
-	draw_string(font,Vector2(40,36),"HOLDFAST / B4 COMMUNICATE & DIVERT",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
-	if protocol["route_set"] and not protocol["betrayed"]:
-		for waypoint in DIVERSION:
-			draw_rect(Rect2(cell_to_local(waypoint)+Vector2(1,1),Vector2(34,34)),Color("8be6de"),false,2)
-	for item in [[OBSERVE_RECT,"Observe [O] · 1 AP","observe"],[TRANSMIT_RECT,"Transmit [P] · 1 AP","transmit"],[AUTH_RECT,"Authenticate [A] · 1 AP","authenticate"],[DIVERT_RECT,"Divert [D] · 1 AP","divert"]]:
-		draw_rect(item[0],Color("304965") if protocol_reason(item[2]) == "" else Color("343b38"))
-		draw_string(font,item[0].position+Vector2(0,26),item[1],HORIZONTAL_ALIGNMENT_CENTER,item[0].size.x,14,Color.WHITE)
-	var progress := "Observed: %s | ACK-01: %s | Authenticated: %s" % ["yes" if protocol["observed"] else "no","received" if protocol["acknowledged"] else "not received","yes" if protocol["authenticated"] else "no"]
-	draw_string(font,Vector2(40,1127),progress,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("8be6de"))
-	draw_string(font,Vector2(40,1201),"Pause: HOLD / ONE CYCLE. Console: (11,12), adjacent %s (MSG if unavailable)." % soldiers[2]["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
-	# Keep the forecast honest while paused or safely redirected.
-	var forecast := "none"
-	if machine["collected_round"] > 0:
-		forecast = str(machine["collected_round"] + 1)
-	elif machine_present() and not disabled() and not protocol["diverted"]:
-		var path := machine_path(enemies[0]["cell"],SKID_CELL,false)
-		forecast = str(phase + path.size() + 1 + (1 if protocol["pause_pending"] else 0))
-	draw_rect(Rect2(35,1070,800,25),Color("0e1412"))
-	draw_string(font,Vector2(40,1088),"Machine closure forecast %s | External 10 | Deadline %d | %s" % [forecast,deadline(),"Safe route canceled" if protocol["betrayed"] else ("Diverted" if protocol["diverted"] else "Default recovery")],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
+	ProtocolPanel.render(self,font,board_projection,protocol_panel_snapshot())
 
 func machine_plan() -> Dictionary:
 	var plan := super.machine_plan()
@@ -235,3 +217,22 @@ func machine_plan() -> Dictionary:
 	plan["skid"] = SKID_CELL
 	plan["diversion"] = DIVERSION
 	return plan
+
+func protocol_panel_snapshot() -> Dictionary:
+	var reasons := {}
+	for action in ["observe","transmit","authenticate","divert"]: reasons[action] = protocol_reason(action)
+	return {
+		"OBSERVE_RECT":OBSERVE_RECT,
+		"TRANSMIT_RECT":TRANSMIT_RECT,
+		"AUTH_RECT":AUTH_RECT,
+		"DIVERT_RECT":DIVERT_RECT,
+		"phase":phase,
+		"protocol":protocol.duplicate(true),
+		"soldiers":soldiers.duplicate(true),
+		"machine":machine.duplicate(true),
+		"DIVERSION":DIVERSION.duplicate(),
+		"reasons":reasons,
+		"present":machine_present(),
+		"disabled":disabled(),
+		"path":machine_path(enemies[0]["cell"],SKID_CELL,false).duplicate() if machine["collected_round"] == 0 and machine_present() and not disabled() and not protocol["diverted"] else [],
+		"deadline":deadline()}

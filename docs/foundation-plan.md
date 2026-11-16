@@ -115,6 +115,14 @@ All five committed suites pass. Added renderer checks cover snapshot isolation, 
 
 Opening, roster, debrief, rescue/interaction panels and mission-specific overlays remain in the inherited scene adapters. Their extraction and the removal of layered drawing are still outstanding; the final isometric renderer is not enabled.
 
+## Completed: narrative, roster, results and interaction panels
+
+Six more snapshot-based renderers now own the main content of opening/log/debrief dialogue (`story_panel.gd`), persistent roster (`roster_panel.gd`), mission results (`results_panel.gd`), casualty rescue controls/markers (`rescue_panel.gd`), breaker controls/confirmation (`breaker_panel.gd`) and protocol controls/diversion hints (`protocol_panel.gd`). Eligibility, dialogue selection, history generation and forecast pathfinding remain in controller adapters. No renderer receives gameplay callbacks.
+
+The existing roster history-page clamp now runs in its snapshot adapter instead of during rendering. Input routing and modal visibility still belong to the scene adapters, preserving their precedence. Small title/navigation overlays, return/final mission drawing and the inheritance chain remain; this is not yet a shallow composed controller or the final isometric presentation.
+
+Validation: all five committed suites and seven targeted B3–B6/C1/C2/staging-care regressions pass. Renderer checks exercise all six snapshots, opening choice labels, roster page bounds and breaker confirmation/cancel controls. The 119-action before/after comparison still matches exactly. No visual screenshot comparison was performed.
+
 ## Remaining sequence before a new mission
 
 1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.

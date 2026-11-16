@@ -1,4 +1,5 @@
 extends "res://farm_protocol.gd"
+const RescuePanel = preload("res://presentation/rescue_panel.gd")
 ## B5 casualty rules; critical_epoch is the round in which the wound occurred.
 const RESCUE_SLOT := "user://holdfast_b5.save"
 const CASUALTY_RECT := Rect2(876,1032,248,32)
@@ -356,45 +357,22 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	super._draw()
-	draw_rect(Rect2(35,10,790,34),Color("0e1412"))
-	draw_string(font,Vector2(40,36),"HOLDFAST / B5 CASUALTY RESCUE",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
-	for index in range(soldiers.size()):
-		var soldier: Dictionary = soldiers[index]
-		if not soldier_visible(index):
-			continue
-		var center := cell_to_local(soldier["cell"])+Vector2(18,18)
-		if soldier["condition"] == "dead":
-			draw_line(center-Vector2(11,11),center+Vector2(11,11),Color("f07878"),3)
-		elif soldier["condition"] == "critical":
-			draw_string(font,center+Vector2(7,-6),str(soldier["bleed"]),HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("ffb75a"))
-		elif soldier["condition"] == "stable":
-			draw_string(font,center+Vector2(7,-6),"+",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("8be6de"))
-		if soldier["carrying"] >= 0:
-			draw_string(font,center+Vector2(-15,22),"+"+soldiers[soldier["carrying"]]["mark"],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8be6de"))
+	RescuePanel.render(self,font,board_projection,rescue_panel_snapshot())
+
+func rescue_panel_snapshot() -> Dictionary:
+	var visible := []
+	for index in range(soldiers.size()): visible.append(soldier_visible(index))
 	var target := target_for_rescue()
-	draw_rect(CASUALTY_RECT,Color("34473e"))
-	draw_string(font,CASUALTY_RECT.position+Vector2(0,23),"Casualty: %s [V]" % (soldiers[target]["name"] if casualty_available(target) else "none"),HORIZONTAL_ALIGNMENT_CENTER,248,14,Color.WHITE)
-	for item in [[STABILIZE_RECT,"Stabilize [S] · 1 AP + charge"],[PICKUP_RECT,"Pick up [U] · 1 AP"],[DROP_RECT,"Put down [J] · 1 AP"]]:
-		draw_rect(item[0],Color("304965"))
-		draw_string(font,item[0].position+Vector2(0,24),item[1],HORIZONTAL_ALIGNMENT_CENTER,248,14,Color.WHITE)
-	draw_string(font,Vector2(876,1210),"%s medical charges: %d/2" % [soldiers[1]["name"],soldiers[1]["medical"]],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("8be6de"))
-	if soldier_can_act(active_soldier) and soldiers[active_soldier]["carrying"] >= 0:
-		draw_rect(Rect2(35,713,800,26),Color("0e1412"))
-		draw_string(font,Vector2(40,730),"Carrying %s: 2 squares per move / 1 AP; no dash, fire or machinery." % soldiers[soldiers[active_soldier]["carrying"]]["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8be6de"))
-	if close_pending and not ended:
-		var living_left := 0
-		for soldier in soldiers:
-			living_left += 1 if not soldier["extracted"] and soldier["condition"] != "dead" else 0
-		draw_rect(Rect2(872,905,256,25),Color("18231f"))
-		draw_string(font,Vector2(876,922),"%d living soldiers left behind." % living_left,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color.WHITE)
-	if ended:
-		var out_count := 0
-		var dead_count := 0
-		var left_count := 0
-		for soldier in soldiers:
-			out_count += 1 if soldier["extracted"] else 0
-			dead_count += 1 if soldier["condition"] == "dead" else 0
-			left_count += 1 if soldier["left_behind"] else 0
-		draw_rect(Rect2(872,825,256,62),Color("18231f"))
-		draw_string(font,Vector2(876,846),"Squad: out %d / dead %d / left %d" % [out_count,dead_count,left_count],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color.WHITE)
-		draw_string(font,Vector2(876,873),"MSG dead: retry required" if soldiers[0]["condition"] == "dead" else ("MSG missing: retry required" if not soldiers[0]["extracted"] else "MSG extracted"),HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("f7cd6c"))
+	return {
+		"active_soldier":active_soldier,
+		"close_pending":close_pending,
+		"ended":ended,
+		"CASUALTY_RECT":CASUALTY_RECT,
+		"STABILIZE_RECT":STABILIZE_RECT,
+		"PICKUP_RECT":PICKUP_RECT,
+		"DROP_RECT":DROP_RECT,
+		"soldiers":soldiers.duplicate(true),
+		"visible":visible,
+		"target":target,
+		"target_available":casualty_available(target),
+		"can_act":soldier_can_act(active_soldier)}

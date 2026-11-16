@@ -1,4 +1,5 @@
 extends "res://farm_story.gd"
+const RosterPanel = preload("res://presentation/roster_panel.gd")
 const Roster = preload("res://campaign_roster.gd")
 const CAMPAIGN_SLOT := "user://holdfast_c2_campaign.save"
 const TACTICAL_SLOT := "user://holdfast_c2.save"
@@ -315,34 +316,19 @@ func _draw() -> void:
 				draw_rect(RETRY_RECT,Color("304965"))
 				draw_string(font,RETRY_RECT.position+Vector2(0,35),"Roster [Q / G]",HORIZONTAL_ALIGNMENT_CENTER,320,19,Color.WHITE)
 		return
-	draw_rect(Rect2(0,0,1144,1224),Color("0e1412"))
-	result_line(65,"HOLDFAST / C2 · PERSISTENT ROSTER",Color("8be6de"),22)
-	result_line(115,"Deployment %d / 2 · %d mission records" % [campaign["deployment"],campaign["missions"].size()],Color("f7cd6c"),25)
-	result_line(155,"Confirmed deaths remain in service records. Replacements have separate identities.",Color("aebbb6"),17)
-	for index in range(campaign["members"].size()):
-		var member: Dictionary = campaign["members"][index]
-		var rect := Rect2(60,210+index*67,300,58)
-		draw_rect(rect,Color("476b59") if index == roster_index else Color("263b32"))
-		draw_string(font,rect.position+Vector2(14,24),member["name"]+(" · new" if member["replacement"] else ""),HORIZONTAL_ALIGNMENT_LEFT,270,20,Color.WHITE)
-		draw_string(font,rect.position+Vector2(14,47),member["status"].replace("_"," ").to_upper(),HORIZONTAL_ALIGNMENT_LEFT,270,15,Color("f7cd6c"))
-	var actor: Dictionary = campaign["members"][roster_index]
-	draw_string(font,Vector2(400,238),"%s · %s · HP %d/8" % [actor["name"],["MSG","Medic","Engineer","Recon"][actor["role"]],actor["hp"]],HORIZONTAL_ALIGNMENT_LEFT,660,25,Color.WHITE)
-	var lines := roster_details(actor)
-	var page_count := maxi(1,ceili(lines.size()/9.0))
-	history_page = clampi(history_page,0,page_count-1)
-	draw_multiline_string(font,Vector2(400,290),"\n".join(lines.slice(history_page*9,history_page*9+9)),HORIZONTAL_ALIGNMENT_LEFT,660,21,-1,Color("d6ded9"))
-	draw_string(font,Vector2(400,765),"Record %d/%d · ← / → pages · ↑ / ↓ soldier" % [history_page+1,page_count],HORIZONTAL_ALIGNMENT_LEFT,660,17,Color("8be6de"))
-	result_line(840,"Next deployment: available survivors keep their remaining HP.",Color.WHITE,19)
-	result_line(875,"Casualty-care patients rest. Living people left behind remain unavailable.",Color("aebbb6"),18)
-	result_line(910,"Ammunition, AP and deployed medic charges are replenished at staging.",Color("aebbb6"),18)
-	result_line(955,"Deployment 2 is a roster test on the same map, with new civilian identities.",Color("8be6de"),18)
-	draw_rect(CARE_RECT,Color("304965") if can_receive_staging_care() else Color("28332d"))
-	draw_string(font,CARE_RECT.position+Vector2(15,32),"Staging care [T] · treatment and rest; patients return at 1 HP" if can_receive_staging_care() else "No patients awaiting staging care",HORIZONTAL_ALIGNMENT_LEFT,994,19,Color.WHITE)
-	var action := "Deploy roster [Enter]"
-	if campaign["deployment"] == 2: action = "Two-deployment fixture complete" if campaign["committed"] else "Finish this deployment first"
-	elif not campaign["committed"]: action = "Retry required before continuation"
-	elif not can_deploy(): action = "MSG needs staging care [T]"
-	for item in [[DEPLOY_RECT,action],[BACK_RECT,"Back to results [Esc]"]]:
-		draw_rect(item[0],Color("304965"))
-		draw_string(font,item[0].position+Vector2(15,35),item[1],HORIZONTAL_ALIGNMENT_LEFT,450,20,Color.WHITE)
-	result_line(1180,result_feedback,Color("aebbb6"),15)
+	RosterPanel.render(self,font,board_projection,roster_panel_snapshot())
+
+func roster_panel_snapshot() -> Dictionary:
+	var details := roster_details(campaign["members"][roster_index])
+	history_page = clampi(history_page,0,maxi(1,ceili(details.size()/9.0))-1)
+	return {
+		"roster_index":roster_index,
+		"history_page":history_page,
+		"CARE_RECT":CARE_RECT,
+		"DEPLOY_RECT":DEPLOY_RECT,
+		"BACK_RECT":BACK_RECT,
+		"result_feedback":result_feedback,
+		"campaign":campaign.duplicate(true),
+		"details":details,
+		"care":can_receive_staging_care(),
+		"deploy":can_deploy()}

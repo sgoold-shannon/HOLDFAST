@@ -1,4 +1,5 @@
 extends "res://farm_rescue.gd"
+const ResultsPanel = preload("res://presentation/results_panel.gd")
 ## B6 derives results from the resolved encounter, never from predicted outcomes.
 const RESULT_SLOT := "user://holdfast_b6.save"
 const REPORT_SLOT := "user://holdfast_b6_result.save"
@@ -200,41 +201,25 @@ func _draw() -> void:
 		draw_rect(Rect2(35,10,790,34),Color("0e1412"))
 		draw_string(font,Vector2(40,36),"HOLDFAST / B6 MISSION RESULTS",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color.WHITE)
 		return
-	draw_rect(Rect2(0,0,1144,1224),Color("0e1412"))
-	result_line(55,"HOLDFAST  /  FARM ROAD RECORD",Color("8be6de"),17)
-	result_line(108,result_title(),Color("f7cd6c"),29)
-	result_line(146,"Round %d · %s" % [phase,end_reason],Color("aebbb6"),18)
-	result_line(184,"MSG terminal loss prevents continuation. Retry or load a tactical save." if retry_required() else "MSG recovered. The casualties and losses below remain recorded.",Color.WHITE,18)
-	result_line(243,"SQUAD DISPOSITIONS",Color("8be6de"),18)
-	for index in range(soldiers.size()):
-		result_line(282+index*37,"%-8s  %s" % [soldiers[index]["name"],soldier_disposition(index)])
-	result_line(443,"CIVILIANS  /  %d evacuated · %d stranded" % [evacuated_people(),12-evacuated_people()],Color("8be6de"),20)
-	for index in range(cohorts.size()):
-		var cohort: Dictionary = cohorts[index]
-		result_line(480+index*33,"Group %s · 4 people · %s" % [cohort["id"],"EVACUATED" if cohort["status"] == "extracted" else "STRANDED — fate unconfirmed"],Color("d6ded9"),18)
-	result_line(605,"MACHINERY & VERIFIED OBSERVATIONS",Color("8be6de"),18)
-	result_line(641,machine_outcome(),Color.WHITE,18)
-	result_line(675,feeder_result(),Color("d6ded9"),18)
-	result_line(709,"Protocol observed: %s · ACK-01 received: %s · Console authenticated: %s" % ["yes" if protocol["observed"] else "no","yes" if protocol["acknowledged"] else "no","yes" if protocol["authenticated"] else "no"],Color("d6ded9"),17)
-	result_line(743,"These are local observations; the machine's wider purpose is unconfirmed.",Color("aebbb6"),17)
-	result_line(799,"VERIFIED CASUALTY RECOVERY",Color("8be6de"),18)
-	var summaries: Array[String] = []
-	for index in range(4):
-		var treatments := 0
-		var pickups := 0
-		var extractions := 0
-		for event in rescue_events:
-			if event["actor"] == index:
-				treatments += 1 if event["kind"] == "stabilized" else 0
-				pickups += 1 if event["kind"] == "picked_up" else 0
-				extractions += 1 if event["kind"] == "extracted_with" else 0
-		if treatments+pickups+extractions > 0:
-			summaries.append("%s · treated %d · picked up %d · carried out %d" % [soldiers[index]["name"],treatments,pickups,extractions])
-	if summaries.is_empty(): summaries.append("No casualty recovery actions recorded.")
-	for index in range(summaries.size()): result_line(835+index*32,summaries[index],Color("d6ded9"),18)
-	result_line(1002,result_feedback,Color("f7cd6c"),17)
-	result_line(1036,"Non-MSG deaths stay recorded. Left behind and stranded do not mean confirmed dead.",Color("aebbb6"),16)
-	for item in [[RETRY_RECT,"Retry mission [Q]" if retry_required() else "Replay mission [Q]"],[RESUME_RECT,"Load tactical save [L]"],[RECORD_RECT,"Save this state [K]"]]:
-		draw_rect(item[0],Color("304965"))
-		draw_string(font,item[0].position+Vector2(0,35),item[1],HORIZONTAL_ALIGNMENT_CENTER,320,19,Color.WHITE)
-	result_line(1180,"A replay starts a new attempt. H reopens the last resolved mission record.",Color("aebbb6"),17)
+	ResultsPanel.render(self,font,board_projection,results_panel_snapshot())
+
+func results_panel_snapshot() -> Dictionary:
+	var dispositions := []
+	for index in range(soldiers.size()): dispositions.append(soldier_disposition(index))
+	return {
+		"phase":phase,
+		"end_reason":end_reason,
+		"result_feedback":result_feedback,
+		"RETRY_RECT":RETRY_RECT,
+		"RESUME_RECT":RESUME_RECT,
+		"RECORD_RECT":RECORD_RECT,
+		"soldiers":soldiers.duplicate(true),
+		"cohorts":cohorts.duplicate(true),
+		"protocol":protocol.duplicate(true),
+		"rescue_events":rescue_events.duplicate(true),
+		"title":result_title(),
+		"retry":retry_required(),
+		"dispositions":dispositions,
+		"evacuated":evacuated_people(),
+		"outcome":machine_outcome(),
+		"feeder":feeder_result()}
