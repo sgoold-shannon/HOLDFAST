@@ -1,7 +1,6 @@
 extends RefCounted
 ## GDD v3.1: center-to-center supercover, including both sides of corner ties.
-const WALLS: Array[Vector2i] = [Vector2i(12, 5), Vector2i(12, 6), Vector2i(12, 8), Vector2i(12, 9)]
-const COVER := {Vector2i(5, 5): "north", Vector2i(8, 5): "north", Vector2i(5, 11): "south", Vector2i(8, 11): "south"}
+const DefaultMission = preload("res://missions/tactical_sandbox.tres")
 
 static func supercover(start: Vector2i, finish: Vector2i) -> Array[Vector2i]:
 	var cells: Array[Vector2i] = [start]
@@ -30,14 +29,14 @@ static func supercover(start: Vector2i, finish: Vector2i) -> Array[Vector2i]:
 		cells.append(current)
 	return cells
 
-static func preview(shooter: Vector2i, target: Vector2i) -> Dictionary:
+static func preview(shooter: Vector2i, target: Vector2i, mission: Resource = DefaultMission) -> Dictionary:
 	var cells := supercover(shooter, target)
 	var blockers: Array[Vector2i] = []
 	for cell in cells:
-		if WALLS.has(cell):
+		if mission.walls.has(cell):
 			blockers.append(cell)
 	var distance := absi(target.x - shooter.x) + absi(target.y - shooter.y)
-	var edge: String = COVER.get(target, "none")
+	var edge: String = mission.cover_edges.get(target, "none")
 	var protected := (edge == "north" and shooter.y < target.y) or (edge == "south" and shooter.y > target.y)
 	var cover_modifier := -25 if protected else 0
 	var range_modifier := 10 if distance <= 4 else (0 if distance <= 8 else -15)

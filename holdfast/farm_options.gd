@@ -1,8 +1,10 @@
 extends "res://farm_evac.gd"
 ## B3: persistent two-action breaker and explicit destroy/disable consequences.
 const OPTIONS_SLOT := "user://holdfast_b3.save"
-const BREAKER_CELL := Vector2i(9,4)
-const GATES: Array[Vector2i] = [Vector2i(11,7),Vector2i(11,10)]
+var BREAKER_CELL: Vector2i:
+	get: return mission_definition().breaker_cell
+var GATES: Array[Vector2i]:
+	get: return mission_definition().gates
 const BREAKER_RECT := Rect2(40, 773, 250, 48)
 const CONFIRM_RECT := Rect2(160, 490, 260, 46)
 const ABORT_RECT := Rect2(440, 490, 260, 46)
@@ -72,7 +74,7 @@ func enemy_intent() -> String:
 
 func civilian_waypoint(order: String) -> Vector2i:
 	if disabled():
-		return Vector2i(11,4) if order == "north" else Vector2i(11,11)
+		return mission_definition().disabled_routes["north" if order == "north" else "south"]
 	return super.civilian_waypoint(order)
 
 func civilian_safe(cell: Vector2i) -> bool:

@@ -1,5 +1,8 @@
 extends RefCounted
 ## Versioned, checked binary data preserves Vector2i and full 64-bit RNG state.
+const FarmMission = preload("res://missions/farm_road.tres")
+const ReturnMission = preload("res://missions/northbound_return.tres")
+const SandboxMission = preload("res://missions/tactical_sandbox.tres")
 const SAVE_PATH := "user://holdfast_a6.save"
 const FORMAT := "HOLDFAST_A6"
 const VERSION := 1
@@ -62,7 +65,7 @@ static func integer(value: Variant, minimum: int, maximum: int) -> bool:
 	return value is int and value >= minimum and value <= maximum
 
 static func cell(value: Variant, allow_none: bool = false) -> bool:
-	return value is Vector2i and ((allow_none and value == Vector2i(-1, -1)) or (value.x >= 1 and value.x <= 20 and value.y >= 1 and value.y <= 16))
+	return value is Vector2i and ((allow_none and value == Vector2i(-1, -1)) or (value.x >= 1 and value.x <= FarmMission.grid_size.x and value.y >= 1 and value.y <= FarmMission.grid_size.y))
 
 static func validate(data: Dictionary) -> String:
 	var return_scene: bool = data.get("layout") == "gdd3.1-d1-return"
@@ -110,7 +113,7 @@ static func validate(data: Dictionary) -> String:
 	var occupied: Array[Vector2i] = []
 	var names := ["MSG", "Ortiz", "Bell", "Park"]
 	var marks := ["M", "O", "B", "P"]
-	const WALLS := [Vector2i(12, 5), Vector2i(12, 6), Vector2i(12, 8), Vector2i(12, 9)]
+	var WALLS: Array = FarmMission.walls
 	for index in range(4):
 		var soldier: Variant = combat["soldiers"][index]
 		if not soldier is Dictionary:
@@ -137,7 +140,7 @@ static func validate(data: Dictionary) -> String:
 				return "invalid occupied cell."
 			occupied.append(soldier["cell"])
 	var enemy: Variant = combat["targets"][0]
-	if not enemy is Dictionary or (not cell(enemy.get("cell")) if farm else enemy.get("cell") != Vector2i(10, 7)) or not integer(enemy.get("hp"), 0, 16 if farm else 8) or not integer(enemy.get("ammo"), 0, 4):
+	if not enemy is Dictionary or (not cell(enemy.get("cell")) if farm else enemy.get("cell") != SandboxMission.machine_spawn) or not integer(enemy.get("hp"), 0, 16 if farm else 8) or not integer(enemy.get("ammo"), 0, 4):
 		return "invalid enemy state."
 	var departed := false
 	if farm:
@@ -146,7 +149,7 @@ static func validate(data: Dictionary) -> String:
 		var machine: Dictionary = data["machine"]
 		if not integer(machine.get("stage"), 0, 8) or not machine.get("hostile") is bool or not machine.get("departed") is bool or not cell(machine.get("pending_shot"), true) or not integer(machine.get("collected_round"), 0, combat["phase"]):
 			return "invalid machine state."
-		var route := [Vector2i(10,8), Vector2i(9,8), Vector2i(8,8), Vector2i(7,8), Vector2i(7,8), Vector2i(8,8), Vector2i(9,8), Vector2i(10,8), Vector2i(11,8)]
+		var route: Array = FarmMission.machine_patrol
 		var dynamic_route: bool = communication and data.get("protocol") is Dictionary and data["protocol"].get("route_set") == true
 		if not dynamic_route and (enemy["cell"] != route[machine["stage"]] or (machine["departed"] and machine["stage"] != 8)):
 			return "machine route mismatch."
@@ -200,7 +203,7 @@ static func validate(data: Dictionary) -> String:
 				return "invalid civilian manifest."
 			if (group["hp"] == 0 and group["status"] != "stranded") or (evacuation["ended"] and group["status"] == "active"):
 				return "invalid civilian outcome."
-			if group["status"] == "extracted" and (group["cell"] != (Vector2i(10,1) if return_active else Vector2i(19,8)) or group["hp"] == 0):
+			if group["status"] == "extracted" and (group["cell"] != (ReturnMission.civilian_exit if return_active else FarmMission.civilian_exit) or group["hp"] == 0):
 				return "invalid evacuation location."
 		for soldier in combat["soldiers"]:
 			if not soldier.get("left_behind") is bool or (soldier["left_behind"] and soldier["extracted"]):

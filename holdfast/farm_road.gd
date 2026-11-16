@@ -2,15 +2,18 @@ extends "res://battlefield.gd"
 ## B1: route, occupied-cell impacts, and fixed-cell defensive shots.
 const MachineActivation = preload("res://systems/machine_activation.gd")
 var machine_behavior: MachineActivation
+const FarmRoadMission = preload("res://missions/farm_road.tres")
 const FARM_SLOT := "user://holdfast_b1.save"
-const ROUTE: Array[Vector2i] = [Vector2i(10, 8), Vector2i(9, 8), Vector2i(8, 8), Vector2i(7, 8), Vector2i(7, 8), Vector2i(8, 8), Vector2i(9, 8), Vector2i(10, 8), Vector2i(11, 8)]
-const FIXTURES: Array[Vector2i] = [Vector2i(9, 4), Vector2i(11, 12)]
+var ROUTE: Array[Vector2i]:
+	get: return mission_definition().machine_patrol
+var FIXTURES: Array[Vector2i]:
+	get: return mission_definition().fixtures
 var machine := {"stage": 0, "hostile": false, "pending_shot": Vector2i(-1, -1), "collected_round": 0, "departed": false}
 
 func _ready() -> void:
 	super._ready()
 	machine_behavior = MachineActivation.new(next_machine_cell, enemy_target, cell_occupied_by_people, damage_cell, machine_path)
-	enemies.assign([{"cell": Vector2i(10, 8), "hp": 16, "ammo": 4}])
+	enemies.assign([{"cell": mission_definition().machine_spawn, "hp": mission_definition().machine_hp, "ammo": 4}])
 	status_text = "Farm Road: neutral machine. Orange = next movement; red = charged shot."
 	enemy_message = "Observed route: (10,8) → (9,8) → (8,8) → skid (7,8), then return."
 	save_feedback = "B1 has its own save slot. Gate A scene and save remain available."
@@ -28,7 +31,7 @@ func is_walkable(cell: Vector2i) -> bool:
 	return not FIXTURES.has(cell) and super.is_walkable(cell)
 
 func enemy_target() -> int:
-	return machine_behavior.nearest_target(machine,enemies[0],soldiers,machine_plan(),soldier_can_act,Rules.preview)
+	return machine_behavior.nearest_target(machine,enemies[0],soldiers,machine_plan(),soldier_can_act,sight_preview)
 
 func enemy_intent() -> String:
 	if machine["departed"]:
@@ -83,7 +86,7 @@ func try_fire() -> bool:
 		queue_redraw()
 		return false
 	var soldier: Dictionary = soldiers[active_soldier]
-	var info := Rules.preview(soldier["cell"], pinned_target)
+	var info := sight_preview(soldier["cell"], pinned_target)
 	# The machine never receives low-cover protection.
 	var chance := clampi(75 + info["range_modifier"], 5, 95)
 	var before := shot_rng.state
@@ -137,7 +140,7 @@ func load_encounter(path: String = FARM_SLOT) -> bool:
 	return true
 
 func machine_track() -> Array[Vector2i]:
-	return [Vector2i(10,8),Vector2i(9,8),Vector2i(8,8),Vector2i(7,8),Vector2i(8,8),Vector2i(9,8),Vector2i(10,8),Vector2i(11,8)]
+	return mission_definition().machine_display_track
 
 func skid_visible() -> bool:
 	return machine["collected_round"] == 0
@@ -152,9 +155,9 @@ func _draw() -> void:
 		draw_line(cell_to_local(track[i-1]) + Vector2(18, 27), cell_to_local(track[i]) + Vector2(18, 27), Color("d1b48a"), 2)
 	for fixture in FIXTURES:
 		draw_rect(Rect2(cell_to_local(fixture) + Vector2(4, 4), Vector2(28, 28)), Color("66727b"))
-		draw_string(font, cell_to_local(fixture) + Vector2(0, 24), "B" if fixture == Vector2i(9, 4) else "C", HORIZONTAL_ALIGNMENT_CENTER, 36, 16, Color.WHITE)
+		draw_string(font, cell_to_local(fixture) + Vector2(0, 24), "B" if fixture == mission_definition().breaker_cell else "C", HORIZONTAL_ALIGNMENT_CENTER, 36, 16, Color.WHITE)
 	if skid_visible():
-		draw_string(font, cell_to_local(Vector2i(7, 8)) + Vector2(0, 12), "SKID", HORIZONTAL_ALIGNMENT_CENTER, 36, 10, Color("e8d9b4"))
+		draw_string(font, cell_to_local(mission_definition().skid_cell) + Vector2(0, 12), "SKID", HORIZONTAL_ALIGNMENT_CENTER, 36, 10, Color("e8d9b4"))
 	var next := next_machine_cell()
 	if next != NONE:
 		draw_rect(Rect2(cell_to_local(next) + Vector2(2, 2), Vector2(32, 32)), Color(1.0,0.5,0.1,0.3))
@@ -200,8 +203,11 @@ func draw_targets() -> void:
 	pass # Farm Road draws its machine after hazard overlays.
 
 func machine_plan() -> Dictionary:
-	return {"collect_stage":3,"depart_stage":ROUTE.size()-1,"disabled":false,
+	return {"collect_stage":mission_definition().machine_collect_stage,"depart_stage":ROUTE.size()-1,"disabled":false,
 		"protocol":{},"skid":NONE,"diversion":[]}
 
 func machine_path(_start: Vector2i, _goal: Vector2i, _avoid_people: bool) -> Array[Vector2i]:
 	return [] # Patrol-only gates do not request navigation; protocol supplies mission terrain.
+
+func mission_definition() -> Resource:
+	return mission_override if mission_override != null else FarmRoadMission

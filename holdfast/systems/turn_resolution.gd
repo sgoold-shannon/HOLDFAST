@@ -8,10 +8,9 @@ static func resolve(phase: int, hooks: Dictionary) -> void:
 			hooks["machine"].call()
 			if not hooks["ended"].call():
 				hooks["civilians"].call()
-				if phase >= hooks["deadline"].call():
-					hooks["finish"].call("Road closed")
-				elif hooks["squad_out"].call() and hooks["remaining_civilians"].call() == 0:
-					hooks["finish"].call("Evacuation resolved")
+				var reason: String = hooks["completion"].call(phase)
+				if reason != "":
+					hooks["finish"].call(reason)
 				else:
 					hooks["begin_player"].call()
 	hooks["after_turn"].call()

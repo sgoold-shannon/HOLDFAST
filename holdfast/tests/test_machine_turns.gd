@@ -137,9 +137,7 @@ func test_turn_order() -> void:
 		"prepare_machine":func(): events.append("prepare"),
 		"machine":do_machine,
 		"civilians":func(): events.append("civilians"),
-		"deadline":func() -> int: return closing_round,
-		"squad_out":func() -> bool: return squad_out,
-		"remaining_civilians":func() -> int: return civilians_left,
+		"completion":completion,
 		"finish":finish,
 		"begin_player":func(): events.append("player"),
 		"after_turn":func(): events.append("finalize"),
@@ -171,3 +169,8 @@ func test_turn_order() -> void:
 	events.clear()
 	Turns.resolve(1,hooks)
 	expect(events==["casualties","prepare","machine","civilians","Evacuation resolved","finalize"],"Complete extraction ends instead of starting another turn")
+
+func completion(round_number: int) -> String:
+	if round_number >= closing_round: return "Road closed"
+	if squad_out and civilians_left == 0: return "Evacuation resolved"
+	return ""

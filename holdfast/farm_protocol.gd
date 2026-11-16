@@ -1,9 +1,12 @@
 extends "res://farm_options.gd"
 ## B4 communication actions are deterministic; the pause is single-use.
 const PROTOCOL_SLOT := "user://holdfast_b4.save"
-const CONSOLE_CELL := Vector2i(11,12)
-const SKID_CELL := Vector2i(7,8)
-const DIVERSION: Array[Vector2i] = [Vector2i(10,10),Vector2i(14,10),Vector2i(14,8)]
+var CONSOLE_CELL: Vector2i:
+	get: return mission_definition().console_cell
+var SKID_CELL: Vector2i:
+	get: return mission_definition().skid_cell
+var DIVERSION: Array[Vector2i]:
+	get: return mission_definition().diversion
 const OBSERVE_RECT := Rect2(40,1136,180,40)
 const TRANSMIT_RECT := Rect2(230,1136,180,40)
 const AUTH_RECT := Rect2(420,1136,190,40)
@@ -30,7 +33,7 @@ func protocol_reason(action: String) -> String:
 		if action == "observe":
 			if protocol["observed"]:
 				return "Machine already observed."
-			var info := Rules.preview(soldiers[0]["cell"],enemies[0]["cell"])
+			var info := sight_preview(soldiers[0]["cell"],enemies[0]["cell"])
 			if not info["clear"] or info["distance"] > 8:
 				return "Observation needs sight and Manhattan distance 8 or less."
 		else:

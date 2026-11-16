@@ -1,9 +1,12 @@
 extends "res://farm_roster.gd"
+const NorthboundMission = preload("res://missions/northbound_return.tres")
 const ReturnRules = preload("res://return_rules.gd")
 const RETURN_SLOT := "user://holdfast_d1.save"
 const RETURN_CAMPAIGN := "user://holdfast_d1_campaign.save"
-const TUNNEL := Vector2i(10,1)
-const REPAIR_CELL := Vector2i(10,8)
+var TUNNEL: Vector2i:
+	get: return NorthboundMission.civilian_exit
+var REPAIR_CELL: Vector2i:
+	get: return mission_definition().repair_cell
 const COOLING_BUTTON := Rect2(40,1136,784,40)
 var return_state := ReturnRules.initial()
 
@@ -122,14 +125,8 @@ func restart_attempt() -> void:
 		state["source"] = return_state["source"]
 	replace_return_attempt(campaign.duplicate(true),state)
 
-func civilian_exit() -> Vector2i:
-	return TUNNEL if return_state["active"] else super.civilian_exit()
 
-func extraction_cell(cell: Vector2i) -> bool:
-	return cell.y == 1 and cell.x >= 9 and cell.x <= 11 if return_state["active"] else super.extraction_cell(cell)
 
-func deadline() -> int:
-	return 10 if return_state["active"] else super.deadline()
 
 func next_machine_cell() -> Vector2i:
 	return NONE if return_state["active"] else super.next_machine_cell()
@@ -156,7 +153,7 @@ func civilian_safe(cell: Vector2i) -> bool:
 	return super.civilian_safe(cell)
 
 func civilian_waypoint(order: String) -> Vector2i:
-	if return_state["active"]: return Vector2i(10,4) if order == "north" else Vector2i(5,4)
+	if return_state["active"]: return mission_definition().civilian_routes["north" if order == "north" else "south"]
 	return super.civilian_waypoint(order)
 
 func route_label(order: String) -> String:
@@ -311,3 +308,7 @@ func _draw() -> void:
 	draw_rect(COOLING_BUTTON,Color("304965"))
 	draw_string(font,COOLING_BUTTON.position+Vector2(0,28),"Cooling move used" if return_state["bonus_event"] != "" else "Use cooling move on selected civilian group [Y]",HORIZONTAL_ALIGNMENT_CENTER,784,18,Color.WHITE)
 	draw_string(font,Vector2(40,1201),"Select a civilian group, order a route, then Y. Repairing never restores earlier losses.",HORIZONTAL_ALIGNMENT_LEFT,784,15,Color("aebbb6"))
+
+func mission_definition() -> Resource:
+	if mission_override != null: return mission_override
+	return NorthboundMission if return_state["active"] else super.mission_definition()

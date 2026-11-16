@@ -1,0 +1,29 @@
+extends Resource
+## Authored logical cells only. No camera, pixels, input, mutable combat or save state.
+@export var mission_id := ""
+@export var grid_size := Vector2i(20,16)
+@export var walls: Array[Vector2i] = []
+@export var cover_edges: Dictionary = {}
+@export var fixtures: Array[Vector2i] = []
+@export var squad_spawns: Array[Vector2i] = []
+@export var civilian_spawns: Array[Vector2i] = []
+@export var squad_exits: Array[Vector2i] = []
+@export var civilian_exit := Vector2i(-1,-1)
+@export var civilian_routes: Dictionary = {}
+@export var disabled_routes: Dictionary = {}
+@export var gates: Array[Vector2i] = []
+@export var machine_spawn := Vector2i(-1,-1)
+@export var machine_hp := 16
+@export var machine_patrol: Array[Vector2i] = []
+@export var machine_display_track: Array[Vector2i] = []
+@export var machine_collect_stage := 3
+@export var diversion: Array[Vector2i] = []
+@export var breaker_cell := Vector2i(-1,-1)
+@export var console_cell := Vector2i(-1,-1)
+@export var skid_cell := Vector2i(-1,-1)
+@export var repair_cell := Vector2i(-1,-1)
+@export var closing_round := 10
+@export var collection_shortens_deadline := false
+@export var closure_reason := "Road closed"
+@export var evacuation_reason := "Evacuation resolved"
+@export var squad_exit_hint := ""

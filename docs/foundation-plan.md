@@ -62,12 +62,27 @@ Validation: all 119 legal-action snapshot hashes and six route outcomes match th
 godot --headless --path holdfast --script res://tests/test_machine_turns.gd
 ```
 
+## Completed: mission definitions and objective policies
+
+The resources in `holdfast/missions/` now define the tactical sandbox, Farm Road and northbound return: board bounds, walls, cover, starting cells, machine routes, fixtures, civilian routes, exits and closure rules. `systems/mission_objectives.gd` evaluates deadlines and completion using those definitions and live encounter facts. Turn resolution calls that policy after civilian movement. Mutable actors, saves and mission selection remain controller-owned.
+
+A custom 8×8 test map verifies that geometry, starts, cover, exits and completion conditions can change without editing the controller. All 119 recorded action snapshots still match, and existing mission and rescue regressions pass. The inherited scene adapters and mission-specific dialogue remain; this does not yet make arbitrary new campaign missions plug-and-play. Save validation still targets the existing mission family and retains its format. A new campaign mission needs an explicit save mapping or tested migration.
+
+## Presentation direction: isometric tactical view
+
+The intended final presentation is an angled/isometric tactical map inspired by XCOM and Shadowrun. The current square, top-down board is a mechanics prototype. The eventual choice between 2D artwork and a 3D scene remains open; this decision adds no elevation, diagonal movement or combat rules.
+
+`presentation/grid_projection.gd` separates logical cells from screen coordinates and picking. Tests cover all 320 cells using both square and diamond-shaped bases (640 round trips). The playable renderer still uses the square basis. Terrain and unit drawing, depth ordering, camera framing and HUD separation must be completed before enabling an isometric view. Logical movement, cover and saves should remain independent of presentation coordinates.
+
+```sh
+godot --headless --path holdfast --script res://tests/test_missions_projection.gd
+```
+
 ## Remaining sequence before a new mission
 
-1. Separate mission layout and objective policies from the encounter controller. Origin and northbound return become data/configuration users of the same services.
-2. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
-3. Move save orchestration to a boundary that serializes the same checked state. Preserve old saves or provide an explicit tested migration before changing formats.
-4. Introduce a shallow encounter controller that composes the extracted services. Keep gate scenes as fixtures until parity checks pass, then retire redundant adapters deliberately.
+1. Separate HUD/input and opening/roster/debrief views from simulation. Remove inherited drawing overlays as those views move.
+2. Move save orchestration to a boundary that serializes the same checked state. Preserve old saves or provide an explicit tested migration before changing formats.
+3. Introduce a shallow encounter controller that composes the extracted services. Keep gate scenes as fixtures until parity checks pass, then retire redundant adapters deliberately.
 
 Each step should ship with equivalence and failure-path checks. File movement alone does not count as finishing the architecture work.
 

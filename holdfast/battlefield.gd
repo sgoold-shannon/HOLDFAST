@@ -1,5 +1,10 @@
 extends Node2D
 ## HOLDFAST A6. Public cell coordinates follow GDD v3.1 section 26 (one-based).
+const SandboxMission = preload("res://missions/tactical_sandbox.tres")
+const MissionObjectives = preload("res://systems/mission_objectives.gd")
+const GridProjection = preload("res://presentation/grid_projection.gd")
+var mission_override: Resource
+var board_projection: GridProjection
 const SaveStore = preload("res://encounter_save.gd")
 const SAVE_RECT := Rect2(250, 1020, 180, 40)
 const LOAD_RECT := Rect2(440, 1020, 180, 40)
@@ -11,7 +16,7 @@ const COMBAT_SEED := 3104
 var shot_rng := RandomNumberGenerator.new()
 var shot_history: Array[Dictionary] = []
 # A5 test enemy: stationary, nearest visible active target, roster-order ties.
-var enemies: Array[Dictionary] = [{"cell": Vector2i(10, 7), "hp": 8, "ammo": 4}]
+var enemies: Array[Dictionary] = [{"cell": Vector2i.ZERO, "hp": 8, "ammo": 4}]
 var last_enemy_phase := 0
 var enemy_message := "Enemy has not acted yet."
 const EXTRACT_RECT := Rect2(40, 1020, 200, 40)
@@ -19,21 +24,21 @@ const EXTRACT_RECT := Rect2(40, 1020, 200, 40)
 var sight_mode := false
 var pinned_target := Vector2i(-1, -1)
 const MODE_RECT := Rect2(480, 880, 178, 40)
-const GRID_SIZE := Vector2i(20, 16)
+var GRID_SIZE: Vector2i:
+	get: return mission_definition().grid_size
 const CELL_SIZE := 36.0
 const GRID_ORIGIN := Vector2(72, 96)
-const WALL_CELLS: Array[Vector2i] = [
-	Vector2i(12, 5), Vector2i(12, 6), Vector2i(12, 8), Vector2i(12, 9)
-]
+var WALL_CELLS: Array[Vector2i]:
+	get: return mission_definition().walls
 const NONE := Vector2i(-1, -1)
 var selected_cell := NONE
 var status_text := "Click a ground cell to select it."
 const DIRECTIONS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT]
 var soldiers: Array[Dictionary] = [
-	{"name": "MSG", "mark": "M", "cell": Vector2i(3, 6), "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
-	{"name": "Ortiz", "mark": "O", "cell": Vector2i(3, 7), "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
-	{"name": "Bell", "mark": "B", "cell": Vector2i(3, 9), "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
-	{"name": "Park", "mark": "P", "cell": Vector2i(3, 10), "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false}
+	{"name": "MSG", "mark": "M", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
+	{"name": "Ortiz", "mark": "O", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
+	{"name": "Bell", "mark": "B", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false},
+	{"name": "Park", "mark": "P", "cell": Vector2i.ZERO, "ap": 2, "ammo": 4, "attacked": false, "hp": 8, "extracted": false}
 ]
 var active_soldier := -1
 var hovered_cell := NONE
@@ -45,6 +50,11 @@ var font: Font = ThemeDB.fallback_font
 
 func _ready() -> void:
 	shot_rng.seed = COMBAT_SEED
+	board_projection = GridProjection.new(GRID_ORIGIN,Vector2(CELL_SIZE,0),Vector2(0,CELL_SIZE))
+	for index in range(soldiers.size()):
+		soldiers[index]["cell"] = mission_definition().squad_spawns[index]
+	enemies[0]["cell"] = mission_definition().machine_spawn
+	enemies[0]["hp"] = mission_definition().machine_hp
 
 func encounter_snapshot() -> Dictionary:
 	return {"layout": "gdd3.1-a5-10x7", "combat": combat_snapshot(),
@@ -91,13 +101,13 @@ func all_extracted() -> bool:
 	return true
 
 func extraction_cell(cell: Vector2i) -> bool:
-	return cell.x == 19 and cell.y >= 6 and cell.y <= 10
+	return MissionObjectives.squad_exit(mission_definition(),cell)
 
 func try_extract() -> bool:
 	if not soldier_can_act(active_soldier):
 		status_text = "Select an active soldier to extract."
 	elif not extraction_cell(soldiers[active_soldier]["cell"]):
-		status_text = "Extraction zone: column 19, rows 6–10. Stand on an EXIT cell."
+		status_text = mission_definition().squad_exit_hint
 	elif soldiers[active_soldier]["ap"] < 1:
 		status_text = "Extraction needs 1 AP. Entering the zone does not extract automatically."
 	else:
@@ -123,7 +133,7 @@ func enemy_target() -> int:
 	for index in range(soldiers.size()):
 		if not soldier_can_act(index):
 			continue
-		var info := Rules.preview(enemies[0]["cell"], soldiers[index]["cell"])
+		var info := sight_preview(enemies[0]["cell"], soldiers[index]["cell"])
 		if info["can_fire"] and info["distance"] < nearest:
 			best = index
 			nearest = info["distance"]
@@ -139,7 +149,7 @@ func enemy_intent() -> String:
 	var index := enemy_target()
 	if index < 0:
 		return "Enemy next: hold (no active soldier in sight and rifle range)."
-	var info := Rules.preview(enemies[0]["cell"], soldiers[index]["cell"])
+	var info := sight_preview(enemies[0]["cell"], soldiers[index]["cell"])
 	return "Enemy next: fire at %s | %d%% | range %+d, cover %+d" % [soldiers[index]["name"], info["chance"], info["range_modifier"], info["cover_modifier"]]
 
 func resolve_enemy_turn() -> void:
@@ -158,7 +168,7 @@ func resolve_enemy_turn() -> void:
 	if index < 0:
 		enemy_message = "Enemy held: no active soldier in sight and range."
 		return
-	var info := Rules.preview(enemy["cell"], soldiers[index]["cell"])
+	var info := sight_preview(enemy["cell"], soldiers[index]["cell"])
 	var state_before := shot_rng.state
 	var roll := shot_rng.randi_range(1, 100)
 	var damage := 4 if roll <= info["chance"] else 0
@@ -196,7 +206,7 @@ func fire_block_reason() -> String:
 		return "Click a enemy to pin it before firing."
 	if target_at(pinned_target) < 0:
 		return "Pin a standing enemy (red E)."
-	var info := Rules.preview(soldier["cell"], pinned_target)
+	var info := sight_preview(soldier["cell"], pinned_target)
 	if not info["clear"]:
 		return "Wall blocks the shot."
 	if not info["can_fire"]:
@@ -210,7 +220,7 @@ func try_fire() -> bool:
 		queue_redraw()
 		return false
 	var soldier: Dictionary = soldiers[active_soldier]
-	var info := Rules.preview(soldier["cell"], pinned_target)
+	var info := sight_preview(soldier["cell"], pinned_target)
 	var target_index := target_at(pinned_target)
 	var state_before := shot_rng.state
 	var roll := shot_rng.randi_range(1, 100)
@@ -274,11 +284,10 @@ func is_walkable(cell: Vector2i) -> bool:
 	return true
 
 func local_to_cell(point: Vector2) -> Vector2i:
-	var offset := point - GRID_ORIGIN
-	return Vector2i(floori(offset.x / CELL_SIZE) + 1, floori(offset.y / CELL_SIZE) + 1)
+	return board_projection.point_to_cell(point)
 
 func cell_to_local(cell: Vector2i) -> Vector2:
-	return GRID_ORIGIN + Vector2(cell - Vector2i.ONE) * CELL_SIZE
+	return board_projection.cell_anchor(cell)
 
 func try_select_cell(cell: Vector2i) -> bool:
 	if not cell_is_in_bounds(cell):
@@ -504,18 +513,18 @@ func _draw() -> void:
 	var target := sight_target()
 	if sight_mode and active_soldier >= 0 and cell_is_in_bounds(target):
 		var source: Vector2i = soldiers[active_soldier]["cell"]
-		var info := Rules.preview(source, target)
+		var info := sight_preview(source, target)
 		for cell in info["cells"]:
 			draw_rect(Rect2(cell_to_local(cell) + Vector2(2, 2), Vector2(32, 32)), Color(0.85, 0.8, 0.4, 0.18))
 		for cell in info["blockers"]:
 			draw_rect(Rect2(cell_to_local(cell) + Vector2(2, 2), Vector2(32, 32)), Color("f27b79"), false, 3)
 		draw_line(cell_to_local(source) + Vector2(18, 18), cell_to_local(target) + Vector2(18, 18), Color("9ae2c4") if info["clear"] else Color("f27b79"), 2)
 		draw_rect(Rect2(cell_to_local(target) + Vector2(4, 4), Vector2(28, 28)), Color("ffffff"), false, 2)
-	for cell in Rules.COVER:
+	for cell in mission_definition().cover_edges:
 		var origin := cell_to_local(cell)
-		var edge_y: float = 2.0 if Rules.COVER[cell] == "north" else CELL_SIZE - 2.0
+		var edge_y: float = 2.0 if mission_definition().cover_edges[cell] == "north" else CELL_SIZE - 2.0
 		var color := Color("7ed4ee")
-		if sight_mode and active_soldier >= 0 and target == cell and Rules.preview(soldiers[active_soldier]["cell"], target)["protected"]:
+		if sight_mode and active_soldier >= 0 and target == cell and sight_preview(soldiers[active_soldier]["cell"], target)["protected"]:
 			color = Color("f7cd6c")
 		draw_line(origin + Vector2(3, edge_y), origin + Vector2(33, edge_y), color, 5)
 	draw_targets()
@@ -537,7 +546,7 @@ func _draw() -> void:
 	if sight_mode:
 		preview = "SIGHT PREVIEW: select a soldier, then hover a target cell."
 		if active_soldier >= 0 and cell_is_in_bounds(target):
-			var info := Rules.preview(soldiers[active_soldier]["cell"], target)
+			var info := sight_preview(soldiers[active_soldier]["cell"], target)
 			preview = "%s (%d, %d) | Distance %d | %s" % ["Pinned" if pinned_target != NONE else "Target", target.x, target.y, info["distance"], "Sight clear" if info["clear"] else "WALL BLOCKS SHOT"]
 			var detail := "Aim 75 | Range %+d | Cover %+d | " % [info["range_modifier"], info["cover_modifier"]]
 			detail += "%d%% preview" % info["chance"] if info["can_fire"] else "Cannot fire"
@@ -602,3 +611,9 @@ func draw_targets() -> void:
 
 func soldier_visible(index: int) -> bool:
 	return not soldiers[index]["extracted"]
+
+func mission_definition() -> Resource:
+	return mission_override if mission_override != null else SandboxMission
+
+func sight_preview(shooter: Vector2i, target: Vector2i) -> Dictionary:
+	return Rules.preview(shooter,target,mission_definition())

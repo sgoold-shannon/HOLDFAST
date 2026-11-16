@@ -4,9 +4,12 @@ const TurnResolution = preload("res://systems/turn_resolution.gd")
 const EvacuationRules = preload("res://systems/civilian_evacuation.gd")
 var evacuation_rules: EvacuationRules
 const EVAC_SLOT := "user://holdfast_b2.save"
-const EXIT_CELL := Vector2i(19, 8)
-const NORTH_WAYPOINT := Vector2i(11, 7)
-const SOUTH_WAYPOINT := Vector2i(11, 10)
+var EXIT_CELL: Vector2i:
+	get: return mission_definition().civilian_exit
+var NORTH_WAYPOINT: Vector2i:
+	get: return mission_definition().civilian_routes["north"]
+var SOUTH_WAYPOINT: Vector2i:
+	get: return mission_definition().civilian_routes["south"]
 const EXIT_ORDER_RECT := Rect2(876, 510, 248, 40)
 const FOLLOW_RECT := Rect2(876, 558, 248, 40)
 const NORTH_RECT := Rect2(876, 654, 120, 36)
@@ -15,9 +18,9 @@ const HOLD_RECT := Rect2(876, 606, 248, 40)
 const CLOSE_RECT := Rect2(876, 936, 248, 44)
 const CANCEL_RECT := Rect2(876, 988, 248, 36)
 var cohorts: Array[Dictionary] = [
-	{"id": "A", "cell": Vector2i(6,6), "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["A-01","A-02","A-03","A-04"]},
-	{"id": "B", "cell": Vector2i(6,8), "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["B-01","B-02","B-03","B-04"]},
-	{"id": "C", "cell": Vector2i(6,10), "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["C-01","C-02","C-03","C-04"]}
+	{"id": "A", "cell": Vector2i.ZERO, "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["A-01","A-02","A-03","A-04"]},
+	{"id": "B", "cell": Vector2i.ZERO, "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["B-01","B-02","B-03","B-04"]},
+	{"id": "C", "cell": Vector2i.ZERO, "hp": 4, "order": "hold", "passed": false, "status": "active", "note": "Holding", "manifest": ["C-01","C-02","C-03","C-04"]}
 ]
 var cohort_selected := 0
 var order_used := false
@@ -30,13 +33,15 @@ func _ready() -> void:
 	super._ready()
 	evacuation_rules = EvacuationRules.new(civilian_safe, civilian_waypoint, civilian_exit,
 		route_available, soldier_can_act, on_civilian_step)
+	for index in range(cohorts.size()):
+		cohorts[index]["cell"] = mission_definition().civilian_spawns[index]
 	for soldier in soldiers:
 		soldier["left_behind"] = false
 	status_text = "Order one group each player phase. Machine → civilians → closure."
 	save_feedback = "B2 save slot. Cohort manifest IDs are placeholders for named civilians."
 
 func deadline() -> int:
-	return mini(10, machine["collected_round"] + 1) if machine["collected_round"] > 0 else 10
+	return MissionObjectives.deadline(mission_definition(),machine["collected_round"])
 
 func remaining_civilians() -> int:
 	var count := 0
@@ -179,9 +184,7 @@ func next_phase() -> void:
 		"prepare_machine":prepare_machine_phase,
 		"machine":resolve_enemy_turn,
 		"civilians":resolve_civilian_phase,
-		"deadline":deadline,
-		"squad_out":all_extracted,
-		"remaining_civilians":remaining_civilians,
+		"completion":mission_completion_reason,
 		"finish":finish_operation,
 		"begin_player":begin_player_phase,
 		"after_turn":after_turn_resolution,
@@ -405,3 +408,7 @@ func _draw() -> void:
 	var forecast := str(machine["collected_round"] + 1) if machine["collected_round"] > 0 else (str(phase + 4 - machine["stage"]) if machine_present() else "none")
 	draw_string(font,Vector2(40,1088),"External closure 10 | Machine forecast %s | Current deadline %d" % [forecast,deadline()],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
 	draw_string(font,Vector2(40,1109),save_feedback,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("aebbb6"))
+
+func mission_completion_reason(round_number: int) -> String:
+	return MissionObjectives.completion_reason(mission_definition(),round_number,
+		machine["collected_round"],all_extracted(),remaining_civilians())
