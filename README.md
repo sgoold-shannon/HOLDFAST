@@ -141,3 +141,5 @@ Mission completion now has an explicit sequence for closure, dispositions, repor
 Main-scene startup now follows an explicit initialization sequence and restores saved progress only after roster and return-map setup. Startup checks cover fresh-state parity, automatic resume, disabled resume and corrupt saves (`tests/test_startup.gd`).
 
 Main-scene save/load now calls persistence and migration directly, retaining existing slots, campaign checkpoints and error behavior. Regression checks include older campaign upgrades and failed writes.
+
+Machine turns and protocol commands now use explicit main-scene orchestration, preserving once-per-phase activation, recovery/finalization ordering and peaceful return-map restrictions.

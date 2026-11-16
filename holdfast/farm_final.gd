@@ -154,3 +154,15 @@ func load_encounter(path: String = RETURN_SLOT) -> bool:
 	save_feedback = "D1 restored: original outcome, repair progress and one-use cooling record."
 	queue_redraw()
 	return true
+
+func resolve_enemy_turn() -> void:
+	if return_state["active"]: activate_return_staging()
+	else: activate_origin_machine()
+	check_recovery_failure()
+	finalize_result()
+
+func protocol_action(action: String) -> bool:
+	if return_state["active"]: return reject_return_protocol()
+	var success := execute_protocol_action(action)
+	update_protocol_observation(action,success)
+	return success

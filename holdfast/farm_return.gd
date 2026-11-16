@@ -143,10 +143,13 @@ func resolve_enemy_turn() -> void:
 	if not return_state["active"]:
 		super.resolve_enemy_turn()
 		return
-	last_enemy_phase = phase
-	enemy_message = "Return staging: no hostile activation. North access closes after round 10."
+	activate_return_staging()
 	check_recovery_failure()
 	finalize_result()
+
+func activate_return_staging() -> void:
+	last_enemy_phase = phase
+	enemy_message = "Return staging: no hostile activation. North access closes after round 10."
 
 func target_at(cell: Vector2i) -> int:
 	return -1 if return_state["active"] else super.target_at(cell)
@@ -228,6 +231,9 @@ func try_fire() -> bool:
 
 func protocol_action(action: String) -> bool:
 	if not return_state["active"]: return super.protocol_action(action)
+	return reject_return_protocol()
+
+func reject_return_protocol() -> bool:
 	status_text = "Original protocol outcome retained. Use I to repair or Y for the cooling move."
 	queue_redraw()
 	return false

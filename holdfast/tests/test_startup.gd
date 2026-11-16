@@ -36,6 +36,21 @@ func run() -> void:
 	corrupt.campaign_path = corrupt_path
 	root.add_child(corrupt)
 	expect(var_to_bytes(corrupt.encounter_snapshot())==var_to_bytes(disabled.encounter_snapshot()),"Rejected startup save leaves fresh encounter state intact")
+	disabled.resolve_enemy_turn()
+	var activated: Dictionary = disabled.encounter_snapshot()
+	disabled.resolve_enemy_turn()
+	expect(disabled.encounter_snapshot()==activated,"Repeated enemy resolution cannot activate the machine twice in one phase")
+	var ap_before: int = disabled.soldiers[0]["ap"]
+	expect(not disabled.protocol_action("invalid") and disabled.soldiers[0]["ap"]==ap_before,"Rejected protocol command consumes no AP")
+	disabled.return_state["active"] = true
+	var machine_before: Dictionary = disabled.machine.duplicate(true)
+	var enemies_before: Array = disabled.enemies.duplicate(true)
+	disabled.phase += 1
+	disabled.resolve_enemy_turn()
+	expect(disabled.machine==machine_before and disabled.enemies==enemies_before,"Return phase does not activate hostile machinery")
+	expect(disabled.last_enemy_phase==disabled.phase,"Return phase still records resolution")
+	var protocol_before: Dictionary = disabled.protocol.duplicate(true)
+	expect(not disabled.protocol_action("observe") and disabled.protocol==protocol_before and disabled.soldiers[0]["ap"]==ap_before,"Return map rejects protocol actions without changing state or AP")
 	for board in [fresh,legacy,resumed,disabled,corrupt]: board.free()
 	print("STARTUP FAILURES: ",failures)
 	quit(1 if failures else 0)

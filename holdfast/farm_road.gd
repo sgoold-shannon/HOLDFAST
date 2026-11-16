@@ -78,6 +78,9 @@ func damage_cell(cell: Vector2i, amount: int) -> String:
 	return "%s -%d HP" % [soldiers[index]["name"], amount]
 
 func resolve_enemy_turn() -> void:
+	activate_origin_machine()
+
+func activate_origin_machine() -> void:
 	if last_enemy_phase == phase: return
 	last_enemy_phase = phase
 	var outcome := machine_behavior.activate(machine,enemies[0],soldiers,phase,machine_plan())

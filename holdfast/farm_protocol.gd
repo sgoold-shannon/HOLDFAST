@@ -64,6 +64,9 @@ func protocol_reason(action: String) -> String:
 	return ""
 
 func protocol_action(action: String) -> bool:
+	return execute_protocol_action(action)
+
+func execute_protocol_action(action: String) -> bool:
 	if not ["observe","transmit","authenticate","divert"].has(action):
 		return false
 	var reason := protocol_reason(action)

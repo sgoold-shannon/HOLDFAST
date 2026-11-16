@@ -93,9 +93,12 @@ func update_closure_knowledge() -> void:
 
 func protocol_action(action: String) -> bool:
 	var success := super.protocol_action(action)
+	update_protocol_observation(action,success)
+	return success
+
+func update_protocol_observation(action: String, success: bool) -> void:
 	if success and action == "observe":
 		status_text = "Fact: retrieving a marked component. Assessment: evacuation equipment (unconfirmed). Tab: log."
-	return success
 
 func present(index: int) -> bool:
 	return soldiers[index]["extracted"] and ["active","stable"].has(soldiers[index]["condition"])

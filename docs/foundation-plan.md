@@ -235,6 +235,12 @@ Requested-slot success still returns true if the subsequent campaign checkpoint 
 
 Nine committed suites and twelve regressions pass, with all 119 recorded states and six outcomes unchanged. Direct main-scene tests cover aliases, custom paths, write/checkpoint failures, C2 upgrade and persisted D1 data, unchanged legacy source bytes and migration-write failure. Gameplay actions and remaining compatibility dependencies still need composition before foundation acceptance.
 
+## Completed: explicit machine activation and protocol orchestration
+
+The main scene now selects origin-machine activation or peaceful return staging directly, then runs recovery checks and result finalization. Origin activation retains its once-per-phase guard; return staging retains its no-hostile-activation policy. Protocol actions now explicitly apply return-map rejection or execute the existing protocol rules followed by observation text. Earlier fixtures reuse these adapters through their original entry points.
+
+Nine committed suites and twelve regressions pass; all 119 recorded states and six route outcomes match. Main-scene checks verify duplicate activation protection, invalid-command AP preservation and return-map machine/protocol immutability. This removes inherited orchestration for these two actions, not the underlying compatibility-class dependency. Weapon attacks, damage/rescue/extraction and remaining mission policy adapters still need composition before final cleanup and visual acceptance.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
