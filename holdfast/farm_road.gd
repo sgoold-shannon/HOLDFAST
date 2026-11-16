@@ -43,6 +43,9 @@ func enemy_target() -> int:
 	return machine_behavior.nearest_target(machine,enemies[0],soldiers,machine_plan(),soldier_can_act,sight_preview)
 
 func enemy_intent() -> String:
+	return origin_machine_intent()
+
+func origin_machine_intent() -> String:
 	if machine["departed"]:
 		return "Machine departed unresolved."
 	if not machine_present():

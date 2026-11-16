@@ -26,6 +26,25 @@ func run() -> void:
 			board.choose_scene_option(0)
 			board.advance_scene()
 		expect(main.story_state_snapshot()==legacy.story_state_snapshot() and main.scene_page==legacy.scene_page and main.scene_view==legacy.scene_view,scenario+": choice and navigation parity")
+	for state in ["neutral","hostile","paused","diverted","collected","betrayed","disabled","destroyed","departed","diverted_departed","return"]:
+		for board in [main,legacy]:
+			board.return_state["active"] = state=="return"
+			board.return_state["source"] = "disabled"
+			board.return_state["repair"] = 1
+			board.machine["departed"] = state in ["departed","diverted_departed"]
+			board.machine["hostile"] = state in ["hostile","betrayed"]
+			board.machine["collected_round"] = 1 if state=="collected" else 0
+			board.protocol["pause_pending"] = state=="paused"
+			board.protocol["diverted"] = state in ["diverted","diverted_departed"]
+			board.protocol["component_collected"] = state=="diverted_departed"
+			board.protocol["betrayed"] = state=="betrayed"
+			board.breaker_progress = 2 if state=="disabled" else 0
+			board.enemies[0]["hp"] = 0 if state=="destroyed" else 16
+		expect(main.enemy_intent()==legacy.enemy_intent(),state+": machine intent parity")
+		expect(main.machine_outcome()==legacy.machine_outcome() and main.feeder_result()==legacy.feeder_result(),state+": outcome text parity")
+		expect(main.machine_track()==legacy.machine_track() and main.skid_visible()==legacy.skid_visible(),state+": machine map display parity")
+		for order in ["north","south"]:
+			expect(main.route_label(order)==legacy.route_label(order),state+": route label parity")
 	main.free()
 	legacy.free()
 	print("NARRATIVE PARITY FAILURES: ",failures)

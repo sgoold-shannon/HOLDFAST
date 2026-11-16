@@ -271,6 +271,12 @@ The main scene directly selects origin/return debrief and log builders, historic
 
 Twelve committed suites and twelve regressions pass. Narrative comparisons cover opening, historical transcript, casualties, vacancies and return-map content, choices and navigation against the compatibility scene. All 119 recorded states and six outcomes match. Machine-status/presentation helpers and shared scene data/method ownership still depend on compatibility layers; the controller milestone remains open.
 
+## Completed: explicit machine-status and map-display policies
+
+The main scene now directly composes machine intent/outcome text, feeder records, visible machine tracks/skid and civilian route labels. It selects origin and return behavior without traversing inherited display-policy overrides. Shared origin text builders remain named adapters for earlier fixtures; no visual layout or text changes.
+
+Twelve committed suites and twelve regressions pass. Display comparisons cover eleven machine states, including hostile, paused, diverted, collected, betrayed, disabled, destroyed, departed and return conditions. All 119 recorded states and six route outcomes match. The remaining structural work is relocating shared methods/data out of the prototype gate classes, then removing redundant compatibility code and performing final visual acceptance. Explicit main-scene routing alone does not satisfy the no-gate-dependency acceptance criterion.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.

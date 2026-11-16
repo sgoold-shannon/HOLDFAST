@@ -105,6 +105,9 @@ func blast_victims() -> String:
 	return "none" if names.is_empty() else ", ".join(names)
 
 func machine_outcome() -> String:
+	return origin_machine_outcome()
+
+func origin_machine_outcome() -> String:
 	if enemies[0]["hp"] <= 0:
 		return "Destroyed | cooling lost | " + ("skid recoverable" if machine["collected_round"] == 0 else "collected skid not restored")
 	if disabled():

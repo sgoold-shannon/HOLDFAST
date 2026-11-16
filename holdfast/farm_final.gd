@@ -346,3 +346,43 @@ func persist_story_report() -> void:
 	if result_ready and not retry_required():
 		sync_knowledge()
 		persist_campaign_result()
+
+func machine_track() -> Array[Vector2i]:
+	if return_state["active"]:
+		var empty: Array[Vector2i] = []
+		return empty
+	return mission_definition().machine_display_track
+
+func skid_visible() -> bool:
+	if return_state["active"]: return not campaign["missions"][0]["feeder"].contains("severed")
+	return machine["collected_round"] == 0
+
+func route_label(order: String) -> String:
+	if return_state["active"]:
+		return ("Cooling" if cooling_ready() else "Cooling locked") if order == "north" else "Manual route"
+	return "Upper route" if order == "north" else "Lower route"
+
+func machine_outcome() -> String:
+	if return_state["active"]:
+		return "Return: original %s / %s" % [return_state["source"],"cooling available" if cooling_ready() else ("repair %d/2" % return_state["repair"] if return_state["source"] == "disabled" else "manual route")]
+	if enemies[0]["hp"] > 0 and not disabled() and protocol["diverted"]:
+		return "Diverted | cooling preserved | skid and feeder intact"
+	return origin_machine_outcome()
+
+func feeder_result() -> String:
+	if return_state["active"]: return "Original record: "+campaign["missions"][0]["feeder"]
+	return origin_feeder_result()
+
+func enemy_intent() -> String:
+	if not machine_present() or disabled():
+		if machine["departed"] and protocol["diverted"]:
+			return "DIVERTED: alternate component collected; machine departed."
+		if disabled() and machine_present():
+			return "DISABLED | No movement or shot | Feeder unpowered"
+		return origin_machine_intent()
+	if protocol["pause_pending"]: return "ACK-01: next machine activation PAUSED (once)."
+	if protocol["diverted"]:
+		return "DIVERTED: component collected; departs next activation." if protocol["component_collected"] else "DIVERTED: 2 squares/phase; avoids people; no defensive shots."
+	if protocol["betrayed"] and machine["collected_round"] == 0:
+		return "HOSTILE: safe route canceled; replanning toward skid (7,8)."
+	return origin_machine_intent()

@@ -153,3 +153,5 @@ Main-scene mission selection, safety/occupancy checks and action eligibility now
 Movement search is now a scene-independent component with stable route ordering. Main-scene movement refresh, bleeding and reload hooks use explicit calls. Full-grid policy checks include the 1-based far edges.
 
 Narrative routing, survivor labels and story/campaign persistence now use explicit main-scene orchestration. `tests/test_narrative.gd` checks content and navigation parity across five scenarios.
+
+Machine status/outcome text and map-display policies now use explicit main-scene composition. Eleven machine-state comparisons preserve existing labels and visible tracks/fixtures. Shared method/data relocation remains outstanding.

@@ -161,6 +161,9 @@ func recorded_soldier_disposition(index: int) -> String:
 	return "EXTRACTED / %d HP" % soldier["hp"]
 
 func feeder_result() -> String:
+	return origin_feeder_result()
+
+func origin_feeder_result() -> String:
 	if machine["collected_round"] > 0:
 		return "Feeder severed when the skid was collected."
 	if disabled():
