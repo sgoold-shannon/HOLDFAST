@@ -14,6 +14,9 @@ func run() -> void:
 	preview.select_actor(0)
 	preview.activate_cell(Vector2i(7,6))
 	expect(preview.session.encounter.soldiers[0]["cell"]==Vector2i(7,6),"Practice movement resolves before returning")
+	preview.session.command("exit",0)
+	await preview.run_command("turn")
+	expect(preview.session.encounter.phase==2,"Practice resolves a civilian and machine turn before returning")
 	preview.close_preview()
 	await process_frame
 	await process_frame

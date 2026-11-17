@@ -1,6 +1,6 @@
 extends RefCounted
 ## Isolated practice encounter. Commands delegate to production rules; no save/load calls.
-const Encounter = preload("res://encounter_controller.gd")
+const Encounter = preload("res://presentation3d/practice_encounter.gd")
 var encounter: Node2D
 var initial: Dictionary
 
@@ -20,6 +20,14 @@ func select(index: int) -> void:
 func move(cell: Vector2i) -> bool:
 	return encounter.try_move(cell)
 
+func command(action: String, group: int = 0) -> void:
+	if encounter.ended: return
+	match action:
+		"turn": encounter.next_phase()
+		"extract": encounter.try_extract()
+		"exit": encounter.order_exit(group)
+		"hold", "follow", "north", "south": encounter.order_cohort(group,action)
+
 func reset() -> void:
 	encounter.apply_loaded_encounter(initial.duplicate(true))
 
@@ -34,4 +42,8 @@ func view(hover: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 			reachable[cell] = cost
 	return {"soldiers":encounter.soldiers.duplicate(true),"active":encounter.active_soldier,
 		"reachable":reachable,"path":encounter.path_to(hover).duplicate(),
-		"cost":reachable.get(hover,0),"status":encounter.status_text}
+		"cost":reachable.get(hover,0),"status":encounter.status_text,
+		"cohorts":encounter.cohorts.duplicate(true),"machine":encounter.machine_view_snapshot(),
+		"intent":encounter.enemy_intent(),"phase":encounter.phase,"ended":encounter.ended,
+		"reason":encounter.end_reason,"order_used":encounter.order_used,
+		"deadline":encounter.deadline(),"evacuated":encounter.evacuated_people()}

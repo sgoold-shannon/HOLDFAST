@@ -16,9 +16,15 @@ Select a figure or one of the four fixed-screen squad buttons. Green cells cost 
 
 Validation: all sixteen committed suites passed. Dedicated movement checks compare reachable costs for all 320 cells and all four soldiers, route ordering and exact post-move snapshots against the production controller. They also cover blocked cells, two-AP dashes, exhausted AP, reset, detached display data and the squad-below-enemy camera relation. All 320 picking round trips still pass. Preview/Back tests now include a practice move and verify the original demo state remains unchanged. A rendered compatibility-mode test used GUI input to select MSG, hover a route and move four squares for 1 AP. [Movement preview](verification/3d-movement.png).
 
-## P2b — remaining encounter integration: next
+## P2b — civilian orders, turns and extraction: complete
 
-Connect civilian orders, machine turns, extraction and other commands to the same rules. Replace static civilian/machine display with live snapshots and hazards. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
+The practice view now offers group selection, Evacuate, Follow soldier, Hold, explicit upper/lower routes, End turn and Extract soldier. It delegates every command to the production controller. Civilian and machine transforms, presence, skid and warning tiles come from live snapshots. The HUD reports turn, road deadline, evacuation count, machine intent and closure. One-order-per-turn restrictions and completion disable controls appropriately.
+
+A practice-only controller overrides persistence entry points so automatic mission completion and story reporting cannot write campaign saves. Reset remains in memory; Back returns to the paused original encounter. All seventeen suites passed, including exact state comparisons through closure, follow/hold restrictions, extraction visibility, no report/save writes and Preview/Back after a resolved turn. Rendered mouse input verified group selection, Evacuate and End turn. [Evacuation preview](verification/3d-evacuation.png).
+
+## P2c — remaining encounter integration: next
+
+Connect firing/reloading, casualty rescue, breaker and protocol commands to the same rules. Add clear targeting, casualty states and final result review. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 

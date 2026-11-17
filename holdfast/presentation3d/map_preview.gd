@@ -6,6 +6,16 @@ var squad_models: Array[Node3D] = []
 var squad_buttons: Array[Button] = []
 var range_nodes: Array[Node3D] = []
 var path_nodes: Array[Node3D] = []
+var civilian_models: Array[Node3D] = []
+var machine_model: Node3D
+var skid_model: Node3D
+var shot_warning: Node3D
+var group_buttons: Array[Button] = []
+var order_buttons: Array[Button] = []
+var turn_button: Button
+var extract_button: Button
+var encounter_info: Label
+var group_selected := 0
 var hovered := Vector2i(-1,-1)
 var display: Dictionary
 const Mission = preload("res://missions/farm_road.tres")
@@ -149,18 +159,23 @@ func _ready() -> void:
 		actor.rotation.y = -PI/2.0
 		squad_models.append(actor)
 	for i in range(3):
+		var previous_children := get_children()
 		var at := world(Mission.civilian_spawns[i])
 		for offset in [Vector3(-0.23,0,-0.23),Vector3(0.23,0,-0.23),Vector3(-0.23,0,0.23),Vector3(0.23,0,0.23)]: person(at+offset,Color("c7b99a"),0.65)
 		label3d("GROUP "+["A","B","C"][i],at+Vector3(0,1.0,0),Color("eedcba"),26)
+		civilian_models.append(group_pieces(previous_children,at))
+	var machine_children := get_children()
 	var machine_at := world(Mission.machine_spawn)
 	box(machine_at+Vector3(0,0.5,0),Vector3(0.72,0.65,0.82),Color("b18442"))
 	for x in [-0.39,0.39]: box(machine_at+Vector3(x,0.20,0),Vector3(0.17,0.30,0.95),Color("202a30"))
 	box(machine_at+Vector3(0,0.82,0),Vector3(0.47,0.22,0.45),Color("677a81"))
 	box(machine_at+Vector3(-0.26,0.8,0),Vector3(0.05,0.10,0.2),Color("ffcf66"),true)
 	label3d("MACHINE",machine_at+Vector3(0,1.45,0),Color("ffcf66"),28)
-	box(world(Mission.skid_cell,0.14),Vector3(0.65,0.25,0.65),Color("ad8760"))
+	machine_model = group_pieces(machine_children,machine_at)
+	skid_model = box(world(Mission.skid_cell,0.14),Vector3(0.65,0.25,0.65),Color("ad8760"))
 	warning = box(world(Mission.machine_patrol[1],0.04),Vector3(0.92,0.04,0.92),Color("d58d38"),true)
-	label3d("!",world(Mission.machine_patrol[1],0.18),Color("ffe1a1"),32)
+	shot_warning = box(Vector3.ZERO,Vector3(0.90,0.06,0.90),Color("e34444"),true)
+	shot_warning.visible = false
 	label3d("EVACUATION",world(Mission.civilian_exit,0.25),Color("9df9df"),30)
 	selection = box(Vector3.ZERO,Vector3(1.01,0.035,1.01),Color("a4f3df"),true)
 	selection.visible = false
@@ -187,14 +202,14 @@ func build_hud() -> void:
 	layer.add_child(back)
 	var title := Label.new()
 	title.position = Vector2(24,20)
-	title.text = "HOLDFAST / FARM ROAD\n3D MOVEMENT PRACTICE"
+	title.text = "HOLDFAST / FARM ROAD\n3D EVACUATION PRACTICE"
 	title.add_theme_font_size_override("font_size",25)
 	layer.add_child(title)
 	var panel := PanelContainer.new()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 20
 	panel.offset_right = -20
-	panel.offset_top = -210
+	panel.offset_top = -300
 	panel.offset_bottom = -20
 	layer.add_child(panel)
 	var margin := MarginContainer.new()
@@ -226,6 +241,33 @@ func build_hud() -> void:
 	reset.focus_mode = Control.FOCUS_NONE
 	reset.pressed.connect(reset_practice)
 	layer.add_child(reset)
+	var groups := HBoxContainer.new()
+	stack.add_child(groups)
+	for i in range(3):
+		var button := Button.new()
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size",18)
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(select_group.bind(i))
+		groups.add_child(button)
+		group_buttons.append(button)
+	var actions := HBoxContainer.new()
+	stack.add_child(actions)
+	for entry in [["Evacuate","exit"],["Follow soldier","follow"],["Hold","hold"],["Upper route","north"],["Lower route","south"],["Extract soldier","extract"],["End turn","turn"]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size",18)
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(run_command.bind(entry[1]))
+		actions.add_child(button)
+		if entry[1]=="turn": turn_button = button
+		elif entry[1]=="extract": extract_button = button
+		else: order_buttons.append(button)
+	encounter_info = Label.new()
+	encounter_info.position = Vector2(24,90)
+	encounter_info.add_theme_font_size_override("font_size",18)
+	layer.add_child(encounter_info)
 	detail = Label.new()
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_font_size_override("font_size",20)
@@ -241,11 +283,10 @@ func select_cell(cell: Vector2i) -> void:
 	if cell in Mission.walls: description = "Wall · blocks movement and sight"
 	elif cell in Mission.fixtures: description = "Breaker" if cell==Mission.breaker_cell else "Protocol console"
 	elif session.actor_at(cell)>=0: description = NAMES[session.actor_at(cell)]
-	elif cell in Mission.civilian_spawns: description = "Civilian group "+["A","B","C"][Mission.civilian_spawns.find(cell)]+" · 4 people"
-	elif cell==Mission.machine_spawn: description = "Neutral machine · firing makes it hostile"
-	elif cell==Mission.machine_patrol[1]: description = "Next machine step · impact danger: 4 damage if occupied"
+	elif cell==display["machine"]["enemies"][0]["cell"]: description = display["intent"]
+	elif cell==display["machine"]["next"]: description = "Next machine step · impact danger: 4 damage if occupied"
 	elif cell==Mission.civilian_exit: description = "Civilian exit · ordered groups evacuate automatically"
-	elif cell in Mission.squad_exits: description = "Squad extraction · 1 AP in the playable demo"
+	elif cell in Mission.squad_exits: description = "Squad extraction · select a soldier here, then Extract soldier (1 AP)"
 	elif Mission.cover_edges.has(cell): description = "Low cover · "+Mission.cover_edges[cell]+" edge"
 	detail.text = "CELL (%d, %d)  /  %s\nSelect a soldier to move · Scroll to zoom · Home to fit · Practice does not change your campaign" % [cell.x,cell.y,description]
 
@@ -299,9 +340,11 @@ func refresh_movement() -> void:
 	for i in range(4):
 		var soldier: Dictionary = display["soldiers"][i]
 		squad_models[i].position = world(soldier["cell"])
+		squad_models[i].visible = not soldier["extracted"] and soldier.get("condition", "active") != "dead"
 		squad_buttons[i].text = "%s%s  |  %d HP · %d AP" % ["> " if i==display["active"] else "",soldier["name"],soldier["hp"],soldier["ap"]]
 	selection.visible = display["active"]>=0
 	if selection.visible: selection.position = world(display["soldiers"][display["active"]]["cell"],0.07)
+	refresh_encounter()
 	preview_route(hovered,true)
 
 func preview_route(cell: Vector2i, force: bool = false) -> void:
@@ -317,10 +360,14 @@ func preview_route(cell: Vector2i, force: bool = false) -> void:
 		detail.text = "Select a soldier. Green = 1 AP; blue = 2 AP.\nHover for a route; click a reachable cell to move. Practice does not change your campaign."
 	else:
 		var soldier: Dictionary = display["soldiers"][active]
-		var route := "Move to (%d, %d): %d AP · %d squares" % [cell.x,cell.y,display["cost"],display["path"].size()-1] if display["cost"]>0 else ("No AP left. Select another soldier or Reset practice." if soldier["ap"]==0 else "Hover a highlighted cell to preview its route. Other cells cannot be reached.")
-		detail.text = "%s · %d/8 HP · %d AP  |  Green 1 AP / Blue 2 AP\n%s\nPractice only · Back to demo preserves your campaign." % [NAMES[active],soldier["hp"],soldier["ap"],route]
+		var route := "Move to (%d, %d): %d AP · %d squares" % [cell.x,cell.y,display["cost"],display["path"].size()-1] if display["cost"]>0 else ("No AP left. End turn to refresh AP." if soldier["ap"]==0 else "Hover a highlighted cell to preview its route. Other cells cannot be reached.")
+		detail.text = "%s · %d/8 HP · %d AP  |  Green 1 AP / Blue 2 AP\n%s\nChoose a group + Evacuate; End turn moves ordered groups. Orders persist." % [NAMES[active],soldier["hp"],soldier["ap"],route]
 
 func activate_cell(cell: Vector2i) -> void:
+	for i in range(display["cohorts"].size()):
+		if display["cohorts"][i]["status"]=="active" and display["cohorts"][i]["cell"]==cell:
+			select_group(i)
+			return
 	var index: int = session.actor_at(cell)
 	if index>=0:
 		select_actor(index)
@@ -342,8 +389,55 @@ func pick_cell(screen: Vector2) -> Vector2i:
 	var closest := 20.0
 	var result := Vector2i(-1,-1)
 	for soldier in session.view()["soldiers"]:
+		if soldier["extracted"] or soldier.get("condition", "active")=="dead": continue
 		var distance := camera.unproject_position(world(soldier["cell"],0.5)).distance_to(screen)
 		if distance<closest:
 			closest = distance
 			result = soldier["cell"]
 	return cell_at(screen) if result==Vector2i(-1,-1) else result
+
+func group_pieces(previous: Array, at: Vector3) -> Node3D:
+	var pieces := get_children().filter(func(child): return not previous.has(child))
+	var actor := Node3D.new()
+	add_child(actor)
+	actor.position = at
+	for piece in pieces:
+		piece.position -= at
+		piece.reparent(actor,false)
+	return actor
+
+func select_group(index: int) -> void:
+	group_selected = index
+	refresh_encounter()
+	var group: Dictionary = display["cohorts"][index]
+	detail.text = "Group %s · %s\nEvacuate chooses an available exit route. Follow uses your selected soldier; Hold stops the group.\nOne free group order per turn. Orders persist; groups move when you End turn." % [group["id"],group["status"]]
+
+func run_command(action: String) -> void:
+	session.command(action,group_selected)
+	# Completion can be deferred by the production rules.
+	await get_tree().process_frame
+	if not is_inside_tree(): return
+	hovered = Vector2i(-1,-1)
+	refresh_movement()
+	detail.text = display["status"]+"\nOne group order per turn · End turn moves groups and the machine · Back preserves your campaign."
+
+func refresh_encounter() -> void:
+	display = session.view(hovered)
+	for i in range(civilian_models.size()):
+		var cohort: Dictionary = display["cohorts"][i]
+		civilian_models[i].position = world(cohort["cell"])
+		civilian_models[i].visible = cohort["status"]=="active"
+		group_buttons[i].text = "%sGroup %s · %s" % ["> " if i==group_selected else "",cohort["id"],cohort["status"] if cohort["status"]!="active" else session.encounter.cohort_order_label(cohort)]
+	var machine: Dictionary = display["machine"]
+	machine_model.position = world(machine["enemies"][0]["cell"])
+	machine_model.visible = machine["present"]
+	skid_model.visible = machine["skid_visible"]
+	warning.visible = machine["present"] and machine["next"]!=Vector2i(-1,-1)
+	warning.position = world(machine["next"],0.04)
+	shot_warning.visible = machine["present"] and machine["machine"]["pending_shot"]!=Vector2i(-1,-1)
+	shot_warning.position = world(machine["machine"]["pending_shot"],0.08)
+	for button in order_buttons:
+		button.disabled = display["ended"] or display["order_used"] or display["cohorts"][group_selected]["status"]!="active"
+	turn_button.disabled = display["ended"]
+	extract_button.disabled = display["ended"] or display["active"]<0
+	encounter_info.text = "Turn %d · Road closes round %d · Evacuated %d/12\n%s\n%s" % [display["phase"],display["deadline"],display["evacuated"],display["intent"],display["reason"] if display["ended"] else ("Group order used — End turn to give another." if display["order_used"] else "One free group order available.")]
