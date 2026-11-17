@@ -4,7 +4,7 @@ Decision date: 15 November 2026. Design baseline: GDD v3.1, with the overwatch s
 
 ## Why
 
-The active `farm_final.tscn` currently reaches the tactical base through eleven script layers. Each prototype gate added behavior through inheritance, including drawing, input, save handling and mission logic. The chain is useful history, but it should not become the template for a new campaign mission.
+At the start of this restructuring, `farm_final.tscn` reached the tactical base through eleven script layers. Each prototype gate added behavior through inheritance, including drawing, input, save handling and mission logic. The chain is useful history, but it should not become the template for a new campaign mission.
 
 Restructure incrementally, keeping playable builds, old saves, deterministic action outcomes and the earlier gate scenes working. No new mission or combat rule is part of this pass.
 
@@ -277,12 +277,20 @@ The main scene now directly composes machine intent/outcome text, feeder records
 
 Twelve committed suites and twelve regressions pass. Display comparisons cover eleven machine states, including hostile, paused, diverted, collected, betrayed, disabled, destroyed, departed and return conditions. All 119 recorded states and six route outcomes match. The remaining structural work is relocating shared methods/data out of the prototype gate classes, then removing redundant compatibility code and performing final visual acceptance. Explicit main-scene routing alone does not satisfy the no-gate-dependency acceptance criterion.
 
+## Completed: standalone active encounter controller
+
+`encounter_controller.gd` now owns the active encounter's constants, model references, UI state and shared methods directly under `Node2D`. It composes the previously extracted state, simulation, input, presentation and persistence components. `farm_final.gd` is a stable two-line entry adapter; it no longer inherits any prototype gate script. Only the effective method implementation was retained from each override chain, and the unused C2-only replacement method was omitted.
+
+All twelve committed suites and twelve gate regressions pass. Startup asserts that the active controller has no script base beyond Node2D. An isolated project with battlefield and B1–D1 scripts/scenes removed still passes full Follow origin/return/wounded-rescue runs, main action tests and all 119 recorded state comparisons. Earlier gate fixtures remain unchanged in the shipped project. Save format, slots and gameplay are unchanged.
+
+This closes the controller-separation acceptance criteria. The standalone controller remains large (about 2,600 lines); consolidation removes hidden inheritance, not all maintenance debt. Useful gate fixtures still duplicate some adapter logic. Final cleanup should remove demonstrably redundant code without sacrificing those fixtures, and must include a visual/playable smoke test before declaring foundation complete.
+
 ## Remaining sequence before a new mission
 
 Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
 
 1. **Dedicated live state — complete.** Combat, machine/protocol, evacuation, story, campaign/return and rescue/result records have independent owners. Instance isolation, detached snapshots, exact RNG restoration, save/migration checks and 119-action parity pass. UI compatibility data remains explicitly separate (see inventory above).
-2. **Composed encounter controller — in progress.** Replace the main scene's inherited gameplay/input orchestration with explicit services and state owners. Acceptance: no gate-to-gate dependency in the main controller; preserve modal priorities, action costs, outcome timing, save slots and earlier fixture behavior.
+2. **Composed encounter controller — complete.** The active Node2D controller has no prototype gate ancestry or gate-scene dependency. Explicit services/state owners, full regression parity and prototype-free rescue/route tests meet the acceptance criteria.
 3. **Retire redundant adapters and close foundation — pending.** Remove compatibility code only after replacement coverage exists; retain useful gate fixtures. Acceptance: complete automated suite, recorded-route parity, successful save/migration checks and a focused visual/playable smoke test. Record remaining usability issues separately; do not call automated checks human playtesting.
 
 No new mission, balance change or final isometric conversion belongs to these steps. After foundation acceptance, choose the next gameplay or presentation milestone explicitly. Each pass must name its completed acceptance criteria and outstanding work; moving files alone does not close a step.

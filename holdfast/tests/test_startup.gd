@@ -2,6 +2,8 @@ extends "res://tests/test_support.gd"
 
 func run() -> void:
 	var fresh = new_board("startup")
+	var controller: Script = fresh.get_script().get_base_script()
+	expect(controller.resource_path=="res://encounter_controller.gd" and controller.get_base_script()==null,"Active encounter extends Node2D directly without prototype script ancestry")
 	var legacy = load("res://farm_return.tscn").instantiate()
 	legacy.auto_resume = false
 	legacy.campaign_path = test_path("legacy-campaign.save")

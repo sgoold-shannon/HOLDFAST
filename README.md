@@ -8,6 +8,10 @@ Open `holdfast/project.godot` in Godot and press **F5**. The project has been te
 
 The prototype contains the Farm Road encounter, conditional debrief, persistent roster, a return mission affected by the earlier machine outcome, and a separate ending logic test. It is not a complete campaign. The ending fixture's 24 passengers are test data, not accumulated campaign rescues.
 
+## Current foundation status
+
+The active encounter now uses `encounter_controller.gd` directly under Node2D, through the stable `farm_final.gd` entry point. It no longer depends on the prototype gate inheritance chain. State ownership and controller separation are complete; final cleanup and visual/playable acceptance remain. Earlier gate scenes are retained as regression fixtures.
+
 ## Readability
 
 The demo starts at **3× magnification**. Scroll to pan; Shift + scroll moves sideways. Use **Fit**, **2×**, or **3×** at the bottom to change the view. Home returns to the top-left. At 3× you will need to pan to reach parts of the map and the civilian panel.
