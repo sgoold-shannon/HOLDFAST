@@ -23,6 +23,11 @@ func move(cell: Vector2i) -> bool:
 func command(action: String, group: int = 0) -> void:
 	if encounter.ended: return
 	match action:
+		"target":
+			encounter.sight_mode = true
+			encounter.pinned_target = encounter.enemies[0]["cell"] if encounter.machine_present() else encounter.NONE
+		"fire": encounter.try_fire()
+		"reload": encounter.try_reload()
 		"turn": encounter.next_phase()
 		"extract": encounter.try_extract()
 		"exit": encounter.order_exit(group)
@@ -40,10 +45,15 @@ func view(hover: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 		var cost: int = encounter.move_cost(cell)
 		if cost>0 and cost<=encounter.soldiers[encounter.active_soldier]["ap"]:
 			reachable[cell] = cost
+	var chance := -1
+	if encounter.soldier_can_act(encounter.active_soldier) and encounter.target_at(encounter.pinned_target)>=0:
+		var sight: Dictionary = encounter.sight_preview(encounter.soldiers[encounter.active_soldier]["cell"],encounter.pinned_target)
+		if sight["clear"] and sight["can_fire"]: chance = clampi(75+sight["range_modifier"],5,95)
 	return {"soldiers":encounter.soldiers.duplicate(true),"active":encounter.active_soldier,
 		"reachable":reachable,"path":encounter.path_to(hover).duplicate(),
 		"cost":reachable.get(hover,0),"status":encounter.status_text,
 		"cohorts":encounter.cohorts.duplicate(true),"machine":encounter.machine_view_snapshot(),
 		"intent":encounter.enemy_intent(),"phase":encounter.phase,"ended":encounter.ended,
 		"reason":encounter.end_reason,"order_used":encounter.order_used,
-		"deadline":encounter.deadline(),"evacuated":encounter.evacuated_people()}
+		"fire_reason":encounter.fire_block_reason(),"chance":chance,"target":encounter.pinned_target,
+		"danger":encounter.danger_summary(),"deadline":encounter.deadline(),"evacuated":encounter.evacuated_people()}

@@ -22,9 +22,15 @@ The practice view now offers group selection, Evacuate, Follow soldier, Hold, ex
 
 A practice-only controller overrides persistence entry points so automatic mission completion and story reporting cannot write campaign saves. Reset remains in memory; Back returns to the paused original encounter. All seventeen suites passed, including exact state comparisons through closure, follow/hold restrictions, extraction visibility, no report/save writes and Preview/Back after a resolved turn. Rendered mouse input verified group selection, Evacuate and End turn. [Evacuation preview](verification/3d-evacuation.png).
 
-## P2c — remaining encounter integration: next
+## P2c — combat targeting and reload: complete
 
-Connect firing/reloading, casualty rescue, breaker and protocol commands to the same rules. Add clear targeting, casualty states and final result review. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
+Select a soldier and Target machine (or click its model/cell), review the displayed chance and neutral-to-hostile/blast warnings, then explicitly Fire. Targeting does not shoot. Fire and Reload delegate to the existing controller. The fixed-screen buttons display blocked-shot reasons and the legal shot chance; squad cards show magazine rounds. Machine labels show HP and posture, and current movement/charged-shot warning cells update after resolution. Target pins remain on the selected cell, so a moved machine must be retargeted.
+
+All eighteen suites passed. New checks compare exact production state for targeting, shots (including RNG), reload and hostile turns, plus chance display, attack allowance, target position, warning visibility and reset. A rendered mouse-input test verified Target machine and Fire. [Combat preview](verification/3d-combat.png).
+
+## P2d — remaining encounter integration: next
+
+Connect casualty rescue, breaker and protocol commands to the same rules. Add clear casualty states and final result review. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 

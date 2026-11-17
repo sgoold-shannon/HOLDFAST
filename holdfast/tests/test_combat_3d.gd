@@ -1,0 +1,41 @@
+extends "res://tests/test_support.gd"
+func run() -> void:
+	var preview = load("res://map_preview_3d.tscn").instantiate()
+	root.add_child(preview)
+	await process_frame
+	var reference = new_board("combat-3d-reference")
+	reference.finish_opening()
+	preview.select_actor(0)
+	reference.select_soldier(0)
+	preview.session.command("target")
+	reference.sight_mode = true
+	reference.pinned_target = reference.enemies[0]["cell"]
+	preview.refresh_movement()
+	expect(preview.target_marker.visible and not preview.fire_button.disabled,"Target enables a legal shot without firing")
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Targeting preserves ammo and RNG")
+	var info: Dictionary = reference.sight_preview(reference.soldiers[0]["cell"],reference.pinned_target)
+	expect(preview.display["chance"]==clampi(75+info["range_modifier"],5,95),"Displayed chance matches production")
+	preview.session.command("fire")
+	reference.try_fire()
+	preview.refresh_movement()
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Shot outcome, RNG, AP and ammo match production")
+	expect(preview.fire_button.disabled and preview.session.encounter.machine["hostile"],"One shot per turn; firing makes machine hostile")
+	preview.session.command("reload")
+	reference.try_reload()
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Reload matches production and leaves attack allowance spent")
+	preview.session.command("turn")
+	reference.next_phase()
+	await process_frame
+	preview.refresh_movement()
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Hostile activation matches production")
+	expect(preview.shot_warning.visible==(reference.machine["pending_shot"]!=reference.NONE),"Charged shot warning follows resolved state")
+	preview.session.command("target")
+	reference.pinned_target = reference.enemies[0]["cell"]
+	preview.refresh_movement()
+	expect(preview.target_marker.position==preview.world(reference.enemies[0]["cell"],0.1),"Retarget follows moved machine")
+	preview.reset_practice()
+	expect(not preview.target_marker.visible and not preview.session.encounter.machine["hostile"],"Reset clears targeting and hostility")
+	preview.free()
+	reference.free()
+	print("3D COMBAT FAILURES: ",failures)
+	quit(1 if failures else 0)

@@ -14,6 +14,10 @@ var group_buttons: Array[Button] = []
 var order_buttons: Array[Button] = []
 var turn_button: Button
 var extract_button: Button
+var target_button: Button
+var fire_button: Button
+var reload_button: Button
+var target_marker: MeshInstance3D
 var encounter_info: Label
 var group_selected := 0
 var hovered := Vector2i(-1,-1)
@@ -179,6 +183,8 @@ func _ready() -> void:
 	label3d("EVACUATION",world(Mission.civilian_exit,0.25),Color("9df9df"),30)
 	selection = box(Vector3.ZERO,Vector3(1.01,0.035,1.01),Color("a4f3df"),true)
 	selection.visible = false
+	target_marker = box(Vector3.ZERO,Vector3(1.04,0.025,1.04),Color("e88773"),true)
+	target_marker.visible = false
 	build_hud()
 	refresh_movement()
 
@@ -202,7 +208,7 @@ func build_hud() -> void:
 	layer.add_child(back)
 	var title := Label.new()
 	title.position = Vector2(24,20)
-	title.text = "HOLDFAST / FARM ROAD\n3D EVACUATION PRACTICE"
+	title.text = "HOLDFAST / FARM ROAD\n3D COMBAT & EVACUATION PRACTICE"
 	title.add_theme_font_size_override("font_size",25)
 	layer.add_child(title)
 	var panel := PanelContainer.new()
@@ -264,8 +270,28 @@ func build_hud() -> void:
 		if entry[1]=="turn": turn_button = button
 		elif entry[1]=="extract": extract_button = button
 		else: order_buttons.append(button)
+	for entry in [["Target machine","target"],["Fire · 1 AP","fire"],["Reload · 1 AP","reload"]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		button.offset_left = -220
+		button.offset_right = -20
+		var index: int = ["target","fire","reload"].find(entry[1])
+		button.offset_top = 132+index*48
+		button.offset_bottom = 176+index*48
+		button.add_theme_font_size_override("font_size",20)
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(run_command.bind(entry[1]))
+		layer.add_child(button)
+		match entry[1]:
+			"target": target_button = button
+			"fire": fire_button = button
+			"reload": reload_button = button
 	encounter_info = Label.new()
 	encounter_info.position = Vector2(24,90)
+	encounter_info.anchor_right = 1.0
+	encounter_info.offset_right = -240
+	encounter_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	encounter_info.add_theme_font_size_override("font_size",18)
 	layer.add_child(encounter_info)
 	detail = Label.new()
@@ -341,7 +367,7 @@ func refresh_movement() -> void:
 		var soldier: Dictionary = display["soldiers"][i]
 		squad_models[i].position = world(soldier["cell"])
 		squad_models[i].visible = not soldier["extracted"] and soldier.get("condition", "active") != "dead"
-		squad_buttons[i].text = "%s%s  |  %d HP · %d AP" % ["> " if i==display["active"] else "",soldier["name"],soldier["hp"],soldier["ap"]]
+		squad_buttons[i].text = "%s%s  |  %d HP · %d AP · %d/4" % ["> " if i==display["active"] else "",soldier["name"],soldier["hp"],soldier["ap"],soldier["ammo"]]
 	selection.visible = display["active"]>=0
 	if selection.visible: selection.position = world(display["soldiers"][display["active"]]["cell"],0.07)
 	refresh_encounter()
@@ -364,6 +390,9 @@ func preview_route(cell: Vector2i, force: bool = false) -> void:
 		detail.text = "%s · %d/8 HP · %d AP  |  Green 1 AP / Blue 2 AP\n%s\nChoose a group + Evacuate; End turn moves ordered groups. Orders persist." % [NAMES[active],soldier["hp"],soldier["ap"],route]
 
 func activate_cell(cell: Vector2i) -> void:
+	if session.encounter.target_at(cell)>=0:
+		run_command("target")
+		return
 	for i in range(display["cohorts"].size()):
 		if display["cohorts"][i]["status"]=="active" and display["cohorts"][i]["cell"]==cell:
 			select_group(i)
@@ -394,6 +423,10 @@ func pick_cell(screen: Vector2) -> Vector2i:
 		if distance<closest:
 			closest = distance
 			result = soldier["cell"]
+	if display["machine"]["present"]:
+		var machine_cell: Vector2i = display["machine"]["enemies"][0]["cell"]
+		if camera.unproject_position(world(machine_cell,0.5)).distance_to(screen)<closest:
+			return machine_cell
 	return cell_at(screen) if result==Vector2i(-1,-1) else result
 
 func group_pieces(previous: Array, at: Vector3) -> Node3D:
@@ -440,4 +473,21 @@ func refresh_encounter() -> void:
 		button.disabled = display["ended"] or display["order_used"] or display["cohorts"][group_selected]["status"]!="active"
 	turn_button.disabled = display["ended"]
 	extract_button.disabled = display["ended"] or display["active"]<0
+	target_button.disabled = display["ended"] or not machine["present"]
+	fire_button.disabled = display["fire_reason"]!=""
+	fire_button.text = "Fire · %d%% · 1 AP" % display["chance"] if not fire_button.disabled else "Fire · unavailable"
+	fire_button.tooltip_text = display["fire_reason"]
+	reload_button.disabled = display["ended"] or not session.encounter.soldier_can_act(display["active"])
+	target_marker.visible = machine["present"] and display["target"]==machine["enemies"][0]["cell"]
+	target_marker.position = world(display["target"],0.10)
+	for child in machine_model.get_children():
+		if child is Label3D:
+			child.text = "%s · %d HP" % ["HOSTILE" if machine["machine"]["hostile"] else "NEUTRAL",machine["enemies"][0]["hp"]]
+			child.modulate = Color("ff786b") if machine["machine"]["hostile"] else Color("ffcf66")
 	encounter_info.text = "Turn %d · Road closes round %d · Evacuated %d/12\n%s\n%s" % [display["phase"],display["deadline"],display["evacuated"],display["intent"],display["reason"] if display["ended"] else ("Group order used — End turn to give another." if display["order_used"] else "One free group order available.")]
+
+	encounter_info.text += "\n"+display["danger"]
+	if target_marker.visible:
+		encounter_info.text += "\n"+("Shot: %d%% · 4 damage · 1 AP. Firing makes the machine hostile. Destroying it blasts adjacent cells for 4 damage." % display["chance"] if display["fire_reason"]=="" else display["fire_reason"])
+	else:
+		encounter_info.text += "\nSelect a soldier, then Target machine. Targeting does not fire."
