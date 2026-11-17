@@ -153,6 +153,17 @@ func fit_camera() -> void:
 func build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
+	var back := Button.new()
+	back.text = "Back to demo"
+	back.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	back.offset_left = -200
+	back.offset_right = -20
+	back.offset_top = 20
+	back.offset_bottom = 68
+	back.add_theme_font_size_override("font_size",22)
+	back.focus_mode = Control.FOCUS_NONE
+	back.pressed.connect(close_preview)
+	layer.add_child(back)
 	var title := Label.new()
 	title.position = Vector2(24,20)
 	title.text = "HOLDFAST / FARM ROAD\n3D MAP STUDY"
@@ -208,3 +219,9 @@ func _exit_tree() -> void:
 		readability.set_process_input(true)
 		for child in readability.get_children():
 			if child is CanvasLayer: child.visible = true
+
+func close_preview() -> void:
+	if get_tree().current_scene == self:
+		get_tree().change_scene_to_file("res://farm_final.tscn")
+	else:
+		queue_free()

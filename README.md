@@ -14,7 +14,7 @@ The active encounter now uses `encounter_controller.gd` directly under Node2D, t
 
 ## 3D presentation preview
 
-Open `holdfast/map_preview_3d.tscn` and press **F6** (Run Current Scene). This separate angled 3D study supports cell inspection, scroll zoom, and Home to fit. It does not run combat or change saves. **F5** still launches the existing playable demo. See the [presentation plan](docs/presentation-plan.md).
+Run the demo normally and click **3D Preview** in the upper-right corner. **Back to demo** restores the same encounter without reloading it. Alternatively, open `holdfast/map_preview_3d.tscn` and use Godot’s Run Current Scene control. This separate angled 3D study supports cell inspection, scroll zoom, and Home to fit. It does not run combat or change saves. **F5** still launches the existing playable demo. See the [presentation plan](docs/presentation-plan.md).
 
 ## Readability
 

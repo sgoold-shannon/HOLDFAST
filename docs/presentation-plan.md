@@ -4,7 +4,7 @@ Direction: angled orthographic 3D, inspired by the requested XCOM/Shadowrun pres
 
 ## P1 — map and readability study: complete
 
-Open `holdfast/map_preview_3d.tscn` and run the current scene (F6). F5 still runs the existing playable demo.
+Run the normal demo and click **3D Preview** at the upper right. The encounter is hidden and paused; **Back to demo** restores the same scene and unsaved state. This avoids dependence on a function-key shortcut. Direct Run Current Scene on `map_preview_3d.tscn` remains supported. F5 still runs the existing playable demo.
 
 The preview reads the existing Farm Road resource: 20×16 cells, walls, cover edges, fixtures, spawns and evacuation area. Primitive models distinguish four squad roles, civilian groups of four, and the tracked neutral machine. A pulsing orange cell marks its authored next patrol step. Clicking cells shows coordinates and context; scroll zooms and Home refits. The inspector stays screen-fixed. The existing 2D magnifier is hidden only while this preview is active.
 
@@ -21,3 +21,5 @@ Bind the view to a detached display snapshot from the standalone controller. Rou
 Animate movement and attacks from resolved events, distinguish neutral/hostile machine posture, and show impact/shot warnings. Keep the full encounter loop and fixed-screen controls readable before replacing the main scene. Re-run recorded routes and do a focused visual/user playtest.
 
 The prototype remains separate until those criteria pass. Existing magnification and the playable demo are unchanged.
+
+Launch follow-up: automated and rendered tests exercise the Preview/Back buttons, duplicate-launch guard, exact encounter-state preservation and magnifier input restoration. The original F6 failure was not reproduced; no keyboard-configuration cause is claimed.
