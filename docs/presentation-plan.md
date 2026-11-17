@@ -28,9 +28,15 @@ Select a soldier and Target machine (or click its model/cell), review the displa
 
 All eighteen suites passed. New checks compare exact production state for targeting, shots (including RNG), reload and hostile turns, plus chance display, attack allowance, target position, warning visibility and reset. A rendered mouse-input test verified Target machine and Fire. [Combat preview](verification/3d-combat.png).
 
-## P2d — remaining encounter integration: next
+## P2d — casualty rescue: complete
 
-Connect casualty rescue, breaker and protocol commands to the same rules. Add clear casualty states and final result review. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
+Casualty card/figure selection preserves the active rescuer. Stabilize, Carry and Put down delegate to the existing rescue rules, with a cancelable adjacent-cell drop mode. Critical/stable figures and labels reflect resolved condition; carried figures follow their carrier and both disappear on extraction. The rescue status explains the selected casualty and bleeding timer; squad tooltips show medical charges.
+
+All nineteen suites passed. Dedicated checks compare exact production snapshots for stabilization, pickup, turn resolution, drop and carried extraction. A rendered mouse-input scenario verifies selecting a rescuer and casualty, stabilizing and carrying. Labels were visually checked after correcting inherited model scaling. [Rescue preview](verification/3d-rescue.png).
+
+## P2e — remaining encounter integration: next
+
+Connect breaker and protocol commands to the same rules, then add final result review. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 

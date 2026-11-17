@@ -15,7 +15,10 @@ func setup(parent: Node) -> void:
 	initial = encounter.encounter_snapshot()
 
 func select(index: int) -> void:
-	encounter.select_soldier(index)
+	if encounter.casualty_available(index):
+		encounter.rescue_target = index
+	else:
+		encounter.select_soldier(index)
 
 func move(cell: Vector2i) -> bool:
 	return encounter.try_move(cell)
@@ -28,6 +31,10 @@ func command(action: String, group: int = 0) -> void:
 			encounter.pinned_target = encounter.enemies[0]["cell"] if encounter.machine_present() else encounter.NONE
 		"fire": encounter.try_fire()
 		"reload": encounter.try_reload()
+		"stabilize": encounter.try_stabilize()
+		"pickup": encounter.try_pickup()
+		"drop": encounter.request_drop()
+		"cancel_drop": encounter.drop_mode = false
 		"turn": encounter.next_phase()
 		"extract": encounter.try_extract()
 		"exit": encounter.order_exit(group)
@@ -55,5 +62,6 @@ func view(hover: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 		"cohorts":encounter.cohorts.duplicate(true),"machine":encounter.machine_view_snapshot(),
 		"intent":encounter.enemy_intent(),"phase":encounter.phase,"ended":encounter.ended,
 		"reason":encounter.end_reason,"order_used":encounter.order_used,
+		"rescue_target":encounter.target_for_rescue(),"drop_mode":encounter.drop_mode,
 		"fire_reason":encounter.fire_block_reason(),"chance":chance,"target":encounter.pinned_target,
 		"danger":encounter.danger_summary(),"deadline":encounter.deadline(),"evacuated":encounter.evacuated_people()}

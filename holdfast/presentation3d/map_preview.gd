@@ -14,6 +14,7 @@ var group_buttons: Array[Button] = []
 var order_buttons: Array[Button] = []
 var turn_button: Button
 var extract_button: Button
+var rescue_buttons: Array[Button] = []
 var target_button: Button
 var fire_button: Button
 var reload_button: Button
@@ -270,6 +271,17 @@ func build_hud() -> void:
 		if entry[1]=="turn": turn_button = button
 		elif entry[1]=="extract": extract_button = button
 		else: order_buttons.append(button)
+	var rescue_row := HBoxContainer.new()
+	stack.add_child(rescue_row)
+	for entry in [["Stabilize · 1 AP","stabilize"],["Carry · 1 AP","pickup"],["Put down · 1 AP","drop"],["Cancel put down","cancel_drop"]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size",18)
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(run_command.bind(entry[1]))
+		rescue_row.add_child(button)
+		rescue_buttons.append(button)
 	for entry in [["Target machine","target"],["Fire · 1 AP","fire"],["Reload · 1 AP","reload"]]:
 		var button := Button.new()
 		button.text = entry[0]
@@ -347,6 +359,7 @@ func clear_nodes(nodes: Array[Node3D]) -> void:
 	nodes.clear()
 
 func select_actor(index: int) -> void:
+	session.encounter.drop_mode = false
 	session.select(index)
 	hovered = Vector2i(-1,-1)
 	refresh_movement()
@@ -367,6 +380,16 @@ func refresh_movement() -> void:
 		var soldier: Dictionary = display["soldiers"][i]
 		squad_models[i].position = world(soldier["cell"])
 		squad_models[i].visible = not soldier["extracted"] and soldier.get("condition", "active") != "dead"
+		var condition: String = soldier.get("condition","active")
+		squad_models[i].scale = Vector3(1,0.35,1) if condition in ["critical","stable"] else Vector3.ONE
+		if soldier.get("carried_by",-1)>=0:
+			squad_models[i].position += Vector3(0,0.85,0)
+		for piece in squad_models[i].get_children():
+			if piece is Label3D:
+				piece.scale.y = 1.0/squad_models[i].scale.y
+				piece.position.y = 1.22/squad_models[i].scale.y
+				piece.text = soldier["name"]+(" · CRITICAL (%d)" % soldier["bleed"] if condition=="critical" else (" · STABLE" if condition=="stable" else ""))
+		squad_buttons[i].tooltip_text = "%s · medical charges %d · %s" % [condition,soldier.get("medical",0),"Carrying casualty" if soldier.get("carrying",-1)>=0 else "Click a casualty card after selecting a rescuer."]
 		squad_buttons[i].text = "%s%s  |  %d HP · %d AP · %d/4" % ["> " if i==display["active"] else "",soldier["name"],soldier["hp"],soldier["ap"],soldier["ammo"]]
 	selection.visible = display["active"]>=0
 	if selection.visible: selection.position = world(display["soldiers"][display["active"]]["cell"],0.07)
@@ -374,6 +397,10 @@ func refresh_movement() -> void:
 	preview_route(hovered,true)
 
 func preview_route(cell: Vector2i, force: bool = false) -> void:
+	if session.encounter.drop_mode:
+		clear_nodes(path_nodes)
+		detail.text = "PUT DOWN: click a free adjacent cell. Costs 1 AP. Cancel put down returns to movement."
+		return
 	if cell==hovered and not force: return
 	hovered = cell
 	display = session.view(cell)
@@ -390,6 +417,11 @@ func preview_route(cell: Vector2i, force: bool = false) -> void:
 		detail.text = "%s · %d/8 HP · %d AP  |  Green 1 AP / Blue 2 AP\n%s\nChoose a group + Evacuate; End turn moves ordered groups. Orders persist." % [NAMES[active],soldier["hp"],soldier["ap"],route]
 
 func activate_cell(cell: Vector2i) -> void:
+	if session.encounter.drop_mode:
+		session.encounter.try_drop(cell)
+		refresh_movement()
+		detail.text = session.encounter.status_text
+		return
 	if session.encounter.target_at(cell)>=0:
 		run_command("target")
 		return
@@ -473,6 +505,8 @@ func refresh_encounter() -> void:
 		button.disabled = display["ended"] or display["order_used"] or display["cohorts"][group_selected]["status"]!="active"
 	turn_button.disabled = display["ended"]
 	extract_button.disabled = display["ended"] or display["active"]<0
+	for button in rescue_buttons: button.disabled = display["ended"]
+	rescue_buttons[3].disabled = not display["drop_mode"]
 	target_button.disabled = display["ended"] or not machine["present"]
 	fire_button.disabled = display["fire_reason"]!=""
 	fire_button.text = "Fire · %d%% · 1 AP" % display["chance"] if not fire_button.disabled else "Fire · unavailable"
@@ -491,3 +525,8 @@ func refresh_encounter() -> void:
 		encounter_info.text += "\n"+("Shot: %d%% · 4 damage · 1 AP. Firing makes the machine hostile. Destroying it blasts adjacent cells for 4 damage." % display["chance"] if display["fire_reason"]=="" else display["fire_reason"])
 	else:
 		encounter_info.text += "\nSelect a soldier, then Target machine. Targeting does not fire."
+
+	var casualty: int = display["rescue_target"]
+	if casualty>=0 and session.encounter.casualty_available(casualty):
+		var patient: Dictionary = display["soldiers"][casualty]
+		encounter_info.text += "\nRESCUE: %s · %s%s. Select a rescuer and move adjacent; Stabilize stops bleeding, Carry allows extraction together." % [patient["name"],patient["condition"]," · %d bleeding turns left" % patient["bleed"] if patient["condition"]=="critical" else ""]
