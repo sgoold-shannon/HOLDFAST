@@ -12,6 +12,10 @@ The prototype contains the Farm Road encounter, conditional debrief, persistent 
 
 The active encounter now uses `encounter_controller.gd` directly under Node2D, through the stable `farm_final.gd` entry point. It no longer depends on the prototype gate inheritance chain. State ownership, controller separation and foundation acceptance are complete. See the [verification record](docs/verification/foundation/README.md) for test evidence, screenshots and remaining readability issues. Earlier gate scenes are retained as regression fixtures.
 
+## 3D presentation preview
+
+Open `holdfast/map_preview_3d.tscn` and press **F6** (Run Current Scene). This separate angled 3D study supports cell inspection, scroll zoom, and Home to fit. It does not run combat or change saves. **F5** still launches the existing playable demo. See the [presentation plan](docs/presentation-plan.md).
+
 ## Readability
 
 The demo starts at **3× magnification**. Scroll to pan; Shift + scroll moves sideways. Use **Fit**, **2×**, or **3×** at the bottom to change the view. Home returns to the top-left. Fit scales the full page into the space above the toolbar, adjusting when the viewport changes. At 3× you will need to pan to reach parts of the map and the civilian panel.
