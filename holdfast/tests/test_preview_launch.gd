@@ -11,7 +11,9 @@ func run() -> void:
 	var count := root.get_child_count()
 	readability.open_preview()
 	expect(root.get_child_count()==count,"Repeated launch does not create duplicate previews")
-	preview.select_cell(Vector2i(10,8))
+	preview.select_actor(0)
+	preview.activate_cell(Vector2i(7,6))
+	expect(preview.session.encounter.soldiers[0]["cell"]==Vector2i(7,6),"Practice movement resolves before returning")
 	preview.close_preview()
 	await process_frame
 	await process_frame

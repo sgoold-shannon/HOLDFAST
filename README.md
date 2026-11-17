@@ -18,9 +18,11 @@ The prototype contains the Farm Road encounter, conditional debrief, persistent 
 
 The active encounter now uses `encounter_controller.gd` directly under Node2D, through the stable `farm_final.gd` entry point. It no longer depends on the prototype gate inheritance chain. State ownership, controller separation and foundation acceptance are complete. See the [verification record](docs/verification/foundation/README.md) for test evidence, screenshots and remaining readability issues. Earlier gate scenes are retained as regression fixtures.
 
-## 3D presentation preview
+## 3D movement practice
 
-Run the demo normally and click **3D Preview** in the upper-right corner. **Back to demo** restores the same encounter without reloading it. Alternatively, open `holdfast/map_preview_3d.tscn` and use Godot’s Run Current Scene control. This separate angled 3D study supports cell inspection, scroll zoom, and Home to fit. It does not run combat or change saves. **F5** still launches the existing playable demo. See the [presentation plan](docs/presentation-plan.md).
+Run the demo normally and click **3D Preview** at the upper right. Select a soldier or their bottom-panel button, hover a highlighted cell to preview the route, then click to move. Green costs **1 AP**, blue costs **2 AP**. **Reset practice** restores the squad; **Back to demo** restores your untouched original encounter. Scroll zooms and Home fits the map.
+
+The camera looks from behind the squad toward the enemy, so advances move upward on screen. This first playable slice uses the existing movement rules in an isolated practice encounter; turns, civilian orders and combat are not connected yet. See the [presentation plan](docs/presentation-plan.md).
 
 ## Readability
 

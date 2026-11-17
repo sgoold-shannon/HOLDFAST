@@ -4,17 +4,21 @@ Direction: angled orthographic 3D, inspired by the requested XCOM/Shadowrun pres
 
 ## P1 — map and readability study: complete
 
-Run the normal demo and click **3D Preview** at the upper right. The encounter is hidden and paused; **Back to demo** restores the same scene and unsaved state. This avoids dependence on a function-key shortcut. Direct Run Current Scene on `map_preview_3d.tscn` remains supported. F5 still runs the existing playable demo.
+Run the normal demo (prefer **Play HOLDFAST.command** on Mac) and click **3D Preview** at the upper right. **Back to demo** restores the same encounter and unsaved state. Direct Run Current Scene on `map_preview_3d.tscn` also works.
 
-The preview reads the existing Farm Road resource: 20×16 cells, walls, cover edges, fixtures, spawns and evacuation area. Primitive models distinguish four squad roles, civilian groups of four, and the tracked neutral machine. A pulsing orange cell marks its authored next patrol step. Clicking cells shows coordinates and context; scroll zooms and Home refits. The inspector stays screen-fixed. The existing 2D magnifier is hidden only while this preview is active.
+The camera now sits behind the squad: origin soldiers appear at the bottom and advance upward toward the machine. Soldiers initially face the enemy and turn with their last movement step. This is camera/model orientation only; the board remains flat with unchanged logical coordinates and rules. Temporary primitive models distinguish squad roles, civilian groups and the machine.
 
-This is an inspection-only starting layout, with no movement, combat, save loading or campaign writes. Shapes are temporary models, not final character art. Click the ground cell under a marker; terrain-plane picking does not yet select tall models by their silhouette. The orange marker is a static starting-state prediction, not a running simulation.
+## P2a — squad movement practice: complete
 
-Validation: Godot script/import checks; 320 world/screen/cell round trips; squad/danger inspection checks; rendered OpenGL compatibility captures inspected for framing and readability. Forward Plus and a human user playtest remain unverified. [Preview image](verification/3d-preview.png).
+The preview owns an isolated fresh Farm Road encounter with auto-resume disabled. It neither reads nor writes campaign saves. `presentation3d/movement_session.gd` delegates selection, pathfinding, movement costs and movement execution to the production encounter controller, returning detached display data to the 3D view.
 
-## P2 — connect the existing encounter
+Select a figure or one of the four fixed-screen squad buttons. Green cells cost 1 AP; blue cells cost 2 AP. Hover highlights a dotted route and reports its cost and length. Click a reachable destination to move. Health and AP remain in the screen-fixed panel. Reset practice restores the initial snapshot without disk access. Scroll zooms; Home fits the map. Movement resolves immediately; animation is deferred to P3.
 
-Bind the view to a detached display snapshot from the standalone controller. Route selection/movement intents to existing rules; show legal movement and path previews. Preserve action costs, deterministic results, civilian orders and save formats. Do not reimplement combat in the renderer.
+Validation: all sixteen committed suites passed. Dedicated movement checks compare reachable costs for all 320 cells and all four soldiers, route ordering and exact post-move snapshots against the production controller. They also cover blocked cells, two-AP dashes, exhausted AP, reset, detached display data and the squad-below-enemy camera relation. All 320 picking round trips still pass. Preview/Back tests now include a practice move and verify the original demo state remains unchanged. A rendered compatibility-mode test used GUI input to select MSG, hover a route and move four squares for 1 AP. [Movement preview](verification/3d-movement.png).
+
+## P2b — remaining encounter integration: next
+
+Connect civilian orders, machine turns, extraction and other commands to the same rules. Replace static civilian/machine display with live snapshots and hazards. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 
