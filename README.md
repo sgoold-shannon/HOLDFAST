@@ -14,7 +14,7 @@ The active encounter now uses `encounter_controller.gd` directly under Node2D, t
 
 ## Readability
 
-The demo starts at **3× magnification**. Scroll to pan; Shift + scroll moves sideways. Use **Fit**, **2×**, or **3×** at the bottom to change the view. Home returns to the top-left. At 3× you will need to pan to reach parts of the map and the civilian panel.
+The demo starts at **3× magnification**. Scroll to pan; Shift + scroll moves sideways. Use **Fit**, **2×**, or **3×** at the bottom to change the view. Home returns to the top-left. Fit scales the full page into the space above the toolbar, adjusting when the viewport changes. At 3× you will need to pan to reach parts of the map and the civilian panel.
 
 ## Rescue civilians
 

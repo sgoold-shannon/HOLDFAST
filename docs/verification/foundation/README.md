@@ -22,7 +22,7 @@ Removed the unreferenced `result_line` drawing adapter from the standalone contr
 
 ## Follow-up usability issues
 
-- **Fit overlaps the bottom toolbar.** Fit sets 100% magnification without reserving the toolbar's 64 logical pixels. Footer text and lower controls can appear behind it. Next bounded fix: calculate Fit against the unobscured viewport, preserving the requested default 3× view and pan controls.
+- **Fit-toolbar overlap fixed (16 November 2026).** Fit now calculates its scale from viewport width and the height above the actual toolbar. The default 3× view and pan controls remain. A rendered replay passed origin/return/wounded rescue; updated [tactical Fit](fit-fixed-tactical.png) and [results Fit](fit-fixed-results.png) captures show lower controls and footer above the toolbar. Original captures above document the pre-fix state.
 - At 3×, long opening lines extend offscreen and require horizontal panning. This is expected with the current whole-canvas magnifier; future responsive panels should wrap text independently of map zoom.
 
 These existing presentation limitations are recorded separately from structural acceptance. No new mission, balance change, overwatch or isometric conversion is included.

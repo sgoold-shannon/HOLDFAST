@@ -1,6 +1,9 @@
 extends Node
 ## Presentation-only magnifier. All game hit tests already invert the canvas transform.
 const PAGE := Vector2(1144, 1224)
+const TOOLBAR_HEIGHT := 64.0
+var fit_enabled := false
+var toolbar: PanelContainer
 var magnification := 3.0
 var origin := Vector2.ZERO
 var camera: Camera2D
@@ -11,8 +14,9 @@ func _ready() -> void:
 	layer.layer = 100
 	add_child(layer)
 	var panel := PanelContainer.new()
+	toolbar = panel
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	panel.offset_top = -64
+	panel.offset_top = -TOOLBAR_HEIGHT
 	layer.add_child(panel)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
@@ -41,6 +45,7 @@ func _process(_delta: float) -> void:
 	_apply()
 
 func _set_zoom(value: float) -> void:
+	fit_enabled = is_equal_approx(value,1.0)
 	magnification = value
 	origin = Vector2.ZERO
 	_apply()
@@ -49,7 +54,11 @@ func _apply() -> void:
 	if not is_instance_valid(camera):
 		return
 	var view := get_viewport().get_visible_rect().size
-	var visible := Vector2(view.x, view.y - 64) / magnification
+	var toolbar_height := maxf(TOOLBAR_HEIGHT,toolbar.size.y)
+	var available := Vector2(view.x,maxf(1.0,view.y-toolbar_height))
+	if fit_enabled:
+		magnification = minf(available.x/PAGE.x,available.y/PAGE.y)
+	var visible := available / magnification
 	origin = origin.clamp(Vector2.ZERO, (PAGE - visible).max(Vector2.ZERO))
 	camera.zoom = Vector2.ONE * magnification
 	camera.position = origin + view / (2.0 * magnification)
