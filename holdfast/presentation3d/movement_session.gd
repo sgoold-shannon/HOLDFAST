@@ -66,7 +66,7 @@ func view(hover: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 		"cohorts":encounter.cohorts.duplicate(true),"machine":encounter.machine_view_snapshot(),
 		"intent":encounter.enemy_intent(),"phase":encounter.phase,"ended":encounter.ended,
 		"reason":encounter.end_reason,"order_used":encounter.order_used,
-		"breaker_progress":encounter.breaker_progress,"isolate_pending":encounter.isolate_pending,
+		"results":encounter.results_panel_snapshot(),"breaker_progress":encounter.breaker_progress,"isolate_pending":encounter.isolate_pending,
 		"protocol":encounter.protocol.duplicate(true),"rescue_target":encounter.target_for_rescue(),"drop_mode":encounter.drop_mode,
 		"fire_reason":encounter.fire_block_reason(),"chance":chance,"target":encounter.pinned_target,
 		"danger":encounter.danger_summary(),"deadline":encounter.deadline(),"evacuated":encounter.evacuated_people()}

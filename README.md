@@ -171,3 +171,5 @@ Movement search is now a scene-independent component with stable route ordering.
 Narrative routing, survivor labels and story/campaign persistence now use explicit main-scene orchestration. `tests/test_narrative.gd` checks content and navigation parity across five scenarios.
 
 Machine status/outcome text and map-display policies now use explicit main-scene composition. Eleven machine-state comparisons preserve existing labels and visible tracks/fixtures. Shared method/data relocation remains outstanding.
+
+At mission closure, **Practice results** lists civilian outcomes, squad dispositions, machine/feeder outcomes and rescue records. Scroll for the full report. **Review map** keeps the resolved board visible; **Mission results** reopens the report. **Restart practice** starts a fresh attempt, while **Back to original demo** restores the paused encounter. Practice never saves campaign progress.

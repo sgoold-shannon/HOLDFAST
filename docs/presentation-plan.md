@@ -40,9 +40,15 @@ The in-game Equipment / protocol panel exposes Observe, Transmit, Authenticate, 
 
 All twenty suites passed (the live-controls suite timed out during the parallel run and passed on its isolated rerun). Dedicated equipment checks compare exact production state for the protocol sequence, housing opening, cancel and confirmed isolation. Rendered mouse input verified opening the breaker and confirming isolation; the final panel was visually checked. [Equipment preview](verification/3d-equipment.png).
 
-## P2f — final encounter review: next
+## P2f — final encounter review: complete
 
-Add final result review and run full recorded-route comparisons across the 3D command interface. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
+Closure opens a scrollable practice report built from production result snapshots: civilian group outcomes, squad dispositions, machine/feeder state and rescue event count. Review map, reopen results, restart practice and return to the original demo are explicit controls. Results open once per attempt and reset correctly.
+
+All twenty-one suites passed. Two complete command-interface routes compare exact state after commands and deferred completion: neutral evacuation ends round 5 with four civilians and the whole squad extracted; combat plus Follow ends round 7 with all twelve civilians and the whole squad extracted. These are two tested routes, not exhaustive coverage of every possible choice. Both results screens were rendered and the report visually inspected. [Results preview](verification/3d-results.png).
+
+## P2g — 3D practice acceptance: next
+
+Run a focused user playtest of a full practice encounter, including protocol or breaker choices and results review. Address usability findings before animation/presentation polish. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 

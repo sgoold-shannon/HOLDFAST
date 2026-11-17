@@ -14,6 +14,10 @@ var group_buttons: Array[Button] = []
 var order_buttons: Array[Button] = []
 var turn_button: Button
 var extract_button: Button
+var results_panel: PanelContainer
+var results_text: Label
+var results_button: Button
+var results_shown := false
 var equipment_popup: PanelContainer
 var equipment_status: Label
 var equipment_buttons: Dictionary = {}
@@ -348,6 +352,45 @@ func build_hud() -> void:
 	close.add_theme_font_size_override("font_size",18)
 	close.pressed.connect(equipment_popup.hide)
 	equipment_stack.add_child(close)
+	results_button = Button.new()
+	results_button.text = "Mission results"
+	results_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	results_button.offset_left = -240
+	results_button.offset_right = -20
+	results_button.offset_top = 332
+	results_button.offset_bottom = 376
+	results_button.add_theme_font_size_override("font_size",18)
+	results_button.pressed.connect(func(): results_panel.show())
+	layer.add_child(results_button)
+	results_panel = PanelContainer.new()
+	results_panel.add_theme_stylebox_override("panel",equipment_style.duplicate())
+	layer.add_child(results_panel)
+	results_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	results_panel.offset_left = -360
+	results_panel.offset_right = 360
+	results_panel.offset_top = -310
+	results_panel.offset_bottom = 310
+	results_panel.hide()
+	var result_stack := VBoxContainer.new()
+	result_stack.add_theme_constant_override("separation",12)
+	results_panel.add_child(result_stack)
+	var result_scroll := ScrollContainer.new()
+	result_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	result_stack.add_child(result_scroll)
+	results_text = Label.new()
+	results_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	results_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	results_text.add_theme_font_size_override("font_size",19)
+	result_scroll.add_child(results_text)
+	for entry in [["Review map","review"],["Restart practice","reset"],["Back to original demo","back"]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.add_theme_font_size_override("font_size",20)
+		result_stack.add_child(button)
+		match entry[1]:
+			"review": button.pressed.connect(results_panel.hide)
+			"reset": button.pressed.connect(reset_practice)
+			"back": button.pressed.connect(close_preview)
 	encounter_info = Label.new()
 	encounter_info.position = Vector2(24,90)
 	encounter_info.anchor_right = 1.0
@@ -414,6 +457,9 @@ func select_actor(index: int) -> void:
 	refresh_movement()
 
 func reset_practice() -> void:
+	results_shown = false
+	results_panel.hide()
+	equipment_popup.hide()
 	session.reset()
 	hovered = Vector2i(-1,-1)
 	for actor in squad_models: actor.rotation.y = -PI/2.0
@@ -446,6 +492,10 @@ func refresh_movement() -> void:
 	preview_route(hovered,true)
 
 func preview_route(cell: Vector2i, force: bool = false) -> void:
+	if session.encounter.ended:
+		clear_nodes(path_nodes)
+		detail.text = "Practice complete. Open Mission results to review outcomes, or Reset practice to try again."
+		return
 	if session.encounter.drop_mode:
 		clear_nodes(path_nodes)
 		detail.text = "PUT DOWN: click a free adjacent cell. Costs 1 AP. Cancel put down returns to movement."
@@ -541,6 +591,7 @@ func run_command(action: String) -> void:
 func refresh_encounter() -> void:
 	display = session.view(hovered)
 	refresh_equipment()
+	refresh_results()
 	for i in range(civilian_models.size()):
 		var cohort: Dictionary = display["cohorts"][i]
 		civilian_models[i].position = world(cohort["cell"])
@@ -573,6 +624,7 @@ func refresh_encounter() -> void:
 			child.modulate = Color("ff786b") if machine["machine"]["hostile"] else Color("ffcf66")
 	encounter_info.text = "Turn %d · Road closes round %d · Evacuated %d/12\n%s\n%s" % [display["phase"],display["deadline"],display["evacuated"],display["intent"],display["reason"] if display["ended"] else ("Group order used — End turn to give another." if display["order_used"] else "One free group order available.")]
 
+	if display["ended"]: return
 	encounter_info.text += "\n"+display["danger"]
 	if target_marker.visible:
 		encounter_info.text += "\n"+("Shot: %d%% · 4 damage · 1 AP. Firing makes the machine hostile. Destroying it blasts adjacent cells for 4 damage." % display["chance"] if display["fire_reason"]=="" else display["fire_reason"])
@@ -600,3 +652,23 @@ func refresh_equipment() -> void:
 	equipment_buttons["cancel_isolate"].visible = display["isolate_pending"]
 	if display["isolate_pending"]:
 		equipment_status.text += "\nCONFIRM: stop machine, cut feeder power and lock gates? Confirm costs 1 AP; Cancel spends nothing."
+
+func refresh_results() -> void:
+	results_button.disabled = not display["ended"]
+	if not display["ended"]: return
+	var result: Dictionary = display["results"]
+	var lines: Array[String] = ["PRACTICE RESULTS",result["title"],result["end_reason"],"", "CIVILIANS: %d / 12 evacuated" % result["evacuated"]]
+	for group in result["cohorts"]:
+		lines.append("Group %s: %s — %s" % [group["id"],group["status"],group.get("note","")])
+	lines.append("\nSQUAD")
+	for i in range(result["soldiers"].size()):
+		lines.append("%s: %s" % [result["soldiers"][i]["name"],result["dispositions"][i]])
+	lines.append("\nMACHINE: "+result["outcome"])
+	lines.append("FEEDER: "+result["feeder"])
+	lines.append("\nRescue actions recorded: %d" % result["rescue_events"].size())
+	lines.append("\nPractice only. Your original encounter and campaign saves are unchanged.")
+	results_text.text = "\n".join(lines)
+	if not results_shown:
+		results_shown = true
+		equipment_popup.hide()
+		results_panel.show()
