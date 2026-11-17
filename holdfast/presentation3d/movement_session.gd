@@ -29,6 +29,10 @@ func command(action: String, group: int = 0) -> void:
 		"target":
 			encounter.sight_mode = true
 			encounter.pinned_target = encounter.enemies[0]["cell"] if encounter.machine_present() else encounter.NONE
+		"breaker": encounter.try_breaker()
+		"confirm_isolate": encounter.try_breaker(true)
+		"cancel_isolate": encounter.isolate_pending = false
+		"observe", "transmit", "authenticate", "divert": encounter.protocol_action(action)
 		"fire": encounter.try_fire()
 		"reload": encounter.try_reload()
 		"stabilize": encounter.try_stabilize()
@@ -62,6 +66,7 @@ func view(hover: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 		"cohorts":encounter.cohorts.duplicate(true),"machine":encounter.machine_view_snapshot(),
 		"intent":encounter.enemy_intent(),"phase":encounter.phase,"ended":encounter.ended,
 		"reason":encounter.end_reason,"order_used":encounter.order_used,
-		"rescue_target":encounter.target_for_rescue(),"drop_mode":encounter.drop_mode,
+		"breaker_progress":encounter.breaker_progress,"isolate_pending":encounter.isolate_pending,
+		"protocol":encounter.protocol.duplicate(true),"rescue_target":encounter.target_for_rescue(),"drop_mode":encounter.drop_mode,
 		"fire_reason":encounter.fire_block_reason(),"chance":chance,"target":encounter.pinned_target,
 		"danger":encounter.danger_summary(),"deadline":encounter.deadline(),"evacuated":encounter.evacuated_people()}

@@ -14,6 +14,9 @@ var group_buttons: Array[Button] = []
 var order_buttons: Array[Button] = []
 var turn_button: Button
 var extract_button: Button
+var equipment_popup: PanelContainer
+var equipment_status: Label
+var equipment_buttons: Dictionary = {}
 var rescue_buttons: Array[Button] = []
 var target_button: Button
 var fire_button: Button
@@ -299,6 +302,52 @@ func build_hud() -> void:
 			"target": target_button = button
 			"fire": fire_button = button
 			"reload": reload_button = button
+	var equipment := Button.new()
+	equipment.text = "Equipment / protocol"
+	equipment.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	equipment.offset_left = -240
+	equipment.offset_right = -20
+	equipment.offset_top = 280
+	equipment.offset_bottom = 324
+	equipment.add_theme_font_size_override("font_size",18)
+	equipment.pressed.connect(open_equipment)
+	layer.add_child(equipment)
+	equipment_popup = PanelContainer.new()
+	var equipment_style := StyleBoxFlat.new()
+	equipment_style.bg_color = Color("18242d")
+	for side in [SIDE_LEFT,SIDE_TOP,SIDE_RIGHT,SIDE_BOTTOM]: equipment_style.set_content_margin(side,16)
+	equipment_popup.add_theme_stylebox_override("panel",equipment_style)
+	layer.add_child(equipment_popup)
+	equipment_popup.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	equipment_popup.offset_left = -340
+	equipment_popup.offset_right = 340
+	equipment_popup.offset_top = -300
+	equipment_popup.offset_bottom = 300
+	equipment_popup.hide()
+	var equipment_stack := VBoxContainer.new()
+	equipment_stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	equipment_stack.offset_left = 16
+	equipment_stack.offset_right = -16
+	equipment_stack.offset_top = 16
+	equipment_stack.offset_bottom = -16
+	equipment_stack.add_theme_constant_override("separation",10)
+	equipment_popup.add_child(equipment_stack)
+	equipment_status = Label.new()
+	equipment_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	equipment_status.add_theme_font_size_override("font_size",18)
+	equipment_stack.add_child(equipment_status)
+	for entry in [["Observe machine · MSG · 1 AP","observe"],["Transmit pause · MSG · 1 AP","transmit"],["Authenticate token · console (11,12) · 1 AP","authenticate"],["Divert machine · console · 1 AP","divert"],["Operate breaker (9,4) · 1 AP per step","breaker"],["Confirm isolation · 1 AP","confirm_isolate"],["Cancel isolation","cancel_isolate"]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.add_theme_font_size_override("font_size",18)
+		button.pressed.connect(run_command.bind(entry[1]))
+		equipment_stack.add_child(button)
+		equipment_buttons[entry[1]] = button
+	var close := Button.new()
+	close.text = "Back to map"
+	close.add_theme_font_size_override("font_size",18)
+	close.pressed.connect(equipment_popup.hide)
+	equipment_stack.add_child(close)
 	encounter_info = Label.new()
 	encounter_info.position = Vector2(24,90)
 	encounter_info.anchor_right = 1.0
@@ -417,6 +466,9 @@ func preview_route(cell: Vector2i, force: bool = false) -> void:
 		detail.text = "%s · %d/8 HP · %d AP  |  Green 1 AP / Blue 2 AP\n%s\nChoose a group + Evacuate; End turn moves ordered groups. Orders persist." % [NAMES[active],soldier["hp"],soldier["ap"],route]
 
 func activate_cell(cell: Vector2i) -> void:
+	if cell in [Mission.breaker_cell,Mission.console_cell]:
+		open_equipment()
+		return
 	if session.encounter.drop_mode:
 		session.encounter.try_drop(cell)
 		refresh_movement()
@@ -488,6 +540,7 @@ func run_command(action: String) -> void:
 
 func refresh_encounter() -> void:
 	display = session.view(hovered)
+	refresh_equipment()
 	for i in range(civilian_models.size()):
 		var cohort: Dictionary = display["cohorts"][i]
 		civilian_models[i].position = world(cohort["cell"])
@@ -530,3 +583,20 @@ func refresh_encounter() -> void:
 	if casualty>=0 and session.encounter.casualty_available(casualty):
 		var patient: Dictionary = display["soldiers"][casualty]
 		encounter_info.text += "\nRESCUE: %s · %s%s. Select a rescuer and move adjacent; Stabilize stops bleeding, Carry allows extraction together." % [patient["name"],patient["condition"]," · %d bleeding turns left" % patient["bleed"] if patient["condition"]=="critical" else ""]
+
+func open_equipment() -> void:
+	refresh_equipment()
+	equipment_popup.show()
+
+func refresh_equipment() -> void:
+	if not is_instance_valid(equipment_status): return
+	equipment_status.text = "EQUIPMENT / PROTOCOL\nMSG: Observe → Transmit (one machine turn paused).\nBell: stand beside console → Authenticate → Divert before skid collection. Firing cancels safe routing.\nBreaker: open housing, then isolate. Isolation stops the machine but cuts feeder power and locks civilian gates; bypass routes replace them.\n\n"+display["status"]
+	for action in ["observe","transmit","authenticate","divert"]:
+		equipment_buttons[action].tooltip_text = session.encounter.protocol_reason(action)
+		equipment_buttons[action].disabled = display["ended"]
+	equipment_buttons["breaker"].tooltip_text = session.encounter.breaker_reason()
+	equipment_buttons["breaker"].disabled = display["ended"] or display["breaker_progress"]==2
+	equipment_buttons["confirm_isolate"].visible = display["isolate_pending"]
+	equipment_buttons["cancel_isolate"].visible = display["isolate_pending"]
+	if display["isolate_pending"]:
+		equipment_status.text += "\nCONFIRM: stop machine, cut feeder power and lock gates? Confirm costs 1 AP; Cancel spends nothing."

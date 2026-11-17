@@ -34,9 +34,15 @@ Casualty card/figure selection preserves the active rescuer. Stabilize, Carry an
 
 All nineteen suites passed. Dedicated checks compare exact production snapshots for stabilization, pickup, turn resolution, drop and carried extraction. A rendered mouse-input scenario verifies selecting a rescuer and casualty, stabilizing and carrying. Labels were visually checked after correcting inherited model scaling. [Rescue preview](verification/3d-rescue.png).
 
-## P2e — remaining encounter integration: next
+## P2e — breaker and protocol: complete
 
-Connect breaker and protocol commands to the same rules, then add final result review. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
+The in-game Equipment / protocol panel exposes Observe, Transmit, Authenticate, Divert and breaker operation through production commands. It explains prerequisites and action failures without spending AP on rejected attempts. Breaker isolation uses the original request/confirm sequence, with explicit feeder/gate/bypass consequences and a free cancel. No mission policies or save formats changed.
+
+All twenty suites passed (the live-controls suite timed out during the parallel run and passed on its isolated rerun). Dedicated equipment checks compare exact production state for the protocol sequence, housing opening, cancel and confirmed isolation. Rendered mouse input verified opening the breaker and confirming isolation; the final panel was visually checked. [Equipment preview](verification/3d-equipment.png).
+
+## P2f — final encounter review: next
+
+Add final result review and run full recorded-route comparisons across the 3D command interface. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 

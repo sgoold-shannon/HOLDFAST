@@ -1,0 +1,51 @@
+extends "res://tests/test_support.gd"
+func run() -> void:
+	var preview = load("res://map_preview_3d.tscn").instantiate()
+	root.add_child(preview)
+	await process_frame
+	var reference = new_board("equipment-3d-reference")
+	reference.finish_opening()
+	for board in [reference,preview.session.encounter]:
+		board.select_soldier(0)
+		board.soldiers[0]["cell"] = Vector2i(4,6)
+		board.rebuild_movement()
+	for action in ["observe","transmit"]:
+		preview.session.command(action)
+		reference.protocol_action(action)
+		expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Observation/pause state and AP match production")
+	for board in [reference,preview.session.encounter]:
+		board.select_soldier(2)
+		board.soldiers[2]["cell"] = Vector2i(10,12)
+		board.rebuild_movement()
+	for action in ["authenticate","divert"]:
+		preview.session.command(action)
+		reference.protocol_action(action)
+		expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Console state and AP match production")
+	expect(preview.session.encounter.protocol["diverted"],"Protocol sequence diverts machine")
+	preview.reset_practice()
+	reference.apply_loaded_encounter(preview.session.initial.duplicate(true))
+	for board in [reference,preview.session.encounter]:
+		board.select_soldier(2)
+		board.soldiers[2]["cell"] = Vector2i(8,4)
+		board.rebuild_movement()
+	preview.session.command("breaker")
+	reference.try_breaker()
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Opening breaker spends one AP")
+	preview.session.command("breaker")
+	reference.try_breaker()
+	preview.refresh_movement()
+	expect(preview.equipment_buttons["confirm_isolate"].visible and preview.display["breaker_progress"]==1,"Isolation requests confirmation before changing power")
+	preview.session.command("cancel_isolate")
+	reference.isolate_pending = false
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Cancel isolation changes no AP or progress")
+	preview.session.command("breaker")
+	reference.try_breaker()
+	preview.session.command("confirm_isolate")
+	reference.try_breaker(true)
+	preview.refresh_movement()
+	expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Confirmed isolation and bypass outcomes match production")
+	expect(preview.display["breaker_progress"]==2 and not preview.equipment_buttons["confirm_isolate"].visible,"Isolation finishes and dismisses confirmation")
+	preview.free()
+	reference.free()
+	print("3D EQUIPMENT FAILURES: ",failures)
+	quit(1 if failures else 0)
