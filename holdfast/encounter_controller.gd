@@ -1865,9 +1865,6 @@ func handle_results_input(event: InputEvent) -> bool:
 	queue_redraw()
 	return true
 
-func result_line(y: float, text: String, color: Color = Color("d6ded9"), size: int = 19) -> void:
-	draw_string(font,Vector2(60,y),text,HORIZONTAL_ALIGNMENT_LEFT,1024,size,color)
-
 func results_panel_snapshot() -> Dictionary:
 	var dispositions := []
 	for index in range(soldiers.size()): dispositions.append(soldier_disposition(index))

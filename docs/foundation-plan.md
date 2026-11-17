@@ -287,11 +287,11 @@ This closes the controller-separation acceptance criteria. The standalone contro
 
 ## Remaining sequence before a new mission
 
-Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility adapters still exist; the foundation phase is not finished.
+Reconciled with the code on 16 November 2026. Simulation, mission definitions, presentation components, main-scene view routing and persistence boundaries are extracted. Compatibility fixtures remain intentionally. All three structural foundation milestones are now accepted; the visual follow-ups are recorded separately.
 
 1. **Dedicated live state — complete.** Combat, machine/protocol, evacuation, story, campaign/return and rescue/result records have independent owners. Instance isolation, detached snapshots, exact RNG restoration, save/migration checks and 119-action parity pass. UI compatibility data remains explicitly separate (see inventory above).
 2. **Composed encounter controller — complete.** The active Node2D controller has no prototype gate ancestry or gate-scene dependency. Explicit services/state owners, full regression parity and prototype-free rescue/route tests meet the acceptance criteria.
-3. **Retire redundant adapters and close foundation — pending.** Remove compatibility code only after replacement coverage exists; retain useful gate fixtures. Acceptance: complete automated suite, recorded-route parity, successful save/migration checks and a focused visual/playable smoke test. Record remaining usability issues separately; do not call automated checks human playtesting.
+3. **Retire redundant adapters and close foundation — complete.** Removed the unused result drawing adapter and retained gate adapters still required by fixtures. Full suites, route parity, save/migration checks and a rendered automated smoke test with assistant visual inspection pass. See [acceptance record and screenshots](verification/foundation/README.md). Fit-toolbar overlap and 3× text panning remain documented usability follow-ups; this was not a human user playtest.
 
 No new mission, balance change or final isometric conversion belongs to these steps. After foundation acceptance, choose the next gameplay or presentation milestone explicitly. Each pass must name its completed acceptance criteria and outstanding work; moving files alone does not close a step.
 

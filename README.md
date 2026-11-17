@@ -10,7 +10,7 @@ The prototype contains the Farm Road encounter, conditional debrief, persistent 
 
 ## Current foundation status
 
-The active encounter now uses `encounter_controller.gd` directly under Node2D, through the stable `farm_final.gd` entry point. It no longer depends on the prototype gate inheritance chain. State ownership and controller separation are complete; final cleanup and visual/playable acceptance remain. Earlier gate scenes are retained as regression fixtures.
+The active encounter now uses `encounter_controller.gd` directly under Node2D, through the stable `farm_final.gd` entry point. It no longer depends on the prototype gate inheritance chain. State ownership, controller separation and foundation acceptance are complete. See the [verification record](docs/verification/foundation/README.md) for test evidence, screenshots and remaining readability issues. Earlier gate scenes are retained as regression fixtures.
 
 ## Readability
 

@@ -211,9 +211,6 @@ func handle_results_input(event: InputEvent) -> bool:
 	queue_redraw()
 	return true
 
-func result_line(y: float, text: String, color: Color = Color("d6ded9"), size: int = 19) -> void:
-	draw_string(font,Vector2(60,y),text,HORIZONTAL_ALIGNMENT_LEFT,1024,size,color)
-
 func _draw() -> void:
 	if not result_ready:
 		super._draw()
