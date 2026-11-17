@@ -2,6 +2,12 @@
 
 A character-driven tactical sci-fi prototype built in Godot. The design baseline is **HOLDFAST Game Design Document v3.1**, included at the repository root.
 
+## Run without the editor (Mac)
+
+Double-click **Play HOLDFAST.command**, beside the `holdfast` folder. This opens the playable demo directly with the tested compatibility renderer, bypassing editor inspection/input modes. Godot must be installed at `/Applications/Godot.app`. Existing saves are used normally. Close the game window to stop it.
+
+If an embedded run appears frozen, use this launcher. Standalone GUI-input tests verify Fit, 3×, scrolling and Preview/Back. The reported editor-specific freeze has not been reproduced or conclusively diagnosed; this is a tested alternative launch path, not a claim that all editor issues are fixed.
+
 ## Run the prototype
 
 Open `holdfast/project.godot` in Godot and press **F5**. The project has been tested with **Godot 4.7.2**. The main scene is `farm_final.tscn`; `battlefield.tscn` retains the earlier tactical sandbox.
