@@ -1,0 +1,26 @@
+{
+  "candidate": "Machine A static 01",
+  "tool": "Blender 5.2.2 LTS",
+  "blender_bounds_min": [
+    -0.459952175617218,
+    -0.4350000023841858,
+    0.0
+  ],
+  "blender_bounds_max": [
+    0.459952175617218,
+    0.47699999809265137,
+    0.9614999890327454
+  ],
+  "dimensions_cells": [
+    0.919904351234436,
+    0.9120000004768372,
+    0.9614999890327454
+  ],
+  "evaluated_triangles": 12440,
+  "mesh_objects": 94,
+  "materials": 9,
+  "texture_bytes": 0,
+  "animation": false,
+  "collision": false,
+  "performance": "Frame timing and representative PC budget not yet measured."
+}

@@ -46,4 +46,4 @@ Do not mark this gate passed because a code smoke test succeeds. This is an art/
 
 ## Next work item
 
-Choose the authoring workflow and produce Machine A's static model candidate. Defer fine wear, insignia/glyph lore, animation, new destruction rules and additional enemy designs until its shape and import pipeline are proven.
+Blender 5.2.2 is the chosen local authoring workflow. [Static candidate 01](machine-a-candidate-01.md) now exists as an editable Blender file and baked GLB in the isolated benchmark. Its import, footprint, cargo toggle and tool hierarchy pass checks; the acceptance gate remains open. Next refine the shape/material treatment and create the remaining state variants. Defer fine wear, insignia/glyph lore, animation, new destruction rules and additional enemy designs until its shape and import pipeline are proven.

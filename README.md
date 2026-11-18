@@ -174,7 +174,7 @@ Machine status/outcome text and map-display policies now use explicit main-scene
 
 At mission closure, **Practice results** lists civilian outcomes, squad dispositions, machine/feeder outcomes and rescue records. Scroll for the full report. **Review map** keeps the resolved board visible; **Mission results** reopens the report. **Restart practice** starts a fresh attempt, while **Back to original demo** restores the paused encounter. Practice never saves campaign progress.
 
-**Visual benchmark** (top toolbar of the normal demo) opens an isolated early art blockout. Use Day/Night, Helmet/Cap and Empty/Loaded to compare lighting, headgear and machine cargo. Scroll zooms; Home resets framing. Back restores the original demo. These are simple design volumes, not finished models or new mission mechanics.
+**Visual benchmark** (top toolbar of the normal demo) opens an isolated early art blockout. Use Day/Night, Helmet/Cap and Empty/Loaded to compare lighting, headgear and machine cargo. Scroll zooms; Home resets framing. Back restores the original demo. Machine A now uses an imported static candidate; people and environment remain simple design volumes. These are not finished art or new mission mechanics.
 
 Benchmark inspection: **View** cycles close-ups; **Silhouettes** removes color/material detail; **Overlap** tests a soldier sharing the civilian group space. These are reversible visual tests, not new gameplay options.
 
@@ -183,3 +183,5 @@ Benchmark inspection: **View** cycles close-ups; **Silhouettes** removes color/m
 In the two-group benchmark stress test, fixed **Group A/B** buttons show numbered markers for the selected cohort, including obscured figures. These are inspection cues only.
 
 Visual production next step: [Machine A asset plan and gameplay zoom requirements](docs/art-direction/first-production-asset.md). Zoom is a confirmed presentation requirement; final camera behavior remains pending.
+
+Machine A [static candidate 01](docs/art-direction/machine-a-candidate-01.md) is available in the visual benchmark. Editable Blender source and the reproducible export builder are included. Static art acceptance, material work, state variants and animation remain open.

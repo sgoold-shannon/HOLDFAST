@@ -7,6 +7,21 @@ func run() -> void:
 	launcher.open_benchmark()
 	var scene = root.get_child(root.get_child_count()-1)
 	expect(not board.visible and launcher.preview_open,"Benchmark pauses original encounter")
+	expect(scene.machine.scene_file_path=="res://assets/machine_a/machine_a_01.glb","Benchmark uses baked imported candidate")
+	var bounds := AABB()
+	var first_mesh := true
+	for mesh in scene.machine.find_children("*","MeshInstance3D",true,false):
+		var local: Transform3D = scene.machine.global_transform.affine_inverse()*mesh.global_transform
+		var part_bounds: AABB = local*mesh.get_aabb()
+		bounds = part_bounds if first_mesh else bounds.merge(part_bounds)
+		first_mesh = false
+	expect(not first_mesh and bounds.size.x<=0.95 and bounds.size.z<=0.95,"Imported asset fits one-cell resting envelope")
+	expect(absf(bounds.position.y)<0.001,"Imported root remains at ground contact")
+	expect(scene.machine.find_children("*","CollisionObject3D",true,false).is_empty(),"Art import adds no collision behavior")
+	var elbow = scene.machine.find_child("ToolElbow",true,false)
+	var wrist = scene.machine.find_child("ToolWrist",true,false)
+	expect(elbow!=null and wrist!=null and elbow.is_ancestor_of(wrist),"Tool export preserves articulated hierarchy")
+	expect(not scene.cargo.visible,"Cargo starts empty after import")
 	var position: Vector3 = scene.camera.position
 	scene.toggle_light()
 	expect(scene.night and scene.camera.position==position,"Night changes lighting without camera movement")
@@ -27,6 +42,22 @@ func run() -> void:
 	expect(scene.focus_index==1 and scene.camera.size==4,"Soldier close-up focuses without moving actors")
 	scene.cycle_focus()
 	expect(scene.focus_index==2,"Machine inspection available")
+	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
+		# Review-only framing and rotation: restore both before continuing tests.
+		var angle: float = scene.machine.rotation.y
+		var was_night: bool = scene.night
+		scene.camera.size = 2.5
+		for review in ["front-day","rear-day","front-night"]:
+			scene.machine.rotation.y = angle+PI if review=="rear-day" else angle
+			scene.night = review=="front-night"
+			scene.apply_light()
+			await process_frame
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png("/private/tmp/machine-a-"+review+".png")
+		scene.machine.rotation.y = angle
+		scene.night = was_night
+		scene.apply_light()
+		scene.apply_focus()
 	scene.toggle_silhouettes()
 	expect(scene.silhouettes and scene.machine_lamp.material_override!=shell_material,"Silhouette mode replaces surface detail")
 	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":

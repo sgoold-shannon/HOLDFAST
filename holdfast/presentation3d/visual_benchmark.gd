@@ -90,24 +90,6 @@ func person(at: Vector3, color: String, scale_value: float = 1.0) -> Node3D:
 		sphere(root,Vector3(x,0.66,0),0.075,"bba18a")
 	sphere(root,Vector3(0,1.40,0),0.15,"bba18a")
 	return root
-func shell_panel(parent: Node3D, theta0: float, theta1: float, phi0: float, phi1: float, color: String, inset: float = 1.0) -> void:
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for u in range(4):
-		for v in range(3):
-			var points: Array[Vector3] = []
-			for uv in [Vector2(u,v),Vector2(u+1,v),Vector2(u+1,v+1),Vector2(u,v+1)]:
-				var theta := lerpf(theta0,theta1,uv.x/4.0)
-				var phi := lerpf(phi0,phi1,uv.y/3.0)
-				points.append(Vector3(0.46*inset*cos(phi)*sin(theta),0.20+0.85*inset*sin(phi),-0.46*inset*cos(phi)*cos(theta)))
-			for index in [0,2,1,0,3,2]:
-				var point: Vector3 = points[index]
-				surface.set_normal(Vector3(point.x/0.46,(point.y-0.2)/0.85,point.z/0.46).normalized())
-				surface.add_vertex(point)
-	var node := shape(parent,surface.commit(),Vector3.ZERO,color)
-	node.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
-	node.material_override.metallic = 0.28
-	node.material_override.roughness = 0.62
 func _ready() -> void:
 	readability = get_node_or_null("/root/Readability")
 	if readability:
@@ -161,7 +143,7 @@ func _ready() -> void:
 		box(civilian,Vector3(0,0.88,0.23),Vector3(0.26,0.35,0.17),"655846")
 	label("ONE COHORT / FOUR PEOPLE",Vector3(-0.5,1.8,2))
 	build_machine(Vector3(2,0,0.5))
-	label("MACHINE A / SHAPE STUDY",Vector3(2,2,0.5))
+	label("MACHINE A / STATIC CANDIDATE 01",Vector3(2,2,0.5))
 	for x in [-3,3]:
 		box(self,Vector3(x,1.3,-3.6),Vector3(0.08,2.6,0.08),"434b4d")
 		var fixture := box(self,Vector3(x,2.55,-3.6),Vector3(0.35,0.12,0.22),"b8a57c")
@@ -195,29 +177,18 @@ func _ready() -> void:
 	refresh_group_markers()
 	apply_light()
 func build_machine(at: Vector3) -> void:
-	machine = Node3D.new()
+	# Baked Blender candidate. Imported data contains no gameplay/collision nodes.
+	machine = preload("res://assets/machine_a/machine_a_01.glb").instantiate()
 	machine.position = at
-	machine.rotation.y = PI/2
+	# Blender -Y exports to Godot +Z; face toward the squad at the left.
+	machine.rotation.y = -PI/2
 	add_child(machine)
-	box(machine,Vector3(0,0.15,0),Vector3(0.9,0.25,0.9),"3e4842")
-	# Segmented dome; omit lower front panels to leave a true cargo aperture.
-	for band in range(3):
-		for sector in range(12):
-			var middle := -PI+(sector+0.5)*TAU/12.0
-			if band<2 and absf(middle)<0.85: continue
-			shell_panel(machine,-PI+sector*TAU/12.0,-PI+(sector+1)*TAU/12.0,band*PI/6.0,(band+1)*PI/6.0,"424b40",0.985)
-			shell_panel(machine,-PI+sector*TAU/12.0+0.018,-PI+(sector+1)*TAU/12.0-0.018,band*PI/6.0+0.012,(band+1)*PI/6.0-0.012,["8f947e","a09d86","77856f"][(sector+band)%3])
-	for x in [-0.34,0.34]:
-		box(machine,Vector3(x,0.10,-0.27),Vector3(0.18,0.14,0.25),"454d43")
-		var tool := box(machine,Vector3(x*0.65,0.32,-0.34),Vector3(0.075,0.075,0.24),"596350")
-		tool.rotation.y = sign(x)*0.35
-	cargo = box(machine,Vector3(0,0.40,-0.10),Vector3(0.38,0.25,0.4),"737868")
+	cargo = machine.find_child("CargoSocket",true,false)
 	cargo.hide()
-	machine_lamp = box(machine,Vector3(0,0.83,-0.34),Vector3(0.24,0.06,0.035),"e6bd65")
-	lamp_material = machine_lamp.material_override
-	lamp_material.emission_enabled = true
-	lamp_material.emission = Color("dba04c")
-	lamp_material.emission_energy_multiplier = 0.7
+	machine_lamp = machine.find_child("WorkLamp",true,false)
+	# Per-instance override keeps inspection switches independent of imported resources.
+	lamp_material = machine_lamp.get_active_material(0).duplicate()
+	machine_lamp.material_override = lamp_material
 func build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
@@ -229,7 +200,7 @@ func build_hud() -> void:
 	layer.add_child(header_bg)
 	var title := Label.new()
 	title.position = Vector2(24,20)
-	title.text = "HOLDFAST / VISUAL BENCHMARK\nEarly shape study — no gameplay or finished art"
+	title.text = "HOLDFAST / VISUAL BENCHMARK\nMachine A candidate 01 · people/environment blockout"
 	title.add_theme_font_size_override("font_size",23)
 	layer.add_child(title)
 	var group_row := HBoxContainer.new()
