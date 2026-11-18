@@ -83,13 +83,17 @@ func build_top_bar() -> void:
 	widgets["round"] = label("",22,GOLD)
 	widgets["round"].size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	widgets["round"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	widgets["round"].clip_text = true
+	widgets["round"].text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	row.add_child(widgets["round"])
 	for entry in [["save","Save  [K]",func(): board.save_encounter()],
 			["load","Load  [L]",func(): board.load_encounter()],
 			["log","Scene log  [Tab]",func(): board.toggle_log()],
 			["roster","Roster  [G]",func(): board.open_roster()],
 			["help","Controls",func(): show_help()]]:
-		row.add_child(action_button(entry[0],entry[1],entry[2],150))
+		var top_button := action_button(entry[0],entry[1],entry[2],0)
+		top_button.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(top_button)
 	var extras := MenuButton.new()
 	extras.text = "Extras ▾"
 	extras.focus_mode = Control.FOCUS_NONE
@@ -135,6 +139,8 @@ func build_sidebar() -> void:
 	side.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	side.offset_left = -SIDEBAR_WIDTH
 	side.offset_top = TOP_HEIGHT
+	side.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	side.clip_contents = true
 	ui.add_child(side)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation",10)
@@ -497,7 +503,7 @@ func refresh_civilians() -> void:
 	set_text("close_warning","Close now? %d civilians will be stranded and %d soldiers left behind." % [view["remaining"],left] if view["close_pending"] else "")
 	actions["close"].text = "Confirm: leave them behind" if view["close_pending"] else "Close operation early"
 	actions["close"].disabled = view["ended"]
-	if actions["close"].get_meta("pending",null) != view["close_pending"]:
+	if not actions["close"].has_meta("pending") or actions["close"].get_meta("pending") != view["close_pending"]:
 		actions["close"].set_meta("pending",view["close_pending"])
 		style_button(actions["close"],Color("713f36") if view["close_pending"] else Color("343b38"))
 	actions["cancel_close"].visible = view["close_pending"]
@@ -734,6 +740,7 @@ func action_button(key: String, text: String, callable: Callable, width: float =
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = Vector2(width,52)
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	button.pressed.connect(func(): run_action(callable))
 	actions[key] = button
 	return button
@@ -743,6 +750,7 @@ func modal_button(text: String, callable: Callable) -> Button:
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = Vector2(0,60)
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	button.add_theme_font_size_override("font_size",24)
 	button.pressed.connect(func(): run_action(callable))
 	return button

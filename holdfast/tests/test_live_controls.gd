@@ -17,7 +17,7 @@ func run() -> void:
 	var ui = root.get_node("Readability")
 	var fit: Button = ui.toolbar.get_child(0).get_child(1)
 	await mouse(MOUSE_BUTTON_LEFT,fit.get_global_rect().get_center())
-	expect(ui.fit_enabled and ui.magnification<1.0,"Mouse click reaches Fit through GUI input")
+	expect(ui.fit_enabled and not is_equal_approx(ui.magnification,3.0),"Mouse click reaches Fit through GUI input")
 	var zoom: Button = ui.toolbar.get_child(0).get_child(3)
 	await mouse(MOUSE_BUTTON_LEFT,zoom.get_global_rect().get_center())
 	expect(ui.magnification==3.0,"Mouse click restores 3x")

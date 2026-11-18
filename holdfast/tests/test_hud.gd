@@ -1,6 +1,6 @@
 extends "res://tests/test_support.gd"
 ## Desktop HUD (game.tscn): real mouse input through the GUI, compared against direct calls.
-func click(point: Vector2, button: int = MOUSE_BUTTON_LEFT) -> void:
+func hud_click(point: Vector2, button: int = MOUSE_BUTTON_LEFT) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point
 	root.push_input(motion,true)
@@ -17,9 +17,9 @@ func cell_point(shell, cell: Vector2i) -> Vector2:
 	var local: Vector2 = shell.board.cell_to_local(cell)+Vector2(18,18)
 	return shell.map_view.get_global_rect().position+shell.holder.position+local*shell.holder.scale.x
 
-func press(shell, key: String) -> void:
+func hud_press(shell, key: String) -> void:
 	var button: Button = shell.actions[key]
-	await click(button.get_global_rect().get_center())
+	await hud_click(button.get_global_rect().get_center())
 
 func run() -> void:
 	expect(ProjectSettings.get_setting("application/run/main_scene")=="res://game.tscn","Desktop HUD is the main scene")
@@ -49,14 +49,14 @@ func run() -> void:
 			for button in row.get_children():
 				if button is Button and button.text.begins_with("Skip"): skip = button
 	expect(skip != null,"Opening modal offers Skip")
-	if skip: await click(skip.get_global_rect().get_center())
+	if skip: await hud_click(skip.get_global_rect().get_center())
 	reference.finish_opening()
 	expect(board.scene_view=="","Skip closes the opening")
 	shell.refresh()
 	expect(not shell.modal_root.visible,"Modal hides after the opening")
 	# Select MSG, move one square, end the turn: HUD clicks vs. direct calls.
 	var start: Vector2i = board.soldiers[0]["cell"]
-	await click(cell_point(shell,start))
+	await hud_click(cell_point(shell,start))
 	reference.select_soldier(0)
 	expect(board.active_soldier==0,"Clicking a soldier on the map selects it")
 	var destination := Vector2i(-1,-1)
@@ -65,23 +65,23 @@ func run() -> void:
 			destination = start+direction
 			break
 	expect(destination != Vector2i(-1,-1),"A 1 AP square exists next to MSG")
-	await click(cell_point(shell,destination))
+	await hud_click(cell_point(shell,destination))
 	reference.hovered_cell = destination
 	reference.try_move(destination)
 	expect(board.soldiers[0]["cell"]==destination,"Clicking a green square moves the soldier")
-	await click(cell_point(shell,destination),MOUSE_BUTTON_RIGHT)
+	await hud_click(cell_point(shell,destination),MOUSE_BUTTON_RIGHT)
 	reference.run_tactical_command("clear")
 	expect(board.active_soldier==-1,"Right-click clears the selection")
-	await press(shell,"next")
+	await hud_press(shell,"next")
 	reference.next_phase()
 	expect(board.phase==2,"End turn button advances the round")
 	board.hovered_cell = reference.hovered_cell
 	expect(var_to_bytes(board.encounter_snapshot())==var_to_bytes(reference.encounter_snapshot()),"HUD play matches direct play exactly")
 	# Civilian group button + order button.
-	await press(shell,"group1")
+	await hud_press(shell,"group1")
 	reference.cohort_selected = 1
 	expect(board.cohort_selected==1,"Group button selects the group")
-	await press(shell,"exit")
+	await hud_press(shell,"exit")
 	reference.order_exit(1)
 	expect(var_to_bytes(board.encounter_snapshot())==var_to_bytes(reference.encounter_snapshot()),"Civilian order via HUD matches direct call")
 	# Keyboard shortcuts still reach the controller.
