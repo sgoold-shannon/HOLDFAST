@@ -44,4 +44,4 @@ The generated disabled sketch retains amber accents; production must use non-emi
 4. Confirm labels, route warnings and adjacent civilian/soldier figures remain visible. Test against both wall and ground backgrounds.
 5. Confirm root footprint/picking and collision remain unchanged; then settle exact dimensions, tool reach and moving parts.
 
-Day/night camera-scale validation is still pending. This sheet does not claim a completed game model or validated animation. Next V2 work: civilian group silhouettes and final squad equipment/headgear decisions alongside the selected-machine dimensional study.
+A procedural benchmark now supports day/night, close-up, silhouette and overlap inspection. These checks do not validate a final model. Machine A is the first scoped production asset; follow the [production plan](first-production-asset.md), including the newly required gameplay-zoom readability matrix. Civilian studies are drafted and scenario-dependent helmet/cap use is approved; final identities and dimensional asset work remain open.

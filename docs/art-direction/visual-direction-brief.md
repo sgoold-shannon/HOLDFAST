@@ -9,7 +9,8 @@ A competent, recognizable team protecting people in an ordinary place that has b
 ## Established constraints
 
 - Serious stylized military science fiction; grounded near-future human equipment.
-- Fixed elevated angled 3D camera, squad toward the bottom advancing up-screen, mostly seen from behind. This is screen composition, not an elevation mechanic.
+- Player-controlled gameplay zoom is required; production behavior and limits remain to be tested.
+- Fixed elevated angled 3D camera orientation, squad toward the bottom advancing up-screen, mostly seen from behind. This is screen composition, not an elevation mechanic.
 - Farm Road remains a 20 × 16 square grid. Existing walls, gaps, cover, fixtures, exits and paths retain their logical coordinates.
 - Drover recovery machinery is neutral until attacked, has a one-cell gameplay footprint and exists to recover cargo. Its appearance must allow a plausible noncombat reading.
 - MSG is a customizable active-duty Army PSYOP Master Sergeant. Ortiz, Bell and Park keep the roles and characterization established by the GDD.

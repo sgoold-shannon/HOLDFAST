@@ -181,3 +181,5 @@ Benchmark inspection: **View** cycles close-ups; **Silhouettes** removes color/m
 **Stress** in the visual benchmark cycles an adjacent wall and a second four-person cohort. This exposes crowding limits without changing the playable encounter.
 
 In the two-group benchmark stress test, fixed **Group A/B** buttons show numbered markers for the selected cohort, including obscured figures. These are inspection cues only.
+
+Visual production next step: [Machine A asset plan and gameplay zoom requirements](docs/art-direction/first-production-asset.md). Zoom is a confirmed presentation requirement; final camera behavior remains pending.

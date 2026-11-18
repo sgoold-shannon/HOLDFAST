@@ -1,5 +1,9 @@
 # 3D presentation milestone
 
+## Current production position
+
+V1 visual direction and scenario-dependent helmets/caps are approved. Machine A is selected. V2 concept studies exist; V3a is a working inspection blockout, not finished art. Next: [Machine A static production asset](art-direction/first-production-asset.md). Gameplay zoom is an owner requirement, recorded for close/normal/wide validation; no camera implementation change in this update. Historical progress notes below retain earlier open decisions and are superseded by this current status.
+
 Direction: angled orthographic 3D, inspired by the requested XCOM/Shadowrun presentation. GDD v3.1 gameplay remains the baseline. This follows foundation acceptance; it does not add a mission, overwatch, elevation or diagonal movement.
 
 ## P1 — map and readability study: complete
