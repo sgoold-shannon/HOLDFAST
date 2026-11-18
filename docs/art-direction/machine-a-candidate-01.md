@@ -60,3 +60,5 @@ Shell stone, olive and replacement panels now have more distinct base colors, me
 [Alternate cargo, day](machine-a-alternate-day-01.png) · [Alternate cargo, night](machine-a-alternate-night-01.png). Rendered benchmark checks pass for exclusive cargo visibility, the three-option cycle, alternate cargo through wreck/restore, all six states, footprint bounds and unchanged original encounter. Day/night close-ups inspected. The export counts include both cargo assemblies even though only one is shown.
 
 Next: complete the close/normal/wide state-and-cargo review, record readability problems and performance measurements, then decide what needs refinement before animation. Passing behavior checks does not approve final art.
+
+The [108-view static review](machine-a-static-review-01.md) is complete. Animation acceptance remains open due to state readability at normal/wide framing. See its concrete follow-up and bounded performance results.

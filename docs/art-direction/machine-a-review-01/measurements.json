@@ -1,0 +1,48 @@
+{
+  "captures": 108,
+  "note": "Close/normal/wide are provisional art-review sizes, not approved gameplay zoom bounds. Frame intervals include presentation/vsync and are not GPU timings.",
+  "renderer": "gl_compatibility",
+  "samples": [
+    {
+      "draw_calls_whole_scene": 425.0,
+      "median_frame_interval_ms": 8.181,
+      "p95_frame_interval_ms": 13.729,
+      "state": "Working"
+    },
+    {
+      "draw_calls_whole_scene": 425.0,
+      "median_frame_interval_ms": 8.207,
+      "p95_frame_interval_ms": 13.613,
+      "state": "Paused"
+    },
+    {
+      "draw_calls_whole_scene": 425.0,
+      "median_frame_interval_ms": 8.193,
+      "p95_frame_interval_ms": 14.175,
+      "state": "Hostile"
+    },
+    {
+      "draw_calls_whole_scene": 425.0,
+      "median_frame_interval_ms": 8.252,
+      "p95_frame_interval_ms": 13.798,
+      "state": "Charged"
+    },
+    {
+      "draw_calls_whole_scene": 425.0,
+      "median_frame_interval_ms": 8.244,
+      "p95_frame_interval_ms": 13.534,
+      "state": "Disabled"
+    },
+    {
+      "draw_calls_whole_scene": 281.0,
+      "median_frame_interval_ms": 8.245,
+      "p95_frame_interval_ms": 13.286,
+      "state": "Destroyed"
+    }
+  ],
+  "sizes": [
+    2.5,
+    8.0,
+    16.0
+  ]
+}

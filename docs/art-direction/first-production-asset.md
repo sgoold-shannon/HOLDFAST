@@ -47,3 +47,7 @@ Do not mark this gate passed because a code smoke test succeeds. This is an art/
 ## Next work item
 
 Blender 5.2.2 is the chosen local authoring workflow. [Static candidate 01](machine-a-candidate-01.md) now exists as an editable Blender file and baked GLB in the isolated benchmark. Its import, footprint, cargo toggle and tool hierarchy pass checks; the acceptance gate remains open. Next refine the shape/material treatment and create the remaining state variants. Defer fine wear, insignia/glyph lore, animation, new destruction rules and additional enemy designs until its shape and import pipeline are proven.
+
+## Review checkpoint
+
+[Static review 01](machine-a-static-review-01.md) covers 108 state/cargo/distance/lighting views plus a bounded Mac timing sample. Animation acceptance remains open: normal/wide tactical state and cargo readability require clearer presentation cues. Next work is the state-cue proposal described in that review.

@@ -189,3 +189,5 @@ Machine A [static candidate 01](docs/art-direction/machine-a-candidate-01.md) is
 The visual benchmark now has a **State** button for Machine A working, paused, hostile, charged, disabled and destroyed static appearance studies. This does not change the playable encounter.
 
 Machine A’s benchmark **Cargo** button cycles empty, skid and alternate-component appearances. The latest material pass separates olive shell and replacement panels; final texturing and visual acceptance remain open.
+
+[Machine A static review](docs/art-direction/machine-a-static-review-01.md): 108 captured combinations; next fix is readable state/cargo cues at normal and wide framing before animation acceptance.
