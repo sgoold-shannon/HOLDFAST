@@ -46,18 +46,45 @@ func label(text: String, at: Vector3) -> void:
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
 	add_child(l)
+func capsule(parent: Node3D, at: Vector3, radius: float, height: float, color: String) -> MeshInstance3D:
+	var m := CapsuleMesh.new()
+	m.radius = radius
+	m.height = height
+	m.radial_segments = 12
+	m.rings = 4
+	return shape(parent,m,at,color)
 func person(at: Vector3, color: String, scale_value: float = 1.0) -> Node3D:
 	var root := Node3D.new()
 	root.position = at
 	root.scale = Vector3.ONE*scale_value
 	add_child(root)
-	for x in [-0.13,0.13]:
-		box(root,Vector3(x,0.30,0),Vector3(0.18,0.60,0.2),"39423b")
-		box(root,Vector3(x,0.05,-0.06),Vector3(0.2,0.13,0.32),"33332c")
-	box(root,Vector3(0,0.89,0),Vector3(0.48,0.60,0.28),color)
-	for x in [-0.32,0.32]: box(root,Vector3(x,0.83,0),Vector3(0.14,0.55,0.17),color)
-	sphere(root,Vector3(0,1.37,0),0.17,"bba18a")
+	for x in [-0.12,0.12]:
+		capsule(root,Vector3(x,0.47,0),0.095,0.72,"39423b")
+		box(root,Vector3(x,0.07,-0.05),Vector3(0.17,0.14,0.29),"33332c")
+	var torso := capsule(root,Vector3(0,0.98,0),0.23,0.65,color)
+	torso.scale.z = 0.65
+	box(root,Vector3(0,0.96,-0.12),Vector3(0.38,0.38,0.09),"535b48")
+	for x in [-0.28,0.28]:
+		capsule(root,Vector3(x,0.93,0),0.075,0.53,color)
+		sphere(root,Vector3(x,0.66,0),0.075,"bba18a")
+	sphere(root,Vector3(0,1.40,0),0.15,"bba18a")
 	return root
+func shell_panel(parent: Node3D, theta0: float, theta1: float, phi0: float, phi1: float, color: String) -> void:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for u in range(4):
+		for v in range(3):
+			var points: Array[Vector3] = []
+			for uv in [Vector2(u,v),Vector2(u+1,v),Vector2(u+1,v+1),Vector2(u,v+1)]:
+				var theta := lerpf(theta0,theta1,uv.x/4.0)
+				var phi := lerpf(phi0,phi1,uv.y/3.0)
+				points.append(Vector3(0.46*cos(phi)*sin(theta),0.20+0.85*sin(phi),-0.46*cos(phi)*cos(theta)))
+			for index in [0,2,1,0,3,2]:
+				var point: Vector3 = points[index]
+				surface.set_normal(Vector3(point.x/0.46,(point.y-0.2)/0.85,point.z/0.46).normalized())
+				surface.add_vertex(point)
+	var node := shape(parent,surface.commit(),Vector3.ZERO,color)
+	node.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
 func _ready() -> void:
 	readability = get_node_or_null("/root/Readability")
 	if readability:
@@ -96,8 +123,8 @@ func _ready() -> void:
 	soldier.rotation.y = -PI/2
 	box(soldier,Vector3(0,0.92,0.25),Vector3(0.32,0.5,0.23),"444d3c")
 	box(soldier,Vector3(-0.15,1.45,0.25),Vector3(0.025,0.7,0.025),"292f29")
-	helmet = sphere(soldier,Vector3(0,1.46,0),0.20,"555e45")
-	cap = box(soldier,Vector3(0,1.48,-0.04),Vector3(0.36,0.10,0.46),"6b7052")
+	helmet = sphere(soldier,Vector3(0,1.49,0),0.18,"555e45")
+	cap = box(soldier,Vector3(0,1.51,-0.04),Vector3(0.36,0.10,0.46),"6b7052")
 	cap.hide()
 	label("MSG / RADIO PROFILE",Vector3(-3,2.1,1))
 	for i in range(4):
@@ -123,14 +150,16 @@ func build_machine(at: Vector3) -> void:
 	machine.rotation.y = PI/2
 	add_child(machine)
 	box(machine,Vector3(0,0.15,0),Vector3(0.9,0.25,0.9),"3e4842")
-	# Layered arch leaves the front cargo opening unobstructed.
+	# Segmented dome; omit lower front panels to leave a true cargo aperture.
+	for band in range(3):
+		for sector in range(12):
+			var middle := -PI+(sector+0.5)*TAU/12.0
+			if band<2 and absf(middle)<0.85: continue
+			shell_panel(machine,-PI+sector*TAU/12.0+0.018,-PI+(sector+1)*TAU/12.0-0.018,band*PI/6.0+0.012,(band+1)*PI/6.0-0.012,["8f947e","a09d86","77856f"][(sector+band)%3])
 	for x in [-0.34,0.34]:
-		box(machine,Vector3(x,0.50,0),Vector3(0.22,0.7,0.84),"9a9983")
-		var shoulder := box(machine,Vector3(x*0.75,0.88,0.05),Vector3(0.27,0.25,0.74),"8b907a")
-		shoulder.rotation.z = -sign(x)*0.45
-	box(machine,Vector3(0,1.0,0.07),Vector3(0.42,0.2,0.7),"747e69")
-	box(machine,Vector3(0,0.60,0.37),Vector3(0.68,0.65,0.12),"898c7b")
-	box(machine,Vector3(-0.23,0.35,-0.37),Vector3(0.13,0.1,0.25),"535d50")
+		box(machine,Vector3(x,0.10,-0.27),Vector3(0.18,0.14,0.25),"454d43")
+		var tool := box(machine,Vector3(x*0.65,0.32,-0.34),Vector3(0.075,0.075,0.24),"596350")
+		tool.rotation.y = sign(x)*0.35
 	cargo = box(machine,Vector3(0,0.40,-0.10),Vector3(0.38,0.25,0.4),"737868")
 	cargo.hide()
 	machine_lamp = box(machine,Vector3(0,0.83,-0.34),Vector3(0.24,0.06,0.035),"e6bd65")
