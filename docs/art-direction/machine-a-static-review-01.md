@@ -44,3 +44,11 @@ HOLDFAST_ART_REVIEW=/private/tmp/holdfast-machine-matrix HOLDFAST_TEST_OUTPUT=/p
 ```
 
 The review script creates a standalone visual benchmark and writes only review output/test-support temporary files. It does not load a campaign encounter. Its successful completion means captures were generated, not that art acceptance passed. No playable-scene or camera behavior changed in this review.
+
+## State-cue proposal implemented
+
+A fixed-screen, high-contrast Machine A review panel now uses distinct text symbols and explicit state names: `>> WORKING`, `II PAUSED`, `! HOSTILE`, `(+) SHOT PENDING`, `O DISABLED`, `X DESTROYED`. Hostile explicitly says no shot is pending; paused stays powered; disabled stays intact. Working retains a route-risk description. The charge study explicitly has no live target; actual integration still requires the resolved target-cell warning.
+
+Cargo text appears only while Machine A is the inspection focus, including empty, skid/pump, alternate and hidden-by-wreck descriptions. The panel retains its screen size when the camera changes and remains visible during silhouette inspection. This is a proposal for this single-machine benchmark, not a scalable enemy list or a production targeting UI.
+
+[Day normal](machine-cues-day-8.png) · [Day wide](machine-cues-day-16.png) · [Night normal](machine-cues-night-8.png) · [Night wide](machine-cues-night-16.png). Rendered benchmark checks pass for all six names, hostile/pending distinction, inspection-only cargo details and encounter preservation. Screens show the charged state at normal/wide distances; they do not constitute a new 108-view matrix. Model silhouettes and final textures remain unchanged. Production snapshot wiring, multiple-machine selection, smaller-window layout, and user acceptance remain open.

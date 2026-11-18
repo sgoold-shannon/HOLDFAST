@@ -22,6 +22,7 @@ func run() -> void:
 	var wrist = scene.machine.find_child("ToolWrist",true,false)
 	expect(elbow!=null and wrist!=null and elbow.is_ancestor_of(wrist),"Tool export preserves articulated hierarchy")
 	expect(not scene.cargo.visible,"Cargo starts empty after import")
+	expect(scene.machine_cue.text.contains("WORKING") and not scene.machine_cargo_cue.visible,"Wide view identifies machine state and keeps cargo details for inspection")
 	var position: Vector3 = scene.camera.position
 	scene.toggle_light()
 	expect(scene.night and scene.camera.position==position,"Night changes lighting without camera movement")
@@ -42,6 +43,7 @@ func run() -> void:
 	expect(scene.focus_index==1 and scene.camera.size==4,"Soldier close-up focuses without moving actors")
 	scene.cycle_focus()
 	expect(scene.focus_index==2,"Machine inspection available")
+	expect(scene.machine_cargo_cue.visible and scene.machine_cargo_cue.text.contains("skid"),"Machine inspection shows selected cargo identity")
 	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
 		# Review-only framing and rotation: restore both before continuing tests.
 		var angle: float = scene.machine.rotation.y
@@ -96,6 +98,8 @@ func run() -> void:
 	for state in range(1,6):
 		scene.cycle_machine_state()
 		expect(scene.machine_states.index==state,"Machine review cycles in order")
+		expect(scene.machine_cue.text.contains(["WORKING","PAUSED","HOSTILE","SHOT PENDING","DISABLED","DESTROYED"][state]),"Fixed-screen cue follows review state")
+		if state==2: expect(scene.machine_cue.text.contains("no shot pending"),"Hostile cue does not imply a charged shot")
 		expect(scene.cargo.visible==cargo_before,"Pose changes preserve independent cargo visibility")
 		for material in scene.machine_states.lamps:
 			expect(material.emission_enabled==(state<4),"All work lamps power down when disabled or destroyed")
@@ -128,6 +132,20 @@ func run() -> void:
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("/private/tmp/machine-a-wreck-night.png")
 		scene.night = was_night
+		scene.apply_light()
+	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
+		var old_night: bool = scene.night
+		for lighting in [false,true]:
+			scene.night = lighting
+			scene.apply_light()
+			for size in [8.0,16.0]:
+				scene.camera.size = size
+				while scene.machine_states.index!=3: scene.cycle_machine_state()
+				await process_frame
+				await RenderingServer.frame_post_draw
+				root.get_texture().get_image().save_png("/private/tmp/machine-cues-%s-%d.png" % ["night" if lighting else "day",int(size)])
+		while scene.machine_states.index!=5: scene.cycle_machine_state()
+		scene.night = old_night
 		scene.apply_light()
 	# State changes while inspecting silhouettes must not reveal emissive materials.
 	scene.toggle_silhouettes()

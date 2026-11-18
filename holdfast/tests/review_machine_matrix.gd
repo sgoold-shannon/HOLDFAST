@@ -27,6 +27,7 @@ func run() -> void:
 				while scene.cargo_mode!=cargo_choice: scene.toggle_cargo()
 				for state in range(6):
 					scene.machine_states.apply(state)
+					scene.refresh_machine_cues()
 					await process_frame
 					await RenderingServer.frame_post_draw
 					var capture := root.get_texture().get_image()

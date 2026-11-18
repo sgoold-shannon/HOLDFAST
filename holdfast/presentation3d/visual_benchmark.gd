@@ -2,6 +2,8 @@ extends Node3D
 ## Design blockout only. No encounter controller, commands, saves or collision rules.
 var machine_states: RefCounted
 var machine_state_button: Button
+var machine_cue: Label
+var machine_cargo_cue: Label
 var soldier: Node3D
 var machine: Node3D
 var civilians: Array[Node3D] = []
@@ -198,6 +200,32 @@ func build_machine(at: Vector3) -> void:
 func build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
+	var machine_panel := PanelContainer.new()
+	machine_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	machine_panel.offset_left = -370
+	machine_panel.offset_right = -24
+	machine_panel.offset_top = 18
+	machine_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color("17232d")
+	background.content_margin_left = 14
+	background.content_margin_right = 14
+	background.content_margin_top = 12
+	background.content_margin_bottom = 12
+	machine_panel.add_theme_stylebox_override("panel",background)
+	layer.add_child(machine_panel)
+	var cue_rows := VBoxContainer.new()
+	cue_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	machine_panel.add_child(cue_rows)
+	machine_cue = Label.new()
+	machine_cue.add_theme_font_size_override("font_size",22)
+	machine_cue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cue_rows.add_child(machine_cue)
+	machine_cargo_cue = Label.new()
+	machine_cargo_cue.add_theme_font_size_override("font_size",20)
+	machine_cargo_cue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cue_rows.add_child(machine_cargo_cue)
+	refresh_machine_cues()
 	var header_bg := ColorRect.new()
 	header_bg.color = Color("17232d")
 	header_bg.position = Vector2(12,12)
@@ -307,6 +335,7 @@ func toggle_cargo() -> void:
 	alternate_cargo.visible = cargo_mode==2
 	refresh_cargo_label()
 func refresh_cargo_label() -> void:
+	refresh_machine_cues()
 	cargo_label.disabled = machine_states.index==5
 	cargo_label.text = "Cargo: wreck" if machine_states.index==5 else ["Cargo: empty", "Cargo: skid", "Cargo: alternate"][cargo_mode]
 func _unhandled_input(event: InputEvent) -> void:
@@ -341,6 +370,7 @@ func apply_focus() -> void:
 	focus_button.text = "View: "+["whole scene","soldier","Machine A","cohort"][focus_index]
 	update_inspection_labels()
 func update_inspection_labels() -> void:
+	refresh_machine_cues()
 	for l in inspection_labels: l.visible = not silhouettes and focus_index==0 and not overlap
 func toggle_overlap() -> void:
 	stress_mode = 0
@@ -416,3 +446,12 @@ func cycle_machine_state() -> void:
 	machine_state_button.text = "State: "+machine_states.NAMES[machine_states.index]
 	refresh_cargo_label()
 	status.text = ["Working: lamps on, recovery tool ready.","Paused: powered, recovery tool stowed. Not disabled.","Hostile: recovery tool retracted; emitter not charging.","Charged: extended lit emitter. Actual gameplay still requires a target-cell warning.","Disabled: intact shell, lowered tool, all lamps and emitter off.","Destroyed: collapsed broken shell; no lights, collision or extra damage."][machine_states.index]+"\nStatic art review only. No orders, shots, damage or mission-state changes."
+
+func refresh_machine_cues() -> void:
+	if not is_instance_valid(machine_cue): return
+	var state: int = machine_states.index
+	var names := [">>  WORKING", "II  PAUSED", "!  HOSTILE", "(+)  SHOT PENDING", "O  DISABLED", "X  DESTROYED"]
+	var details := ["Neutral · route may threaten people", "Pause acknowledged · still powered", "Hostile · no shot pending", "Charge study · no live target", "Power off · shell intact", "Collapsed wreck · power off"]
+	machine_cue.text = "MACHINE A · ART REVIEW\n"+names[state]+"\n"+details[state]
+	machine_cargo_cue.visible = focus_index==2
+	machine_cargo_cue.text = "Cargo: hidden by wreck" if state==5 else ["Cargo: empty bay", "Cargo: skid / pump study", "Cargo: alternate component"][cargo_mode]
