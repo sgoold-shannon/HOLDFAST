@@ -74,3 +74,5 @@ Character and environment design now precede animation production. Follow V1–V
 V1 update: Spencer approved the grounded visual foundation, with progressively more unusual alien palettes/forms and day/night missions. V2 first-review sheets are available in the [Phase 2 design pack](art-direction/phase-2-design-pack.md). Machine choice, final identities/headgear, civilians and precise asset dimensions remain open. No V2 art is installed in the game yet.
 
 V2 selection update: Machine A (folded shell) selected by Spencer. [Turnaround, state mapping and model requirements](art-direction/machine-a-spec.md) are drafted. Camera-scale day/night model validation remains pending; no model or rig has replaced the practice placeholder.
+
+V2 people update: [civilian group and squad refinement sheets](art-direction/people-design-notes.md) drafted. No gameplay scope change; cohort abstraction and customizable MSG retained. Headgear/identity approval and dimensional validation remain outstanding before full asset production.

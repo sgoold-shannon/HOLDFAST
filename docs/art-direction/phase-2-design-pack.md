@@ -48,3 +48,7 @@ A production checklist must also include civilian group design, squad/civilian e
 Machine A is selected. Review the squad direction and day/night mood, then refine A using its dedicated specification. Then complete civilian silhouettes, selected-machine front/side/back studies, character identities/headgear and precise kit dimensions. Build only a small representative V3 scene after those decisions; do not animate the entire placeholder roster or model a whole campaign yet.
 
 The V3 test must compare the approved designs at normal camera scale in daylight and darkness, check grayscale role recognition and overlapping silhouettes, and confirm that cover, routes and warnings remain visible. Performance budgets follow measured results on target hardware.
+
+## People refinement update
+
+[Civilian groups and squad equipment notes](people-design-notes.md) now include three four-person civilian studies and a second squad kit sheet. Tactical helmets/noncombat caps are proposed, not approved. Equipment retention and silhouette separation have improved; final identities, dimensions and camera-scale checks remain open.
