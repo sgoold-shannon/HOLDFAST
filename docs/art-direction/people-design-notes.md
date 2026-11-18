@@ -21,7 +21,7 @@ In the benchmark, arrange four visual figures inside a readable cohort envelope 
 - Bell: compact retained asymmetric tool roll, replacing loose/dangling tools.
 - Park: slim kit, protected optics and notebook access. The generated pack is still fairly broad: narrow it in the dimensional pass to distinguish him from Ortiz.
 
-Helmets during tactical encounters and soft caps in noncombat scenes are recommendations, not yet owner-approved. These do not add armor statistics. The MSG remains customizable; generated faces are samples. The written brief governs roles; generated annotations such as “obstacle reduction” do not authorize new actions.
+Spencer approved scenario-dependent headgear: helmets for tactical conditions and soft caps where appropriate. These do not add armor statistics. The MSG remains customizable; generated faces are samples. The written brief governs roles; generated annotations such as “obstacle reduction” do not authorize new actions.
 
 Equipment attachment points must leave shoulders, hands, elbows and hips clear for aiming, kneeling, stabilization, pickup and carrying. Verify rifle sling retention and casualty clipping in a simple pose test before finalizing straps and pouches. No rank/patch detail from generated images is authoritative; production insignia should be separately reviewed.
 

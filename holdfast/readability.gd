@@ -25,6 +25,16 @@ func _ready() -> void:
 	preview_button.focus_mode = Control.FOCUS_NONE
 	preview_button.pressed.connect(open_preview)
 	layer.add_child(preview_button)
+	var art_button := Button.new()
+	art_button.text = "Visual benchmark"
+	art_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	art_button.offset_left = -400
+	art_button.offset_right = -190
+	art_button.offset_top = 12
+	art_button.offset_bottom = 58
+	art_button.add_theme_font_size_override("font_size",20)
+	art_button.pressed.connect(open_benchmark)
+	layer.add_child(art_button)
 	var panel := PanelContainer.new()
 	toolbar = panel
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -101,10 +111,16 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func open_preview() -> void:
+	open_visual("res://map_preview_3d.tscn")
+
+func open_benchmark() -> void:
+	open_visual("res://visual_benchmark.tscn")
+
+func open_visual(scene_path: String) -> void:
 	if preview_open: return
 	var board := get_tree().current_scene
 	if not board is Node2D: return
-	var preview = preload("res://map_preview_3d.tscn").instantiate()
+	var preview = load(scene_path).instantiate()
 	var previous_mode := board.process_mode
 	var was_visible: bool = board.visible
 	preview_open = true

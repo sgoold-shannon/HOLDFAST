@@ -76,3 +76,11 @@ V1 update: Spencer approved the grounded visual foundation, with progressively m
 V2 selection update: Machine A (folded shell) selected by Spencer. [Turnaround, state mapping and model requirements](art-direction/machine-a-spec.md) are drafted. Camera-scale day/night model validation remains pending; no model or rig has replaced the practice placeholder.
 
 V2 people update: [civilian group and squad refinement sheets](art-direction/people-design-notes.md) drafted. No gameplay scope change; cohort abstraction and customizable MSG retained. Headgear/identity approval and dimensional validation remain outstanding before full asset production.
+
+## V3a — isolated visual blockout
+
+A separate `visual_benchmark.tscn` is reachable through **Visual benchmark** in the normal demo toolbar. It contains one radio-profile soldier, a compact Machine A volume study, four civilian figures representing one cohort, road/ground and low/full cover. Day/night changes lighting on identical geometry. Helmet/cap and empty/loaded controls inspect scenario presentation, not gameplay effects. Back restores the original encounter and toolbar.
+
+This is an early primitive blockout, not final character art, a finished folded-shell model or completion of V3. Civilian figures use a reduced group-representation scale to fit the cohort; this is a presentation proposal, not realistic height approval. The machine needs rounded shell modeling and better silhouette fidelity. Final textures, rigging, animation, hardware budgets and grayscale/overlap validation remain pending. No new collision, damage, visibility or mission rules are introduced.
+
+Validation: dedicated launch/toggle/return test passed headless and in rendered compatibility mode; existing preview launch and startup suites passed. Day/night captures were inspected and initial framing widened to fit the whole scene. [Day](verification/visual-benchmark-day.png), [night](verification/visual-benchmark-night.png). This establishes a comparison harness, not a performance benchmark result.
