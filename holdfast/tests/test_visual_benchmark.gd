@@ -36,6 +36,8 @@ func run() -> void:
 	scene.toggle_silhouettes()
 	expect(scene.machine_lamp.material_override==shell_material,"Inspection restores original materials exactly")
 	scene.cycle_focus()
+	var original_positions: Array[Vector3] = []
+	for civilian in scene.civilians: original_positions.append(civilian.position)
 	scene.toggle_overlap()
 	expect(scene.overlap and scene.soldier.position==Vector3(-0.46,0,1.94),"Overlap test places soldier in cohort space")
 	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
@@ -44,6 +46,8 @@ func run() -> void:
 		root.get_texture().get_image().save_png("/private/tmp/holdfast-inspection-overlap.png")
 	scene.toggle_overlap()
 	expect(scene.soldier.position==Vector3(-3,0,1),"Leaving overlap restores original placement")
+	for i in range(scene.civilians.size()):
+		expect(scene.civilians[i].position.is_equal_approx(original_positions[i]),"Formation inspection restores every civilian position")
 	scene.close()
 	await process_frame
 	await process_frame

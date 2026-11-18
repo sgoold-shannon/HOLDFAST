@@ -83,7 +83,7 @@ func person(at: Vector3, color: String, scale_value: float = 1.0) -> Node3D:
 		sphere(root,Vector3(x,0.66,0),0.075,"bba18a")
 	sphere(root,Vector3(0,1.40,0),0.15,"bba18a")
 	return root
-func shell_panel(parent: Node3D, theta0: float, theta1: float, phi0: float, phi1: float, color: String) -> void:
+func shell_panel(parent: Node3D, theta0: float, theta1: float, phi0: float, phi1: float, color: String, inset: float = 1.0) -> void:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for u in range(4):
@@ -92,7 +92,7 @@ func shell_panel(parent: Node3D, theta0: float, theta1: float, phi0: float, phi1
 			for uv in [Vector2(u,v),Vector2(u+1,v),Vector2(u+1,v+1),Vector2(u,v+1)]:
 				var theta := lerpf(theta0,theta1,uv.x/4.0)
 				var phi := lerpf(phi0,phi1,uv.y/3.0)
-				points.append(Vector3(0.46*cos(phi)*sin(theta),0.20+0.85*sin(phi),-0.46*cos(phi)*cos(theta)))
+				points.append(Vector3(0.46*inset*cos(phi)*sin(theta),0.20+0.85*inset*sin(phi),-0.46*inset*cos(phi)*cos(theta)))
 			for index in [0,2,1,0,3,2]:
 				var point: Vector3 = points[index]
 				surface.set_normal(Vector3(point.x/0.46,(point.y-0.2)/0.85,point.z/0.46).normalized())
@@ -181,6 +181,7 @@ func build_machine(at: Vector3) -> void:
 		for sector in range(12):
 			var middle := -PI+(sector+0.5)*TAU/12.0
 			if band<2 and absf(middle)<0.85: continue
+			shell_panel(machine,-PI+sector*TAU/12.0,-PI+(sector+1)*TAU/12.0,band*PI/6.0,(band+1)*PI/6.0,"424b40",0.985)
 			shell_panel(machine,-PI+sector*TAU/12.0+0.018,-PI+(sector+1)*TAU/12.0-0.018,band*PI/6.0+0.012,(band+1)*PI/6.0-0.012,["8f947e","a09d86","77856f"][(sector+band)%3])
 	for x in [-0.34,0.34]:
 		box(machine,Vector3(x,0.10,-0.27),Vector3(0.18,0.14,0.25),"454d43")
@@ -320,9 +321,14 @@ func update_inspection_labels() -> void:
 func toggle_overlap() -> void:
 	overlap = not overlap
 	soldier.position = Vector3(-0.46,0,1.94) if overlap else Vector3(-3,0,1)
+	var right := Vector3(13,0,12).normalized()
+	var toward := Vector3(-12,0,13).normalized()
+	var offsets := [Vector2(-0.65,0.05),Vector2(0.65,0.05),Vector2(-0.29,0.65),Vector2(0.29,0.65)]
+	for i in range(civilians.size()):
+		civilians[i].position = soldier.position+right*offsets[i].x+toward*offsets[i].y if overlap else Vector3(-0.7+(i%2)*0.48,0,1.7+(i/2)*0.48)
 	overlap_button.text = "Overlap: on" if overlap else "Overlap: off"
 	apply_focus()
-	status.text = "Overlap study: soldier shares cohort space. Visual occlusion is not a movement-rule change.\nHome: wide view · Scroll: zoom · Back preserves your demo." if overlap else "Same geometry in day/night. View cycles scene, soldier, machine and cohort.\nSilhouettes remove color/detail. Home: wide view · Scroll: zoom."
+	status.text = "Shared-space study: figures spread visually around the soldier; no occupancy rules change.\nHome: wide view · Scroll: zoom · Back preserves your demo." if overlap else "Same geometry in day/night. View cycles scene, soldier, machine and cohort.\nSilhouettes remove color/detail. Home: wide view · Scroll: zoom."
 func toggle_silhouettes() -> void:
 	silhouettes = not silhouettes
 	if silhouettes:
