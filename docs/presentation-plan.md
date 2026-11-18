@@ -66,3 +66,7 @@ Animate movement and attacks from resolved events, distinguish neutral/hostile m
 The prototype remains separate until those criteria pass. Existing magnification and the playable demo are unchanged.
 
 Launch follow-up: automated and rendered tests exercise the Preview/Back buttons, duplicate-launch guard, exact encounter-state preservation and magnifier input restoration. The original F6 failure was not reproduced; no keyboard-configuration cause is claimed.
+
+## Visual production sequence — owner-directed update
+
+Character and environment design now precede animation production. Follow V1–V6 in [the draft visual direction brief](art-direction/visual-direction-brief.md). V1 is ready for creative review; V2 designs and damage scope are not yet approved. Existing P3 animation work follows the V3 benchmark rather than starting on placeholder assets.
