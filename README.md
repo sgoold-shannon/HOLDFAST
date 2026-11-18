@@ -179,3 +179,5 @@ At mission closure, **Practice results** lists civilian outcomes, squad disposit
 Benchmark inspection: **View** cycles close-ups; **Silhouettes** removes color/material detail; **Overlap** tests a soldier sharing the civilian group space. These are reversible visual tests, not new gameplay options.
 
 **Stress** in the visual benchmark cycles an adjacent wall and a second four-person cohort. This exposes crowding limits without changing the playable encounter.
+
+In the two-group benchmark stress test, fixed **Group A/B** buttons show numbered markers for the selected cohort, including obscured figures. These are inspection cues only.

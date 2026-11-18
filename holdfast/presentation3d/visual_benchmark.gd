@@ -3,6 +3,9 @@ extends Node3D
 var soldier: Node3D
 var machine: Node3D
 var civilians: Array[Node3D] = []
+var selected_group := 0
+var group_buttons: Array[Button] = []
+var group_markers: Array[Label3D] = []
 var stress_mode := 0
 var stress_wall: MeshInstance3D
 var extra_civilians: Array[Node3D] = []
@@ -178,7 +181,18 @@ func _ready() -> void:
 		var extra := person(Vector3.ZERO,["70889b","9b8870","788d79","a69e88"][i],0.65)
 		extra.hide()
 		extra_civilians.append(extra)
+	for group in [civilians,extra_civilians]:
+		for i in range(group.size()):
+			var marker := Label3D.new()
+			marker.font_size = 32
+			marker.pixel_size = 0.005
+			marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			marker.no_depth_test = true
+			marker.outline_size = 10
+			add_child(marker)
+			group_markers.append(marker)
 	build_hud()
+	refresh_group_markers()
 	apply_light()
 func build_machine(at: Vector3) -> void:
 	machine = Node3D.new()
@@ -218,6 +232,17 @@ func build_hud() -> void:
 	title.text = "HOLDFAST / VISUAL BENCHMARK\nEarly shape study — no gameplay or finished art"
 	title.add_theme_font_size_override("font_size",23)
 	layer.add_child(title)
+	var group_row := HBoxContainer.new()
+	group_row.position = Vector2(24,105)
+	group_row.add_theme_constant_override("separation",12)
+	layer.add_child(group_row)
+	for i in range(2):
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(270,44)
+		button.add_theme_font_size_override("font_size",20)
+		button.pressed.connect(select_group.bind(i))
+		group_row.add_child(button)
+		group_buttons.append(button)
 	var controls_bg := ColorRect.new()
 	controls_bg.color = Color("17232d")
 	controls_bg.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -333,6 +358,7 @@ func update_inspection_labels() -> void:
 	for l in inspection_labels: l.visible = not silhouettes and focus_index==0 and not overlap
 func toggle_overlap() -> void:
 	stress_mode = 0
+	selected_group = 0
 	if is_instance_valid(stress_wall): stress_wall.hide()
 	for extra in extra_civilians: extra.hide()
 	if is_instance_valid(stress_button): stress_button.text = "Stress: off"
@@ -345,6 +371,7 @@ func toggle_overlap() -> void:
 		civilians[i].position = soldier.position+right*offsets[i].x+toward*offsets[i].y if overlap else Vector3(-0.7+(i%2)*0.48,0,1.7+(i/2)*0.48)
 	overlap_button.text = "Overlap: on" if overlap else "Overlap: off"
 	apply_focus()
+	refresh_group_markers()
 	status.text = "Shared-space study: figures spread visually around the soldier; no occupancy rules change.\nHome: wide view · Scroll: zoom · Back preserves your demo." if overlap else "Same geometry in day/night. View cycles scene, soldier, machine and cohort.\nSilhouettes remove color/detail. Home: wide view · Scroll: zoom."
 func toggle_silhouettes() -> void:
 	silhouettes = not silhouettes
@@ -376,4 +403,24 @@ func cycle_stress() -> void:
 	focus_index = 3
 	apply_focus()
 	camera.size = 5
+	if stress_mode!=2: selected_group = 0
+	refresh_group_markers()
 	status.text = ["Shared-space formation; stress obstacles hidden.","Wall test: check figure bodies and equipment against the adjacent wall.","Two-group test: eight civilians share the display area. Check which figures become hidden."][stress_mode]+"\nVisual test only; no logical movement, collisions or group membership changes."
+
+func select_group(index: int) -> void:
+	if index==1 and stress_mode!=2: return
+	selected_group = index
+	refresh_group_markers()
+	status.text = "Group %s selected: four numbered markers identify its members, including obscured figures." % ["A","B"][index]+"\nInspection markers show through objects; they do not grant gameplay sight or issue orders."
+func refresh_group_markers() -> void:
+	for i in range(group_buttons.size()):
+		group_buttons[i].disabled = i==1 and stress_mode!=2
+		group_buttons[i].text = "%sGroup %s · 4 people%s" % ["> " if selected_group==i else "",["A","B"][i]," · hidden" if i==1 and stress_mode!=2 else ""]
+	for index in range(group_markers.size()):
+		var group := index/4
+		var member := index%4
+		var actor: Node3D = civilians[member] if group==0 else extra_civilians[member]
+		var marker := group_markers[index]
+		marker.visible = group==selected_group and actor.visible
+		marker.position = actor.position+Vector3(0,1.13,0)
+		marker.text = "%s%d" % [["A","B"][group],member+1]

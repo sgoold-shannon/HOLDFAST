@@ -59,11 +59,16 @@ func run() -> void:
 	scene.cycle_stress()
 	expect(scene.stress_mode==2 and not scene.stress_wall.visible,"Crowd test replaces wall test")
 	for extra in scene.extra_civilians: expect(extra.visible,"Second cohort has four visible figures")
+	scene.select_group(1)
+	expect(scene.selected_group==1 and not scene.group_buttons[1].disabled,"Overlapping cohort selectable by fixed-screen control")
+	for i in range(8):
+		expect(scene.group_markers[i].visible==(i>=4),"Only selected cohort member markers are visible")
 	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
 		await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("/private/tmp/holdfast-stress-crowd.png")
 	scene.cycle_stress()
+	expect(scene.selected_group==0 and scene.group_buttons[1].disabled,"Removing second group resets selection")
 	expect(scene.stress_mode==0 and not scene.stress_wall.visible,"Stress cycle clears temporary scenery")
 	for extra in scene.extra_civilians: expect(not extra.visible,"Stress cycle hides second group")
 	scene.close()
