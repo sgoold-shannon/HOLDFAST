@@ -2,7 +2,9 @@
 
 A character-driven, turn-based tactical game about first contact, built in Godot 4. The design baseline is **HOLDFAST Game Design Document v3.1** at the top of this repository; older versions are in `archive/`.
 
-**Status:** prototype. One playable mission (Farm Road), its debrief, a persistent roster, a return mission shaped by the first mission's outcome, and an ending logic test. It is not a campaign yet.
+**Status:** prototype. The game now opens in a desktop layout (1920×1080, landscape): big map on the left, real buttons and panels on the right, story/results/roster as pop-up windows. Keyboard shortcuts are unchanged; press **Controls** in the top bar for the list.
+
+ One playable mission (Farm Road), its debrief, a persistent roster, a return mission shaped by the first mission's outcome, and an ending logic test. It is not a campaign yet.
 
 ## Play it (Mac)
 
@@ -28,6 +30,7 @@ Every file in `holdfast/tests/` runs the same way. A passing run prints `FAILURE
 | `holdfast/state/` | Game state: combat, machine, evacuation, story, campaign, results |
 | `holdfast/systems/` | Game rules that don't draw anything: turns, machine behavior, civilians, saving |
 | `holdfast/presentation/` | Screens, panels and input handling |
+| `holdfast/presentation/hud/` | The desktop interface (`game.tscn` is the main scene) |
 | `holdfast/missions/` | Mission layouts as data files |
 | `holdfast/tests/` | Automated tests |
 | `docs/` | Plans, decisions, art direction and test evidence |

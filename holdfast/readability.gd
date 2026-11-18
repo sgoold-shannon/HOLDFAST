@@ -9,10 +9,15 @@ var magnification := 3.0
 var origin := Vector2.ZERO
 var camera: Camera2D
 var caption: Label
+## Set by the desktop HUD (game.tscn). The HUD is already sized for the window, so the
+## magnifier toolbar, preview buttons and scroll-to-pan stay out of the way.
+var shell_mode := false
+var overlay: CanvasLayer
 
 func _ready() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 100
+	overlay = layer
 	add_child(layer)
 	var preview_button := Button.new()
 	preview_button.text = "3D Preview"
@@ -60,6 +65,10 @@ func _ready() -> void:
 	row.add_child(hint)
 
 func _process(_delta: float) -> void:
+	if shell_mode:
+		# Previews re-show this layer when they close; keep it hidden under the HUD.
+		if overlay.visible: overlay.visible = false
+		return
 	var active := get_viewport().get_camera_2d()
 	if active != camera:
 		camera = active
@@ -88,6 +97,7 @@ func _apply() -> void:
 	caption.text = " View %d%% " % int(magnification * 100)
 
 func _input(event: InputEvent) -> void:
+	if shell_mode: return
 	var pan := Vector2.ZERO
 	if event is InputEventPanGesture:
 		pan = event.delta * 32.0 / magnification
@@ -119,7 +129,7 @@ func open_benchmark() -> void:
 func open_visual(scene_path: String) -> void:
 	if preview_open: return
 	var board := get_tree().current_scene
-	if not board is Node2D: return
+	if not (board is Node2D or board is Control): return
 	var preview = load(scene_path).instantiate()
 	var previous_mode := board.process_mode
 	var was_visible: bool = board.visible

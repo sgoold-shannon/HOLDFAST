@@ -279,6 +279,10 @@ const Snapshot = preload("res://systems/encounter_snapshot.gd")
 const ViewRouter = preload("res://presentation/view_router.gd")
 const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
+const HudMapLayer = preload("res://presentation/hud/map_layer.gd")
+## Desktop HUD (game.tscn) sets this: the board then draws only the map and
+## leaves mouse input to the HUD. Keyboard shortcuts keep working unchanged.
+var hud_mode := false
 
 func _ready() -> void:
 	prepare_return_startup()
@@ -616,6 +620,8 @@ func sight_target() -> Vector2i:
 	return pinned_target if pinned_target != NONE else hovered_cell
 
 func _unhandled_input(event: InputEvent) -> void:
+	if hud_mode and not (event is InputEventKey):
+		return
 	InputRouter.dispatch(event,{
 		"ending":handle_ending_input,"return":handle_return_input,"roster":handle_roster_input,
 		"story":handle_story_input,"results":handle_results_input,"rescue":handle_rescue_input,
@@ -659,6 +665,9 @@ func draw_soldier_marker(index: int, center: Vector2) -> void:
 	ActorView.soldier(self,font,center,soldier_marker_snapshot(index))
 
 func _draw() -> void:
+	if hud_mode:
+		HudMapLayer.render(self)
+		return
 	ViewRouter.render(ViewRouter.screen(roster_open,scene_view,result_ready),{
 		"tactical":draw_tactical_layer,"machine":draw_machine_layer,"civilian":draw_civilian_layer,
 		"breaker":draw_breaker_layer,"protocol":draw_protocol_layer,"rescue":draw_rescue_layer,

@@ -363,7 +363,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		focus_index = 0
 		apply_focus()
 func close() -> void:
-	if get_tree().current_scene==self: get_tree().change_scene_to_file("res://farm_final.tscn")
+	if get_tree().current_scene==self: get_tree().change_scene_to_file(ProjectSettings.get_setting("application/run/main_scene","res://game.tscn"))
 	else: queue_free()
 func _exit_tree() -> void:
 	if is_instance_valid(readability):

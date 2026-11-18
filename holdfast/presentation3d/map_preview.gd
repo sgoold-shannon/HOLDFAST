@@ -442,7 +442,7 @@ func _exit_tree() -> void:
 
 func close_preview() -> void:
 	if get_tree().current_scene == self:
-		get_tree().change_scene_to_file("res://farm_final.tscn")
+		get_tree().change_scene_to_file(ProjectSettings.get_setting("application/run/main_scene","res://game.tscn"))
 	else:
 		queue_free()
 

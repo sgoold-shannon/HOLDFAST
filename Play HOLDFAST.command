@@ -13,4 +13,8 @@ if [ ! -f "$holdfast_root/holdfast/project.godot" ]; then
   read -r -p 'Press Return to close. ' holdfast_reply
   exit 1
 fi
+# If Claude's bridge script sits here, start it too (it lets Claude run tests on this Mac).
+if [ -x "$holdfast_root/Claude Bridge.command" ] && ! pgrep -f 'Claude Bridge.command' >/dev/null; then
+  nohup "$holdfast_root/Claude Bridge.command" >/dev/null 2>&1 &
+fi
 exec "$holdfast_engine" --path "$holdfast_root/holdfast" --rendering-method gl_compatibility --rendering-driver opengl3

@@ -2,6 +2,16 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Desktop interface (Nov 2026)
+
+- New main scene `game.tscn` (`presentation/hud/game_shell.gd`): 1920×1080 landscape, window opens maximized.
+- The encounter controller gets `hud_mode`: it draws only the map (`presentation/hud/map_layer.gd`) and leaves mouse clicks to the HUD (`presentation/hud/map_input.gd`, same click priority as before). Keyboard shortcuts still go to the controller unchanged.
+- Sidebar: selected soldier, every action as a button (disabled with the reason as a tooltip), squad, civilian groups and orders, threat. Story, results, roster and the breaker confirmation are pop-up windows.
+- The magnifier toolbar (`readability.gd`) stays hidden in the new layout (`shell_mode`). 3D preview and visual benchmark moved to **Extras**.
+- Right-click clears the selection, unpins an aim target or cancels put-down.
+- `farm_final.tscn` and every existing test still use the old layout, so the 119-action parity suite is unaffected. New test: `tests/test_hud.gd`.
+- Editor plugin `addons/claude_bridge` starts `Claude Bridge.command` if that file sits beside the project (Spence's Mac only).
+
 ### Run without the editor (Mac)
 
 Double-click **Play HOLDFAST.command**, beside the `holdfast` folder. This opens the playable demo directly with the tested compatibility renderer, bypassing editor inspection/input modes. Godot must be installed at `/Applications/Godot.app`. Existing saves are used normally. Close the game window to stop it.

@@ -1,0 +1,59 @@
+extends RefCounted
+## Map-only drawing for the desktop HUD. Panels, buttons and text live in game_shell.gd;
+## this draws only what belongs on the board, using the same renderers as the legacy view.
+const BoardView = preload("res://presentation/board_view.gd")
+const OverlayView = preload("res://presentation/tactical_overlay.gd")
+const MachineView = preload("res://presentation/machine_view.gd")
+const CivilianView = preload("res://presentation/civilian_view.gd")
+
+## Region of the legacy page that holds the board and its coordinate labels.
+const CROP := Rect2(24, 68, 776, 608)
+
+static func render(board) -> void:
+	var font: Font = board.font
+	var projection = board.board_projection
+	board.draw_rect(CROP, Color("0e1412"))
+	BoardView.render(board,font,projection,board.board_view_snapshot())
+	var path: Array[Vector2i] = []
+	if not board.sight_mode and not board.drop_mode:
+		path = board.path_to(board.hovered_cell)
+	var target: Vector2i = board.sight_target()
+	OverlayView.render(board,projection,board.tactical_overlay_snapshot(path,target))
+	board.draw_targets()
+	for index in range(board.soldiers.size()):
+		if board.soldier_visible(index):
+			board.draw_soldier_marker(index,board.cell_to_local(board.soldiers[index]["cell"])+Vector2(18,18))
+	MachineView.render(board,font,projection,board.machine_view_snapshot())
+	CivilianView.render(board,font,projection,board.civilian_view_snapshot())
+	# Breaker: locked civilian gates after isolation.
+	if board.disabled():
+		for gate in board.GATES:
+			var origin: Vector2 = projection.cell_anchor(gate)
+			board.draw_rect(Rect2(origin+Vector2(2,2),Vector2(32,32)),Color("ea9670"),false,2)
+			board.draw_string(font,origin+Vector2(0,24),"LOCK",HORIZONTAL_ALIGNMENT_CENTER,36,10,Color("ea9670"))
+	# Protocol: agreed diversion waypoints.
+	if board.protocol["route_set"] and not board.protocol["betrayed"]:
+		for waypoint in board.DIVERSION:
+			board.draw_rect(Rect2(projection.cell_anchor(waypoint)+Vector2(1,1),Vector2(34,34)),Color("8be6de"),false,2)
+	# Rescue: casualty condition markers.
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		if not board.soldier_visible(index): continue
+		var center: Vector2 = projection.cell_anchor(soldier["cell"])+Vector2(18,18)
+		var condition: String = soldier.get("condition","active")
+		if condition == "dead":
+			board.draw_line(center-Vector2(11,11),center+Vector2(11,11),Color("f07878"),3)
+		elif condition == "critical":
+			board.draw_string(font,center+Vector2(7,-6),str(soldier.get("bleed",0)),HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("ffb75a"))
+		elif condition == "stable":
+			board.draw_string(font,center+Vector2(7,-6),"+",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("8be6de"))
+		if soldier.get("carrying",-1) >= 0:
+			board.draw_string(font,center+Vector2(-15,22),"+"+board.soldiers[soldier["carrying"]]["mark"],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8be6de"))
+		if index == board.rescue_target and board.casualty_available(index):
+			board.draw_arc(center,20,0,TAU,24,Color("ffb75a"),2)
+	# Hover highlight so the player always knows which square the mouse is on.
+	if board.cell_is_in_bounds(board.hovered_cell):
+		var hover := Rect2(projection.cell_anchor(board.hovered_cell),Vector2.ONE*board.CELL_SIZE)
+		board.draw_rect(hover.grow(-1),Color(1,1,1,0.55),false,2)
+		if board.drop_mode:
+			board.draw_rect(hover.grow(-4),Color(0.55,0.9,0.87,0.25))
