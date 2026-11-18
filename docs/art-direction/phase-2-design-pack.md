@@ -24,7 +24,7 @@ Faces, hairstyles, head protection and exact insignia are provisional. The gener
 | B — Ribbed cradle | Exposed cargo and asymmetric ribs convey recovery work | Tall parts could obscure adjacent people; requires camera test |
 | C — Low arch | Low silhouette preserves sightlines | May blend into ground and lose identity at distance |
 
-Recommendation: develop B, with A's compact footprint discipline. This recommendation is not an approved selection. Keep neutral work posture distinct from hostile shot preparation, paused work, diversion and disabled states. Generated symbols and amber lamps are design suggestions, not a new language or gameplay signaling rule. The machine retains one logical occupied cell; confirm its silhouette and overhang at actual map scale.
+Selection update: Spencer chose **A — Folded shell**. Develop A; the earlier B recommendation is superseded. See the [Machine A specification](machine-a-spec.md) and [turnaround/state sheet](machine-a-turnaround-states-01.png). Keep neutral work posture distinct from hostile shot preparation, paused work, diversion and disabled states. Generated symbols and amber lamps are design suggestions, not a new language or gameplay signaling rule. The machine retains one logical occupied cell; confirm its silhouette and overhang at actual map scale.
 
 ### Farm Road and lighting
 
@@ -45,6 +45,6 @@ A production checklist must also include civilian group design, squad/civilian e
 
 ## Next gate
 
-Review the squad direction, choose or revise the machine alternative, and accept/revise the day/night mood. Then complete civilian silhouettes, selected-machine front/side/back studies, character identities/headgear and precise kit dimensions. Build only a small representative V3 scene after those decisions; do not animate the entire placeholder roster or model a whole campaign yet.
+Machine A is selected. Review the squad direction and day/night mood, then refine A using its dedicated specification. Then complete civilian silhouettes, selected-machine front/side/back studies, character identities/headgear and precise kit dimensions. Build only a small representative V3 scene after those decisions; do not animate the entire placeholder roster or model a whole campaign yet.
 
 The V3 test must compare the approved designs at normal camera scale in daylight and darkness, check grayscale role recognition and overlapping silhouettes, and confirm that cover, routes and warnings remain visible. Performance budgets follow measured results on target hardware.

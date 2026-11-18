@@ -66,4 +66,4 @@ Do not set arbitrary polygon or texture budgets yet. Measure the representative 
 
 [Concept board](concept-02.png) is an AI-generated mood/composition study, not an exact level map, production model or screenshot. It is not a projection specification: the actual camera remains the tested Godot camera. Generated civilian counts, wall positions, scenery and machine proportions must be reconciled with the mission resource in V3. The current board is stronger on atmosphere and rear silhouettes than on unique alien design.
 
-Next concrete design task after direction review: compare three Drover recovery-machine silhouettes and develop the four soldier rear silhouettes at the actual game camera scale. No animation production or gameplay changes begin at this gate.
+V2 update: squad and environment exploration sheets are available; Spencer selected Machine A, the folded shell. Its [dedicated specification](machine-a-spec.md) records state mapping and remaining camera-scale checks. No animation production or gameplay changes begin at this gate.
