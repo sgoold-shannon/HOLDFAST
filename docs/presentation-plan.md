@@ -46,9 +46,18 @@ Closure opens a scrollable practice report built from production result snapshot
 
 All twenty-one suites passed. Two complete command-interface routes compare exact state after commands and deferred completion: neutral evacuation ends round 5 with four civilians and the whole squad extracted; combat plus Follow ends round 7 with all twelve civilians and the whole squad extracted. These are two tested routes, not exhaustive coverage of every possible choice. Both results screens were rendered and the report visually inspected. [Results preview](verification/3d-results.png).
 
-## P2g — 3D practice acceptance: next
+## P2g — automated practice acceptance: complete; user feedback open
 
-Run a focused user playtest of a full practice encounter, including protocol or breaker choices and results review. Address usability findings before animation/presentation polish. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
+Four complete legal command-interface routes now pass exact production-state comparisons after every command and deferred completion. Results fields (title, reason, dispositions, cohorts, machine, feeder, evacuation count and rescue events) also match. All four routes passed in rendered compatibility mode:
+
+| Route | Completion round | Civilians evacuated | Squad extracted |
+| --- | --- | --- | --- |
+| Neutral machine / exit orders | 5 | 4/12 | 4/4 |
+| Combat / Follow orders | 7 | 12/12 | 4/4 |
+| Breaker isolation / bypasses | 8 | 12/12 | 4/4 |
+| Observe / pause / authenticate / divert | 7 | 12/12 | 4/4 |
+
+The breaker and protocol routes reach their fixtures through legal moves and AP costs; their tests do not teleport actors or alter AP. The protocol result screen was visually inspected. [Protocol result](verification/3d-protocol-acceptance.png). This is automated acceptance of four routes, not exhaustive choice coverage or a substitute for user feedback. A focused user playtest of the full encounter remains open. Address usability findings before animation/presentation polish. Decide when the complete 3D encounter replaces the practice view; never silently apply practice moves to the paused campaign. Preserve costs, deterministic outcomes and save formats, and run recorded-route comparisons before enabling the full loop.
 
 ## P3 — action readability
 

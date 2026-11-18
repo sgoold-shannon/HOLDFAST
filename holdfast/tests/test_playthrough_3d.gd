@@ -15,6 +15,9 @@ func command(action: String, group: int = 0) -> void:
 		"target":
 			reference.sight_mode = true
 			reference.pinned_target = reference.enemies[0]["cell"] if reference.machine_present() else reference.NONE
+		"observe", "transmit", "authenticate", "divert": reference.protocol_action(action)
+		"breaker": reference.try_breaker()
+		"confirm_isolate": reference.try_breaker(true)
 		"fire": reference.try_fire()
 		"turn": reference.next_phase()
 		"extract": reference.try_extract()
@@ -38,18 +41,46 @@ func exit_soldier(index: int) -> void:
 				break
 		if destination==reference.NONE: return
 		move_to(destination)
-func scenario(fight: bool) -> void:
+func scenario(mode: String) -> void:
+	var fight := mode=="combat"
 	preview = load("res://map_preview_3d.tscn").instantiate()
 	root.add_child(preview)
 	await process_frame
-	reference = new_board("3d-full-"+str(fight))
+	reference = new_board("3d-full-"+mode)
 	reference.finish_opening()
 	for turn in range(12):
 		if reference.ended: break
 		if reference.phase<=3:
 			choose(0)
 			command("follow" if fight else "exit",reference.phase-1)
-		if fight and reference.phase==1:
+		if mode=="breaker" and reference.phase<=3:
+			choose(2)
+			if reference.phase==1: move_to(Vector2i(8,6))
+			elif reference.phase==2:
+				move_to(Vector2i(8,4))
+				command("breaker")
+			else:
+				command("breaker")
+				command("confirm_isolate")
+				expect(reference.disabled(),"Legal breaker route isolates machine")
+		elif mode=="protocol" and reference.phase<=3:
+			if reference.phase==1:
+				choose(0)
+				move_to(Vector2i(4,6))
+				command("observe")
+				choose(2)
+				move_to(Vector2i(9,10))
+			elif reference.phase==2:
+				choose(0)
+				command("transmit")
+				choose(2)
+				move_to(Vector2i(10,12))
+				command("authenticate")
+			else:
+				choose(2)
+				command("divert")
+				expect(reference.protocol["diverted"],"Legal protocol route diverts machine")
+		elif fight and reference.phase==1:
 			for index in range(4):
 				choose(index)
 				move_to(Vector2i(7,[6,7,9,10][index]))
@@ -64,9 +95,11 @@ func scenario(fight: bool) -> void:
 		expect(preview.session.encounter.encounter_snapshot()==reference.encounter_snapshot(),"Deferred completion parity")
 	expect(reference.ended and preview.results_panel.visible,"Complete route opens results")
 	expect(preview.display["results"]["dispositions"]==reference.results_panel_snapshot()["dispositions"],"Results display production dispositions")
+	for key in ["title","end_reason","dispositions","cohorts","outcome","feeder","evacuated","rescue_events"]:
+		expect(preview.display["results"][key]==reference.results_panel_snapshot()[key],"Result field %s matches production" % key)
 	expect(str(reference.evacuated_people())+" / 12" in preview.results_text.text,"Report shows actual civilian total")
 	if fight: expect(reference.evacuated_people()==12 and reference.all_extracted(),"Combat/follow route rescues all civilians and squad")
-	print("3D COMPLETE ROUTE fight=",fight," round=",reference.phase," civilians=",reference.evacuated_people()," squad=",reference.all_extracted())
+	print("3D COMPLETE ROUTE mode=",mode," round=",reference.phase," civilians=",reference.evacuated_people()," squad=",reference.all_extracted())
 	preview.results_panel.hide()
 	preview.refresh_movement()
 	expect(not preview.results_panel.visible,"Review map remains open without forced results reopening")
@@ -75,7 +108,9 @@ func scenario(fight: bool) -> void:
 	preview.free()
 	reference.free()
 func run() -> void:
-	await scenario(false)
-	await scenario(true)
+	await scenario("neutral")
+	await scenario("combat")
+	await scenario("breaker")
+	await scenario("protocol")
 	print("3D PLAYTHROUGH FAILURES: ",failures)
 	quit(1 if failures else 0)
