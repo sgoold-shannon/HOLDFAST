@@ -70,3 +70,5 @@ Launch follow-up: automated and rendered tests exercise the Preview/Back buttons
 ## Visual production sequence — owner-directed update
 
 Character and environment design now precede animation production. Follow V1–V6 in [the draft visual direction brief](art-direction/visual-direction-brief.md). V1 is ready for creative review; V2 designs and damage scope are not yet approved. Existing P3 animation work follows the V3 benchmark rather than starting on placeholder assets.
+
+V1 update: Spencer approved the grounded visual foundation, with progressively more unusual alien palettes/forms and day/night missions. V2 first-review sheets are available in the [Phase 2 design pack](art-direction/phase-2-design-pack.md). Machine choice, final identities/headgear, civilians and precise asset dimensions remain open. No V2 art is installed in the game yet.
