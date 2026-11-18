@@ -29,6 +29,8 @@ var lamps: Array[OmniLight3D] = []
 var night := false
 var helmet: Node3D
 var cap: Node3D
+var cargo_mode := 0
+var alternate_cargo: Node3D
 var cargo: Node3D
 var machine_lamp: MeshInstance3D
 var lamp_material: StandardMaterial3D
@@ -176,6 +178,7 @@ func _ready() -> void:
 			add_child(marker)
 			group_markers.append(marker)
 	build_hud()
+	refresh_cargo_label()
 	refresh_group_markers()
 	apply_light()
 func build_machine(at: Vector3) -> void:
@@ -187,6 +190,8 @@ func build_machine(at: Vector3) -> void:
 	add_child(machine)
 	cargo = machine.find_child("CargoSocket",true,false)
 	cargo.hide()
+	alternate_cargo = machine.find_child("CargoAlternate",true,false)
+	alternate_cargo.hide()
 	machine_lamp = machine.find_child("WorkLamp",true,false)
 	machine_states = preload("res://presentation3d/machine_candidate_states.gd").new(machine)
 	lamp_material = machine_lamp.material_override
@@ -297,8 +302,13 @@ func toggle_headgear() -> void:
 	headgear_label.text = "Helmet → Cap" if helmet.visible else "Cap → Helmet"
 func toggle_cargo() -> void:
 	if machine_states.index==5: return
-	cargo.visible = not cargo.visible
-	cargo_label.text = "Loaded → Empty" if cargo.visible else "Empty → Loaded"
+	cargo_mode = (cargo_mode+1)%3
+	cargo.visible = cargo_mode==1
+	alternate_cargo.visible = cargo_mode==2
+	refresh_cargo_label()
+func refresh_cargo_label() -> void:
+	cargo_label.disabled = machine_states.index==5
+	cargo_label.text = "Cargo: wreck" if machine_states.index==5 else ["Cargo: empty", "Cargo: skid", "Cargo: alternate"][cargo_mode]
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index==MOUSE_BUTTON_WHEEL_UP: camera.size = maxf(3,camera.size-0.5)
@@ -404,6 +414,5 @@ func refresh_group_markers() -> void:
 func cycle_machine_state() -> void:
 	machine_states.apply((machine_states.index+1)%machine_states.NAMES.size())
 	machine_state_button.text = "State: "+machine_states.NAMES[machine_states.index]
-	cargo_label.disabled = machine_states.index==5
-	cargo_label.text = "Cargo: wreck" if machine_states.index==5 else ("Loaded → Empty" if cargo.visible else "Empty → Loaded")
+	refresh_cargo_label()
 	status.text = ["Working: lamps on, recovery tool ready.","Paused: powered, recovery tool stowed. Not disabled.","Hostile: recovery tool retracted; emitter not charging.","Charged: extended lit emitter. Actual gameplay still requires a target-cell warning.","Disabled: intact shell, lowered tool, all lamps and emitter off.","Destroyed: collapsed broken shell; no lights, collision or extra damage."][machine_states.index]+"\nStatic art review only. No orders, shots, damage or mission-state changes."

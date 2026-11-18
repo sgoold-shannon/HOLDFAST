@@ -27,19 +27,19 @@ Rebuild from the repository root:
 
 ## Measurements and checks
 
-Evaluated source: 12,440 triangles, 94 mesh objects, nine materials, zero texture bytes. Resting bounds: approximately 0.920 × 0.912 cells on the ground, 0.961 cells tall. These are benchmark cell units, not real-world meters. The mesh count is an initial authoring structure, not a production draw-call budget; consolidate static parts after shape review while retaining moving/state-controlled parts.
+Evaluated source: 14,184 triangles, 106 mesh objects (including both mutually exclusive cargo assemblies), nine materials, zero texture bytes. Resting bounds: approximately 0.920 × 0.912 cells on the ground, 0.961 cells tall. These are benchmark cell units, not real-world meters. The mesh count is an initial authoring structure, not a production draw-call budget; consolidate static parts after shape review while retaining moving/state-controlled parts.
 
 Godot rendered benchmark tests pass: imported footprint and ground origin, no collision objects, preserved tool hierarchy, empty initial cargo, cargo toggle, day/night controls, silhouette material restoration, and unchanged encounter on exit. Front/rear close-ups, wide daylight and close night were inspected on Apple M4 Max using the compatibility renderer. The full close/normal/wide × all-state acceptance matrix is incomplete. No performance budget, frame-time result or representative PC acceptance is claimed.
 
 ## Next gate
 
-Refine the shell/material candidate against the selected concept, then build alternate cargo, paused, hostile/charge, disabled and collapsed-wreck appearances. Review their silhouettes and zoom readability before animation. Keep the candidate in the separate benchmark until this gate passes; gameplay zoom requirements and production camera work remain deferred.
+Refine the shell/material candidate against the selected concept, then review the existing cargo and static-state appearances. Review their silhouettes and zoom readability before animation. Keep the candidate in the separate benchmark until this gate passes; gameplay zoom requirements and production camera work remain deferred.
 
 ## Static state review update
 
 Use **State: Working** in the benchmark to cycle six appearances. [Charged capture](machine-a-charged-01.png) · [Disabled capture](machine-a-disabled-01.png). The tool stows inward for pause/defensive posture. Tests cover every work lamp, charge-only emission, independent cargo, pose bounds, exact reset, changing states in silhouette view, and encounter preservation. Rendered checks pass on the current Mac.
 
-Pose differences remain subtle at wide framing; the status text is a diagnostic aid, not final gameplay UI. A target-cell warning remains mandatory for a pending shot when integrated. The departed display, alternate cargo, detailed material work, the full day/night/zoom matrix and animation remain open. No production camera or gameplay changes were made.
+Pose differences remain subtle at wide framing; the status text is a diagnostic aid, not final gameplay UI. A target-cell warning remains mandatory for a pending shot when integrated. The departed display, detailed material work, the full day/night/zoom matrix and animation remain open. No production camera or gameplay changes were made.
 
 ## Destroyed candidate
 
@@ -49,4 +49,14 @@ Source: `art-source/machine-a/machine_a_wreck_01.blend`; reproducible builder: `
 
 The benchmark swaps presentation roots, preserves the intact cargo choice, disables the cargo control while viewing the wreck, and restores it on return. Tests cover all six states, pose bounds, power-down, silhouette restoration and unchanged encounter state. Day/night close-up captures were inspected. The wreck does not add cover, blast damage, debris physics or fire; mission integration remains deferred.
 
-Next: material/surface refinement and alternate cargo, followed by the full distance/state review before animation. The body remains visually simple, and state readability at wide gameplay framing is not accepted yet.
+Next: material/surface refinement and cargo review, followed by the full distance/state review before animation. The body remains visually simple, and state readability at wide gameplay framing is not accepted yet.
+
+## Material and alternate-cargo pass
+
+The Cargo button now cycles **empty → skid → alternate → empty**. The alternate component is a rectangular finned module; the skid study retains its cylindrical pump silhouette. Both are removable and mutually exclusive. Exact cargo identity/detail remains an art proposal, and mission-state wiring is still deferred. The wreck hides either choice and restores the remembered choice when returning to an intact state.
+
+Shell stone, olive and replacement panels now have more distinct base colors, metalness and roughness; four small rear service fasteners add restrained repair detail. The wreck was rebuilt from the revised source. These are still solid-color material studies without texture maps, wear maps or final surface acceptance.
+
+[Alternate cargo, day](machine-a-alternate-day-01.png) · [Alternate cargo, night](machine-a-alternate-night-01.png). Rendered benchmark checks pass for exclusive cargo visibility, the three-option cycle, alternate cargo through wreck/restore, all six states, footprint bounds and unchanged original encounter. Day/night close-ups inspected. The export counts include both cargo assemblies even though only one is shown.
+
+Next: complete the close/normal/wide state-and-cargo review, record readability problems and performance measurements, then decide what needs refinement before animation. Passing behavior checks does not approve final art.

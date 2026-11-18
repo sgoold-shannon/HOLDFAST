@@ -23,9 +23,9 @@ def material(name, color, metal=0.0, rough=.65, emission=0):
         p.inputs['Emission Strength'].default_value=emission
     m.diffuse_color=(*color,1)
     return m
-stone=material('Shell_stone',(.40,.42,.33),.28)
-olive=material('Shell_olive',(.25,.29,.21),.30)
-repair=material('Shell_replacement',(.53,.50,.40),.28)
+stone=material('Shell_stone',(.24,.26,.20),.18,.78)
+olive=material('Shell_olive',(.105,.14,.095),.22,.72)
+repair=material('Shell_replacement',(.37,.33,.25),.35,.58)
 frame=material('Frame_dark',(.085,.105,.085),.55,.48)
 edge=material('Edges_and_tool',(.24,.27,.22),.65,.42)
 rubber=material('Contact_pads',(.045,.052,.043),.05,.95)
@@ -131,6 +131,19 @@ box('CargoSkid',(0,-.12,.30),(.29,.25,.035),edge,cargo)
 cylinder('CargoComponent',(0,-.10,.395),.085,.21,cargo_mat,cargo,(1,0,0))
 for x in [-.09,.09]: cylinder('CargoBand',(x,-.10,.395),.092,.022,edge,cargo,(1,0,0))
 box('CargoConnector',(0,-.10,.49),(.08,.07,.05),cargo_mat,cargo)
+
+# Alternate recovered component: a compact rectangular finned module, distinct from pump/skid.
+# Its exact identity is still an art proposal; runtime selection will follow mission data later.
+alternate=empty('CargoAlternate',root)
+box('Alternate_tray',(0,-.12,.30),(.29,.25,.035),edge,alternate)
+box('Alternate_module',(0,-.10,.39),(.24,.18,.145),olive,alternate,.012)
+for x in [-.085,-.042,0,.042,.085]:
+    box('Alternate_fin',(x,-.10,.48),(.014,.16,.045),edge,alternate,.003)
+box('Alternate_socket',(0,-.205,.395),(.075,.025,.055),frame,alternate,.004)
+# Restrained rear repair fasteners; no insignia or invented glyphs.
+for x in [-.075,.075]:
+    for z in [.285,.455]:
+        cylinder('Service_fastener',(x,.473,z),.008,.008,edge,shell,(0,1,0),8)
 
 # Validate evaluated geometry and publish counts and actual envelope, including hidden cargo.
 bpy.context.view_layer.update()

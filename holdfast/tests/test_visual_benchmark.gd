@@ -66,6 +66,30 @@ func run() -> void:
 		root.get_texture().get_image().save_png("/private/tmp/holdfast-inspection-machine.png")
 	scene.toggle_silhouettes()
 	expect(scene.machine_lamp.material_override==shell_material,"Inspection restores original materials exactly")
+	scene.toggle_cargo()
+	expect(scene.cargo_mode==2 and scene.alternate_cargo.visible and not scene.cargo.visible,"Alternate cargo replaces skid without displaying both")
+	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
+		var was_night: bool = scene.night
+		scene.camera.size = 2.5
+		for lighting in [false,true]:
+			scene.night = lighting
+			scene.apply_light()
+			await process_frame
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png("/private/tmp/machine-a-alternate-%s.png" % ("night" if lighting else "day"))
+		scene.night = was_night
+		scene.apply_light()
+		scene.apply_focus()
+	# Destruction hides both cargo types without losing the alternate choice.
+	for step in range(5): scene.cycle_machine_state()
+	expect(scene.cargo_mode==2 and not scene.alternate_cargo.is_visible_in_tree(),"Destroyed hides alternate cargo")
+	scene.toggle_cargo()
+	expect(scene.cargo_mode==2,"Wreck blocks alternate cargo changes")
+	scene.cycle_machine_state()
+	expect(scene.alternate_cargo.is_visible_in_tree() and not scene.cargo.visible,"Restore preserves alternate cargo")
+	scene.toggle_cargo()
+	expect(scene.cargo_mode==0 and not scene.cargo.visible and not scene.alternate_cargo.visible,"Cargo cycle returns to empty")
+	scene.toggle_cargo()
 	var tool_rest: Transform3D = scene.machine_states.shoulder.transform
 	var emitter_rest: Transform3D = scene.machine_states.emitter.transform
 	var cargo_before: bool = scene.cargo.visible
