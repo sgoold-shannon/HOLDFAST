@@ -34,6 +34,7 @@ var dirty := true
 ## Tests point these at throwaway files so the player's campaign is never touched.
 var board_auto_resume := true
 var board_campaign_path := ""
+var confirm_new := false
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -100,6 +101,8 @@ func build_top_bar() -> void:
 	extras.custom_minimum_size = Vector2(140,0)
 	extras.get_popup().add_item("3D preview",0)
 	extras.get_popup().add_item("Visual benchmark",1)
+	extras.get_popup().add_separator()
+	extras.get_popup().add_item("New game (start over at Farm Road)",2)
 	extras.get_popup().add_theme_font_size_override("font_size",22)
 	extras.get_popup().id_pressed.connect(open_extra)
 	row.add_child(extras)
@@ -195,6 +198,9 @@ func build_sidebar() -> void:
 		body.add_child(button)
 
 	body.add_child(heading("CIVILIANS"))
+	widgets["civ_how"] = label("",18,MUTED)
+	widgets["civ_how"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(widgets["civ_how"])
 	widgets["civ_state"] = label("",20,GOLD)
 	widgets["civ_state"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(widgets["civ_state"])
@@ -359,6 +365,10 @@ func pick_group(index: int) -> void:
 	board.status_text = "Group %s selected. Choose an order below." % board.cohorts[index]["id"]
 
 func open_extra(id: int) -> void:
+	if id == 2:
+		confirm_new = true
+		dirty = true
+		return
 	var readability = get_node_or_null("/root/Readability")
 	if readability == null: return
 	if id == 0: readability.open_preview()
@@ -391,7 +401,7 @@ func refresh() -> void:
 
 func refresh_top() -> void:
 	var returning: bool = board.return_state["active"]
-	set_text("mission","Northbound Return" if returning else "Farm Road")
+	set_text("mission","Return to Farm Road · deployment %d" % board.campaign.get("deployment",2) if returning else "Farm Road")
 	set_text("round","Round %d   ·   Road closes after round %d   ·   Evacuated %d / 12" % [board.phase,board.deadline(),board.evacuated_people()])
 	actions["roster"].disabled = not board.result_ready
 	actions["log"].disabled = board.roster_open
@@ -485,13 +495,15 @@ func refresh_squad() -> void:
 
 func refresh_civilians() -> void:
 	var view: Dictionary = board.civilian_panel_snapshot()
+	var exit_cell: Vector2i = view["exit"]
+	set_text("civ_how","12 civilians in 3 groups (A, B, C — little blue tags on the map). You can give ONE group an order per turn, and orders stick. Groups only walk when you press End turn: up to 3 squares toward the teal CIVILIAN EXIT at (%d, %d). Give a different group its order each turn." % [exit_cell.x,exit_cell.y])
 	set_text("civ_state","Operation ended: " + view["end_reason"] if view["ended"] else ("Group order already used this turn" if view["order_used"] else "One free group order available this turn"))
 	for index in range(3):
 		var cohort: Dictionary = view["cohorts"][index]
 		var button: Button = actions["group%d" % index]
 		button.text = "Group %s  ·  4 people  ·  HP %d/4  ·  %s" % [cohort["id"],cohort["hp"],view["labels"][index] if cohort["status"] == "active" else cohort["status"].to_upper()]
 		button.set_pressed_no_signal(index == view["cohort_selected"])
-		set_text("group_note%d" % index,view["notes"][index])
+		set_text("group_note%d" % index,view["notes"][index]+arrival_text(index))
 	var locked: bool = view["order_used"] or view["ended"]
 	for action in ["exit","follow","hold","north","south"]: actions[action].disabled = locked
 	actions["north"].disabled = locked or not view["north_available"]
@@ -508,6 +520,16 @@ func refresh_civilians() -> void:
 		style_button(actions["close"],Color("713f36") if view["close_pending"] else Color("343b38"))
 	actions["cancel_close"].visible = view["close_pending"]
 
+func arrival_text(index: int) -> String:
+	var cohort: Dictionary = board.cohorts[index]
+	if cohort["status"] != "active" or cohort["order"] == "hold": return ""
+	var path: Array = board.route_preview(cohort,cohort["order"])
+	if path.is_empty(): return ""
+	var arrival: int = board.phase+ceili(path.size()/3.0)-1
+	if arrival > board.deadline():
+		return "  ·  TOO SLOW: needs until round %d, road closes after round %d" % [arrival,board.deadline()]
+	return "  ·  reaches EXIT end of round %d" % arrival
+
 func refresh_threat() -> void:
 	set_text("intent",board.enemy_intent())
 	set_text("danger",board.danger_summary())
@@ -516,7 +538,10 @@ func refresh_threat() -> void:
 	var forecast := "none"
 	if machine["collected_round"] > 0: forecast = "round %d" % (machine["collected_round"]+1)
 	elif board.machine_present(): forecast = "round %d" % (board.phase+4-machine["stage"])
-	set_text("forecast","Machine closure forecast: %s  ·  External closure: round 10  ·  Deadline: round %d" % [forecast,board.deadline()])
+	var road := "Road closes after round %d." % board.deadline()
+	if not board.return_state["active"] and board.machine_present() and machine["collected_round"] == 0 and not board.protocol["diverted"] and not board.disabled():
+		road += " If the machine reaches its cargo, the road closes early (after %s). Stop it — shoot it (Aim → Fire) or cut its power at the breaker B (9,4) — or divert it with the console C." % forecast
+	set_text("forecast",road)
 	if board.return_state["active"]:
 		set_text("return_info",board.machine_outcome()+"\nCooling: "+("available" if board.cooling_ready() else "unavailable")+" — one free civilian move of up to 3 squares.")
 	else:
@@ -585,12 +610,33 @@ func strip_callables(value):
 	return value
 
 func modal_content() -> Dictionary:
+	if confirm_new: return new_game_content()
 	if board.has_meta("hud_help"): return help_content()
 	if board.roster_open: return roster_content()
 	if board.scene_view != "": return story_content()
 	if board.result_ready: return results_content()
 	if board.isolate_pending: return breaker_content()
 	return {}
+
+func new_game_content() -> Dictionary:
+	return {"items":[["title","START A NEW GAME?"],
+		["text","This starts over at Farm Road, deployment 1, with the machine active. Your current campaign is kept as a backup file, not deleted.",24],
+		["row",[["Start new game",func(): new_game()],["Cancel",func(): confirm_new = false]]]]}
+
+func new_game() -> void:
+	confirm_new = false
+	var dir := DirAccess.open("user://")
+	if dir and board_campaign_path == "":
+		var stamp := Time.get_datetime_string_from_system().replace(":","-")
+		for file in ["holdfast_d1_campaign.save","holdfast_c2_campaign.save","holdfast_d1.save"]:
+			if dir.file_exists(file): dir.rename(file,file+"."+stamp+".bak")
+	if valid_board(): board.queue_free()
+	board = null
+	var fresh = BoardScene.instantiate()
+	fresh.auto_resume = false
+	if board_campaign_path != "": fresh.campaign_path = board_campaign_path
+	holder.add_child(fresh)
+	modal_signature = ""
 
 func help_content() -> Dictionary:
 	return {"items":[["title","CONTROLS"],

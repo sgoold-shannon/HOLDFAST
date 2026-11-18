@@ -91,6 +91,16 @@ func run() -> void:
 	root.push_input(key,true)
 	await process_frame
 	expect(board.sight_mode,"T still toggles aim mode under the HUD")
+	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
+	shell.open_extra(2)
+	shell.refresh()
+	expect(shell.modal_root.visible,"New game asks for confirmation")
+	var old = shell.board
+	shell.new_game()
+	await process_frame
+	shell.refresh()
+	expect(shell.board != old and shell.board.hud_mode and shell.board.phase==1 and not shell.board.return_state["active"],"New game starts a fresh Farm Road in HUD mode")
+	expect(String(shell.widgets["civ_how"].text).contains("ONE group"),"Civilian panel explains the order rule")
 	current_scene = null
 	shell.free()
 	reference.free()

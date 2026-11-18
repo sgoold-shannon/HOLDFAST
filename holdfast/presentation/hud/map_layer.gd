@@ -25,6 +25,15 @@ static func render(board) -> void:
 			board.draw_soldier_marker(index,board.cell_to_local(board.soldiers[index]["cell"])+Vector2(18,18))
 	MachineView.render(board,font,projection,board.machine_view_snapshot())
 	CivilianView.render(board,font,projection,board.civilian_view_snapshot())
+	# Label the machine (the only enemy on Farm Road) so it reads as a target.
+	if board.machine_present():
+		var at: Vector2 = projection.cell_anchor(board.enemies[0]["cell"])
+		board.draw_rect(Rect2(at+Vector2(-37,-15),Vector2(110,14)),Color(0.05,0.08,0.07,0.85))
+		board.draw_string(font,at+Vector2(-37,-4),"MACHINE %d/16" % board.enemies[0]["hp"],HORIZONTAL_ALIGNMENT_CENTER,110,11,Color("ff8a80") if board.machine["hostile"] else Color("e6a2c7"))
+	# Name the civilian exit so it isn't confused with the squad's EXIT squares.
+	var civ_exit: Vector2 = projection.cell_anchor(board.civilian_exit())
+	board.draw_rect(Rect2(civ_exit+Vector2(-22,-15),Vector2(80,14)),Color(0.05,0.08,0.07,0.85))
+	board.draw_string(font,civ_exit+Vector2(-22,-4),"CIVILIANS",HORIZONTAL_ALIGNMENT_CENTER,80,11,Color("8be6de"))
 	# Breaker: locked civilian gates after isolation.
 	if board.disabled():
 		for gate in board.GATES:
