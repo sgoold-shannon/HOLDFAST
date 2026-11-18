@@ -186,4 +186,4 @@ Visual production next step: [Machine A asset plan and gameplay zoom requirement
 
 Machine A [static candidate 01](docs/art-direction/machine-a-candidate-01.md) is available in the visual benchmark. Editable Blender source and the reproducible export builder are included. Static art acceptance, material work, state variants and animation remain open.
 
-The visual benchmark now has a **State** button for Machine A working, paused, hostile, charged and disabled static appearance studies. This does not change the playable encounter.
+The visual benchmark now has a **State** button for Machine A working, paused, hostile, charged, disabled and destroyed static appearance studies. This does not change the playable encounter.

@@ -296,6 +296,7 @@ func toggle_headgear() -> void:
 	cap.visible = not helmet.visible
 	headgear_label.text = "Helmet → Cap" if helmet.visible else "Cap → Helmet"
 func toggle_cargo() -> void:
+	if machine_states.index==5: return
 	cargo.visible = not cargo.visible
 	cargo_label.text = "Loaded → Empty" if cargo.visible else "Empty → Loaded"
 func _unhandled_input(event: InputEvent) -> void:
@@ -403,4 +404,6 @@ func refresh_group_markers() -> void:
 func cycle_machine_state() -> void:
 	machine_states.apply((machine_states.index+1)%machine_states.NAMES.size())
 	machine_state_button.text = "State: "+machine_states.NAMES[machine_states.index]
-	status.text = ["Working: lamps on, recovery tool ready.","Paused: powered, recovery tool stowed. Not disabled.","Hostile: recovery tool retracted; emitter not charging.","Charged: extended lit emitter. Actual gameplay still requires a target-cell warning.","Disabled: intact shell, lowered tool, all lamps and emitter off."][machine_states.index]+"\nStatic art review only. No orders, shots, damage or mission-state changes."
+	cargo_label.disabled = machine_states.index==5
+	cargo_label.text = "Cargo: wreck" if machine_states.index==5 else ("Loaded → Empty" if cargo.visible else "Empty → Loaded")
+	status.text = ["Working: lamps on, recovery tool ready.","Paused: powered, recovery tool stowed. Not disabled.","Hostile: recovery tool retracted; emitter not charging.","Charged: extended lit emitter. Actual gameplay still requires a target-cell warning.","Disabled: intact shell, lowered tool, all lamps and emitter off.","Destroyed: collapsed broken shell; no lights, collision or extra damage."][machine_states.index]+"\nStatic art review only. No orders, shots, damage or mission-state changes."

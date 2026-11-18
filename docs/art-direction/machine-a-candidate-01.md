@@ -37,6 +37,16 @@ Refine the shell/material candidate against the selected concept, then build alt
 
 ## Static state review update
 
-Use **State: Working** in the benchmark to cycle five appearances. [Charged capture](machine-a-charged-01.png) · [Disabled capture](machine-a-disabled-01.png). The tool stows inward for pause/defensive posture. Tests cover every work lamp, charge-only emission, independent cargo, pose bounds, exact reset, changing states in silhouette view, and encounter preservation. Rendered checks pass on the current Mac.
+Use **State: Working** in the benchmark to cycle six appearances. [Charged capture](machine-a-charged-01.png) · [Disabled capture](machine-a-disabled-01.png). The tool stows inward for pause/defensive posture. Tests cover every work lamp, charge-only emission, independent cargo, pose bounds, exact reset, changing states in silhouette view, and encounter preservation. Rendered checks pass on the current Mac.
 
-Pose differences remain subtle at wide framing; the status text is a diagnostic aid, not final gameplay UI. A target-cell warning remains mandatory for a pending shot when integrated. Destroyed/departed variants, alternate cargo, detailed material work, the full day/night/zoom matrix and animation remain open. No production camera or gameplay changes were made.
+Pose differences remain subtle at wide framing; the status text is a diagnostic aid, not final gameplay UI. A target-cell warning remains mandatory for a pending shot when integrated. The departed display, alternate cargo, detailed material work, the full day/night/zoom matrix and animation remain open. No production camera or gameplay changes were made.
+
+## Destroyed candidate
+
+A separate editable collapsed-shell model is now available as **State: Destroyed**. [Day](machine-a-wreck-day-01.png) · [Night](machine-a-wreck-night-01.png). Missing upper plates, an uneven inward collapse, exposed supports and a detached crown fragment give it a lower broken silhouette. Disabled remains intact. This is a static shape candidate, not final fracture or material work.
+
+Source: `art-source/machine-a/machine_a_wreck_01.blend`; reproducible builder: `tools/art/build_machine_a_wreck.py` (reads the intact Blender source); runtime: `holdfast/assets/machine_a/machine_a_wreck_01.glb`. Ground envelope approximately 0.89 × 0.86 cells, height 0.406 cells, 3,112 triangles, 29 mesh objects. No lights, animations or collision are authored. Performance budgeting remains open.
+
+The benchmark swaps presentation roots, preserves the intact cargo choice, disables the cargo control while viewing the wreck, and restores it on return. Tests cover all six states, pose bounds, power-down, silhouette restoration and unchanged encounter state. Day/night close-up captures were inspected. The wreck does not add cover, blast damage, debris physics or fire; mission integration remains deferred.
+
+Next: material/surface refinement and alternate cargo, followed by the full distance/state review before animation. The body remains visually simple, and state readability at wide gameplay framing is not accepted yet.
