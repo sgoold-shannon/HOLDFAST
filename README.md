@@ -175,3 +175,5 @@ Machine status/outcome text and map-display policies now use explicit main-scene
 At mission closure, **Practice results** lists civilian outcomes, squad dispositions, machine/feeder outcomes and rescue records. Scroll for the full report. **Review map** keeps the resolved board visible; **Mission results** reopens the report. **Restart practice** starts a fresh attempt, while **Back to original demo** restores the paused encounter. Practice never saves campaign progress.
 
 **Visual benchmark** (top toolbar of the normal demo) opens an isolated early art blockout. Use Day/Night, Helmet/Cap and Empty/Loaded to compare lighting, headgear and machine cargo. Scroll zooms; Home resets framing. Back restores the original demo. These are simple design volumes, not finished models or new mission mechanics.
+
+Benchmark inspection: **View** cycles close-ups; **Silhouettes** removes color/material detail; **Overlap** tests a soldier sharing the civilian group space. These are reversible visual tests, not new gameplay options.

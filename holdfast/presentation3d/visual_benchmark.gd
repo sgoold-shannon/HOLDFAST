@@ -1,5 +1,16 @@
 extends Node3D
 ## Design blockout only. No encounter controller, commands, saves or collision rules.
+var soldier: Node3D
+var machine: Node3D
+var civilians: Array[Node3D] = []
+var silhouettes := false
+var overlap := false
+var focus_index := 0
+var original_materials: Dictionary = {}
+var inspection_labels: Array[Label3D] = []
+var focus_button: Button
+var silhouette_button: Button
+var overlap_button: Button
 var camera: Camera3D
 var environment: Environment
 var sun: DirectionalLight3D
@@ -48,6 +59,7 @@ func label(text: String, at: Vector3) -> void:
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
 	add_child(l)
+	inspection_labels.append(l)
 func capsule(parent: Node3D, at: Vector3, radius: float, height: float, color: String) -> MeshInstance3D:
 	var m := CapsuleMesh.new()
 	m.radius = radius
@@ -128,7 +140,7 @@ func _ready() -> void:
 	box(self,Vector3(2.4,0.75,-2),Vector3(1,1.5,0.35),"999b8f")
 	label("LOW COVER",Vector3(-0.5,1,-2))
 	label("FULL WALL",Vector3(2.4,2,-2))
-	var soldier := person(Vector3(-3,0,1),"646a4d")
+	soldier = person(Vector3(-3,0,1),"646a4d")
 	soldier.rotation.y = -PI/2
 	box(soldier,Vector3(0,0.92,0.25),Vector3(0.32,0.5,0.23),"444d3c")
 	box(soldier,Vector3(-0.15,1.45,0.25),Vector3(0.025,0.7,0.025),"292f29")
@@ -138,6 +150,7 @@ func _ready() -> void:
 	label("MSG / RADIO PROFILE",Vector3(-3,2.1,1))
 	for i in range(4):
 		var civilian := person(Vector3(-0.7+(i%2)*0.48,0,1.7+(i/2)*0.48),["98785c","c2b89b","596a70","8d9778"][i],0.65)
+		civilians.append(civilian)
 		box(civilian,Vector3(0,0.88,0.23),Vector3(0.26,0.35,0.17),"655846")
 	label("ONE COHORT / FOUR PEOPLE",Vector3(-0.5,1.8,2))
 	build_machine(Vector3(2,0,0.5))
@@ -158,7 +171,7 @@ func _ready() -> void:
 	build_hud()
 	apply_light()
 func build_machine(at: Vector3) -> void:
-	var machine := Node3D.new()
+	machine = Node3D.new()
 	machine.position = at
 	machine.rotation.y = PI/2
 	add_child(machine)
@@ -183,16 +196,28 @@ func build_machine(at: Vector3) -> void:
 func build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
+	var header_bg := ColorRect.new()
+	header_bg.color = Color("17232d")
+	header_bg.position = Vector2(12,12)
+	header_bg.size = Vector2(720,78)
+	header_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(header_bg)
 	var title := Label.new()
 	title.position = Vector2(24,20)
 	title.text = "HOLDFAST / VISUAL BENCHMARK\nEarly shape study — no gameplay or finished art"
 	title.add_theme_font_size_override("font_size",23)
 	layer.add_child(title)
+	var controls_bg := ColorRect.new()
+	controls_bg.color = Color("17232d")
+	controls_bg.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	controls_bg.offset_top = -220
+	controls_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(controls_bg)
 	var panel := VBoxContainer.new()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 24
 	panel.offset_right = -24
-	panel.offset_top = -150
+	panel.offset_top = -210
 	panel.add_theme_constant_override("separation",12)
 	layer.add_child(panel)
 	var row := HBoxContainer.new()
@@ -215,6 +240,25 @@ func build_hud() -> void:
 				cargo_label = button
 				button.pressed.connect(toggle_cargo)
 			_: button.pressed.connect(close)
+	var inspect_row := HBoxContainer.new()
+	panel.add_child(inspect_row)
+	for action in ["View: whole scene","Silhouettes: off","Overlap: off"]:
+		var button := Button.new()
+		button.text = action
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size.y = 46
+		button.add_theme_font_size_override("font_size",20)
+		inspect_row.add_child(button)
+		match action:
+			"View: whole scene":
+				focus_button = button
+				button.pressed.connect(cycle_focus)
+			"Silhouettes: off":
+				silhouette_button = button
+				button.pressed.connect(toggle_silhouettes)
+			_:
+				overlap_button = button
+				button.pressed.connect(toggle_overlap)
 	status = Label.new()
 	status.add_theme_font_size_override("font_size",20)
 	status.text = "Same geometry in both lighting conditions. Scroll: zoom · Home: reset view\nCompare silhouettes, cargo opening, cover heights and labels. No saves or mission changes."
@@ -232,6 +276,7 @@ func apply_light() -> void:
 	for light in lamps: light.light_energy = 1.7 if night else 0.0
 	for glow in fixture_materials: glow.emission_energy_multiplier = 1.0 if night else 0.0
 	phase_label.text = "Night → Day" if night else "Day → Night"
+	if silhouettes: environment.background_color = Color("dadada")
 func toggle_headgear() -> void:
 	helmet.visible = not helmet.visible
 	cap.visible = not helmet.visible
@@ -241,9 +286,11 @@ func toggle_cargo() -> void:
 	cargo_label.text = "Loaded → Empty" if cargo.visible else "Empty → Loaded"
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		if event.button_index==MOUSE_BUTTON_WHEEL_UP: camera.size = maxf(7,camera.size-0.5)
+		if event.button_index==MOUSE_BUTTON_WHEEL_UP: camera.size = maxf(3,camera.size-0.5)
 		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN: camera.size = minf(20,camera.size+0.5)
-	if event is InputEventKey and event.pressed and event.keycode==KEY_HOME: camera.size = 16
+	if event is InputEventKey and event.pressed and event.keycode==KEY_HOME:
+		focus_index = 0
+		apply_focus()
 func close() -> void:
 	if get_tree().current_scene==self: get_tree().change_scene_to_file("res://farm_final.tscn")
 	else: queue_free()
@@ -253,3 +300,43 @@ func _exit_tree() -> void:
 		readability.set_process_input(true)
 		for child in readability.get_children():
 			if child is CanvasLayer: child.visible = true
+
+func cycle_focus() -> void:
+	focus_index = (focus_index+1)%4
+	apply_focus()
+func apply_focus() -> void:
+	var target := Vector3(0,0.3,0)
+	match focus_index:
+		1: target = soldier.position+Vector3(0,0.8,0)
+		2: target = machine.position+Vector3(0,0.5,0)
+		3: target = Vector3(-0.5,0.6,2)
+	camera.position = target+Vector3(-12,14.7,13)
+	camera.look_at(target)
+	camera.size = 16 if focus_index==0 else 4
+	focus_button.text = "View: "+["whole scene","soldier","Machine A","cohort"][focus_index]
+	update_inspection_labels()
+func update_inspection_labels() -> void:
+	for l in inspection_labels: l.visible = not silhouettes and focus_index==0 and not overlap
+func toggle_overlap() -> void:
+	overlap = not overlap
+	soldier.position = Vector3(-0.46,0,1.94) if overlap else Vector3(-3,0,1)
+	overlap_button.text = "Overlap: on" if overlap else "Overlap: off"
+	apply_focus()
+	status.text = "Overlap study: soldier shares cohort space. Visual occlusion is not a movement-rule change.\nHome: wide view · Scroll: zoom · Back preserves your demo." if overlap else "Same geometry in day/night. View cycles scene, soldier, machine and cohort.\nSilhouettes remove color/detail. Home: wide view · Scroll: zoom."
+func toggle_silhouettes() -> void:
+	silhouettes = not silhouettes
+	if silhouettes:
+		for node in find_children("*","MeshInstance3D",true,false):
+			original_materials[node] = node.material_override
+			var actor: bool = soldier.is_ancestor_of(node) or machine.is_ancestor_of(node)
+			for civilian in civilians: actor = actor or civilian.is_ancestor_of(node)
+			var flat := mat("151515" if actor else "d7d7d7")
+			flat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			flat.cull_mode = BaseMaterial3D.CULL_DISABLED
+			node.material_override = flat
+	else:
+		for node in original_materials: node.material_override = original_materials[node]
+		original_materials.clear()
+	silhouette_button.text = "Silhouettes: on" if silhouettes else "Silhouettes: off"
+	update_inspection_labels()
+	apply_light()
