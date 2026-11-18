@@ -76,8 +76,8 @@ for x in [-.18,.18]:
     box('Cargo_rail',(x,-.25,.274),(.025,.35,.035),frame,base,.005)
 
 # Curved panels have closed thickness; underlying contiguous shell keeps seams dark.
-def patch(name,t0,t1,p0,p1,mat,inset=0,thick=.014):
-    nu,nv=6,4; verts=[]; faces=[]
+def patch(name,t0,t1,p0,p1,mat,inset=0,thick=.014,nu=6,nv=4):
+    verts=[]; faces=[]
     for layer in [0,1]:
         r=.46-inset-layer*thick; h=.76-inset-layer*thick
         for j in range(nv+1):
@@ -97,6 +97,9 @@ def patch(name,t0,t1,p0,p1,mat,inset=0,thick=.014):
     o=bpy.data.objects.new(name,mesh); bpy.context.collection.objects.link(o)
     finish(o,name,mat,shell)
     for p in mesh.polygons: p.use_smooth=len(p.vertices)==4
+    if name.startswith("Plate_"):
+        bevel=o.modifiers.new("Plate_edge_chamfer","BEVEL")
+        bevel.width=.0025; bevel.segments=2; bevel.limit_method="ANGLE"; bevel.angle_limit=.6
     split=o.modifiers.new("Hard_panel_rims","EDGE_SPLIT"); split.split_angle=0.6
     return o
 for band in range(3):
@@ -107,6 +110,16 @@ for band in range(3):
         p0=band*math.pi/6; p1=(band+1)*math.pi/6
         patch('Backing_%d_%02d'%(band,sector),t0,t1,p0,p1,frame,.022,.012)
         patch('Plate_%d_%02d'%(band,sector),t0+.012,t1-.012,p0+.008,min(p1-.008,math.pi/2-.006),[stone,stone,olive,repair][(sector+band)%4])
+# Sparse mechanical repair bridges across selected seams, rather than uniform decoration.
+# They follow the shell curvature and use existing metal material; no new gameplay parts.
+for k,(theta,phi) in enumerate([(-math.pi/2,.28),(math.pi/2,.31),(-2.1,.67),(2.1,.69)]):
+    patch('Repair_bridge_%d'%k,theta-.115,theta+.115,phi-.024,phi+.024,edge,-.004,.009,4,1)
+    for side in [-1,1]:
+        t=theta+side*.084
+        pos=Vector((.468*math.cos(phi)*math.sin(t),-.468*math.cos(phi)*math.cos(t),.20+.768*math.sin(phi)))
+        normal=Vector((pos.x/(.46*.46),pos.y/(.46*.46),(pos.z-.20)/(.76*.76))).normalized()
+        cylinder('Repair_fastener',pos,.009,.008,frame,shell,normal,8)
+
 # Crown bridges polar ends; low-profile service strip and rear vent bank.
 cylinder('Crown_cap',(0,0,.953),.055,.017,olive,shell)
 box('Rear_service_panel',(0,.448,.37),(.22,.035,.25),olive,shell,.012)

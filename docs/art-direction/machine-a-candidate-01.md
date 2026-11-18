@@ -72,3 +72,13 @@ The same 108-view matrix was captured before and after export consolidation. [Be
 Whole-scene draw calls in the repeatable sample fell from 428 to 278 for intact states, and 284 to 238 for wreck. This includes interface and scenery; it is not a per-model count. [Before sample](machine-a-export-review/before-measurements.json) / [After sample](machine-a-export-review/after-measurements.json). Frame-interval scheduling differed substantially between runs, so no speedup or guaranteed frame-rate claim is made. Representative hardware/full-mission profiling remains open.
 
 Next art work remains repaired-surface/edge treatment and final mechanism review before animation approval. This export pass changes no camera, collision, gameplay or save behavior.
+
+## Panel-edge and repair-detail pass
+
+Outer plates now have a small two-segment bevel on sharp edges, leaving curved shell faces smooth. Four curved metal repair bridges and eight fasteners cross selected side/rear seams; these reuse existing materials and are merged into static shell geometry during export. No markings, lore or new functional parts are added. The wreck is rebuilt from the revised plate surfaces; repair bridges are absent from the collapsed subset.
+
+[Front day](machine-a-surface-front-day.png) · [Rear day](machine-a-surface-rear-day.png) · [Front night](machine-a-surface-front-night.png). These are Godot captures. Front/rear close-ups, night close-up and wide state-panel view were inspected. Details are intentionally subtle at wide framing; state recognition still relies on the separate text/symbol cues. Rendered benchmark tests pass for states, cargo, hierarchy, footprint and encounter preservation.
+
+Updated evaluated source counts: intact 22,360 triangles / 118 mesh objects; wreck 6,024 triangles / 29 mesh objects. Runtime consolidation remains 19 mesh objects / 28 material slots intact and one mesh / six slots wreck. The added bevel geometry increases triangles; this pass does not claim unchanged GPU cost or repeat the previous frame-time measurement. Source bounds remain inside one cell. Nine materials, no texture maps. Final wear/texturing and mechanism acceptance remain open.
+
+Next: review the tool’s movement range and cargo clearance as a mechanical preparation step, then scope the first animation study. Do not infer that this surface pass approves final art or locomotion.
