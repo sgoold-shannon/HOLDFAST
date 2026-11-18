@@ -3,10 +3,12 @@ Run: Blender --background --python tools/art/build_machine_a.py
 Blender coordinates: Z up, front -Y. Export converts to Godot Y up/front +Z.
 No textures, animation, collision, or mission code is authored here.
 """
-import bpy, math, json
+import bpy, math, json, sys
 from pathlib import Path
 from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from export_helpers import merge_static_children, export_stats
 SOURCE = ROOT / 'art-source/machine-a'
 OUT = ROOT / 'holdfast/assets/machine_a'
 bpy.ops.object.select_all(action='SELECT')
@@ -160,5 +162,8 @@ report={'candidate':'Machine A static 01','tool':'Blender '+bpy.app.version_stri
 (SOURCE/'metrics.json').write_text(json.dumps(report,indent=2)+'\n')
 # Save only asset data; no review lights/cameras in editable model or game export.
 bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE/'machine_a_01.blend'))
+# Merge only static parts in the runtime export; editable source remains separated.
+for group in [shell,base,cargo,alternate]: merge_static_children(group,group.name+'Geometry')
+(SOURCE/'export_metrics.json').write_text(json.dumps(export_stats(),indent=2)+'\n')
 bpy.ops.export_scene.gltf(filepath=str(OUT/'machine_a_01.glb'),export_format='GLB',export_apply=True,export_animations=False,export_cameras=False,export_lights=False)
 print('MACHINE_A_METRICS',json.dumps(report))

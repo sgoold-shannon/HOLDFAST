@@ -1,0 +1,32 @@
+[
+  {
+    "sheet": "day-close.png",
+    "mean_absolute_channel_difference_255": 0.07565411522633746,
+    "pixels_over_8_channel_difference_percent": 0.1274537037037037
+  },
+  {
+    "sheet": "day-normal.png",
+    "mean_absolute_channel_difference_255": 0.033326748971193414,
+    "pixels_over_8_channel_difference_percent": 0.06424382716049383
+  },
+  {
+    "sheet": "day-wide.png",
+    "mean_absolute_channel_difference_255": 0.012246399176954734,
+    "pixels_over_8_channel_difference_percent": 0.025709876543209876
+  },
+  {
+    "sheet": "night-close.png",
+    "mean_absolute_channel_difference_255": 0.05755756172839507,
+    "pixels_over_8_channel_difference_percent": 0.03830246913580247
+  },
+  {
+    "sheet": "night-normal.png",
+    "mean_absolute_channel_difference_255": 0.031368569958847736,
+    "pixels_over_8_channel_difference_percent": 0.059367283950617286
+  },
+  {
+    "sheet": "night-wide.png",
+    "mean_absolute_channel_difference_255": 0.010609053497942387,
+    "pixels_over_8_channel_difference_percent": 0.02388888888888889
+  }
+]

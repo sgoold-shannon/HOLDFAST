@@ -193,3 +193,5 @@ Machine A’s benchmark **Cargo** button cycles empty, skid and alternate-compon
 [Machine A static review](docs/art-direction/machine-a-static-review-01.md): 108 captured combinations; next fix is readable state/cargo cues at normal and wide framing before animation acceptance.
 
 Machine A’s benchmark now has a fixed-screen state panel with symbols and plain labels. Cargo details appear when the **View** control focuses Machine A. These remain isolated art-review cues.
+
+Machine A runtime exports now consolidate stationary geometry while preserving editable source parts and independent cargo/tool/light controls. The benchmark draw-call comparison is recorded in the [candidate notes](docs/art-direction/machine-a-candidate-01.md).

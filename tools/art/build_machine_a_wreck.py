@@ -2,10 +2,12 @@
 Run with Blender --background --python tools/art/build_machine_a_wreck.py.
 No collision, particles, lights, cargo, animation or gameplay are exported.
 """
-import bpy, math, json
+import bpy, math, json, sys
 from pathlib import Path
 from mathutils import Vector
 ROOT=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from export_helpers import merge_static_children, export_stats
 SOURCE=ROOT/'art-source/machine-a'
 bpy.ops.wm.open_mainfile(filepath=str(SOURCE/'machine_a_01.blend'))
 bpy.context.view_layer.update()
@@ -66,4 +68,6 @@ lo=[min(v[i] for v in points) for i in range(3)]; hi=[max(v[i] for v in points) 
 assert hi[0]-lo[0]<.95 and hi[1]-lo[1]<.95 and lo[2]>=0 and hi[2]<.5
 (SOURCE/'wreck_metrics.json').write_text(json.dumps({'bounds_min':lo,'bounds_max':hi,'triangles':triangles,'mesh_objects':count,'collision':False,'animation':False},indent=2)+'\n')
 bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE/'machine_a_wreck_01.blend'))
+merge_static_children(root,'WreckGeometry')
+(SOURCE/'wreck_export_metrics.json').write_text(json.dumps(export_stats(),indent=2)+'\n')
 bpy.ops.export_scene.gltf(filepath=str(ROOT/'holdfast/assets/machine_a/machine_a_wreck_01.glb'),export_format='GLB',export_apply=True,export_animations=False,export_cameras=False,export_lights=False)
