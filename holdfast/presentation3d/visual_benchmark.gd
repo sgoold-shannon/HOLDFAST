@@ -1,5 +1,7 @@
 extends Node3D
 ## Design blockout only. No encounter controller, commands, saves or collision rules.
+var machine_states: RefCounted
+var machine_state_button: Button
 var soldier: Node3D
 var machine: Node3D
 var civilians: Array[Node3D] = []
@@ -186,9 +188,8 @@ func build_machine(at: Vector3) -> void:
 	cargo = machine.find_child("CargoSocket",true,false)
 	cargo.hide()
 	machine_lamp = machine.find_child("WorkLamp",true,false)
-	# Per-instance override keeps inspection switches independent of imported resources.
-	lamp_material = machine_lamp.get_active_material(0).duplicate()
-	machine_lamp.material_override = lamp_material
+	machine_states = preload("res://presentation3d/machine_candidate_states.gd").new(machine)
+	lamp_material = machine_lamp.material_override
 func build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
@@ -229,7 +230,7 @@ func build_hud() -> void:
 	layer.add_child(panel)
 	var row := HBoxContainer.new()
 	panel.add_child(row)
-	for action in ["Day / night","Helmet / cap","Empty / loaded","Back to demo"]:
+	for action in ["Day / night","Helmet / cap","Empty / loaded","State: Working","Back to demo"]:
 		var button := Button.new()
 		button.text = action
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -246,6 +247,9 @@ func build_hud() -> void:
 			"Empty / loaded":
 				cargo_label = button
 				button.pressed.connect(toggle_cargo)
+			"State: Working":
+				machine_state_button = button
+				button.pressed.connect(cycle_machine_state)
 			_: button.pressed.connect(close)
 	var inspect_row := HBoxContainer.new()
 	panel.add_child(inspect_row)
@@ -395,3 +399,8 @@ func refresh_group_markers() -> void:
 		marker.visible = group==selected_group and actor.visible
 		marker.position = actor.position+Vector3(0,1.13,0)
 		marker.text = "%s%d" % [["A","B"][group],member+1]
+
+func cycle_machine_state() -> void:
+	machine_states.apply((machine_states.index+1)%machine_states.NAMES.size())
+	machine_state_button.text = "State: "+machine_states.NAMES[machine_states.index]
+	status.text = ["Working: lamps on, recovery tool ready.","Paused: powered, recovery tool stowed. Not disabled.","Hostile: recovery tool retracted; emitter not charging.","Charged: extended lit emitter. Actual gameplay still requires a target-cell warning.","Disabled: intact shell, lowered tool, all lamps and emitter off."][machine_states.index]+"\nStatic art review only. No orders, shots, damage or mission-state changes."

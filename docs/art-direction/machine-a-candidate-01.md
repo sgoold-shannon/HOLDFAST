@@ -17,7 +17,7 @@ The candidate remains cleaner and more regular than the repaired concept. Panel 
 - Runtime asset: `holdfast/assets/machine_a/machine_a_01.glb`, imported through its committed Godot import settings.
 - Assembly: MachineA → Shell, Base, ToolShoulder → ToolElbow → ToolWrist; CargoSocket; WorkLights; separate DefensiveEmitter. Parts can be edited independently. The source has non-destructive edge modifiers; GLB bakes them.
 - Blender uses Z up/front -Y; the export uses Godot Y up/front +Z. The benchmark rotates the asset to face the squad. Ground contact is at zero and the root is cell-centered.
-- Nine solid-color materials, no texture maps or animation. Emission is separate from shell materials. Work lamps are on in this static candidate; disabled/charged behavior is not yet wired.
+- Nine solid-color materials, no texture maps or animation. Emission is separate from shell materials. The benchmark now provides static Working / Paused / Hostile / Charged / Disabled studies through a separate presentation-only adapter. Disabled extinguishes both work lamps and the emitter; hostile alone leaves the emitter dark. Charge extends the emitter as a geometric cue. Cargo is independent. These do not yet consume mission snapshots.
 
 Rebuild from the repository root:
 
@@ -34,3 +34,9 @@ Godot rendered benchmark tests pass: imported footprint and ground origin, no co
 ## Next gate
 
 Refine the shell/material candidate against the selected concept, then build alternate cargo, paused, hostile/charge, disabled and collapsed-wreck appearances. Review their silhouettes and zoom readability before animation. Keep the candidate in the separate benchmark until this gate passes; gameplay zoom requirements and production camera work remain deferred.
+
+## Static state review update
+
+Use **State: Working** in the benchmark to cycle five appearances. [Charged capture](machine-a-charged-01.png) · [Disabled capture](machine-a-disabled-01.png). The tool stows inward for pause/defensive posture. Tests cover every work lamp, charge-only emission, independent cargo, pose bounds, exact reset, changing states in silhouette view, and encounter preservation. Rendered checks pass on the current Mac.
+
+Pose differences remain subtle at wide framing; the status text is a diagnostic aid, not final gameplay UI. A target-cell warning remains mandatory for a pending shot when integrated. Destroyed/departed variants, alternate cargo, detailed material work, the full day/night/zoom matrix and animation remain open. No production camera or gameplay changes were made.

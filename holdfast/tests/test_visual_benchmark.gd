@@ -66,6 +66,37 @@ func run() -> void:
 		root.get_texture().get_image().save_png("/private/tmp/holdfast-inspection-machine.png")
 	scene.toggle_silhouettes()
 	expect(scene.machine_lamp.material_override==shell_material,"Inspection restores original materials exactly")
+	var tool_rest: Transform3D = scene.machine_states.shoulder.transform
+	var emitter_rest: Transform3D = scene.machine_states.emitter.transform
+	var cargo_before: bool = scene.cargo.visible
+	for state in range(1,5):
+		scene.cycle_machine_state()
+		expect(scene.machine_states.index==state,"Machine review cycles in order")
+		expect(scene.cargo.visible==cargo_before,"Pose changes preserve independent cargo visibility")
+		for material in scene.machine_states.lamps:
+			expect(material.emission_enabled==(state!=4),"All work lamps power down only when disabled")
+		expect(scene.machine_states.emitter_material.emission_enabled==(state==3),"Hostile alone never charges emitter")
+		for mesh in scene.machine.find_children("*","MeshInstance3D",true,false):
+			var local: Transform3D = scene.machine.global_transform.affine_inverse()*mesh.global_transform
+			var part: AABB = local*mesh.get_aabb()
+			expect(part.position.x>=-0.475 and part.end.x<=0.475 and part.position.z>=-0.48 and part.end.z<=0.48,"Review poses stay within documented resting footprint")
+		if state==3:
+			expect(scene.machine_states.emitter.transform!=emitter_rest,"Charge has a geometric cue")
+		if state==4:
+			expect(scene.machine_states.shoulder.transform!=tool_rest,"Disabled has a distinct static tool pose")
+		if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1" and state>=3:
+			scene.camera.size = 2.5
+			await process_frame
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png("/private/tmp/machine-a-state-%d.png" % state)
+	# State changes while inspecting silhouettes must not reveal emissive materials.
+	scene.toggle_silhouettes()
+	scene.cycle_machine_state()
+	expect(scene.machine_lamp.material_override.shading_mode==BaseMaterial3D.SHADING_MODE_UNSHADED,"State changes retain silhouette view")
+	scene.toggle_silhouettes()
+	expect(scene.machine_states.index==0 and scene.machine_states.shoulder.transform==tool_rest,"Full cycle restores working pose exactly")
+	expect(scene.machine_states.emitter.transform==emitter_rest,"Full cycle resets charge geometry")
+	expect(scene.machine_lamp.material_override.emission_enabled,"Silhouette exit restores updated powered material")
 	scene.cycle_focus()
 	var original_positions: Array[Vector3] = []
 	for civilian in scene.civilians: original_positions.append(civilian.position)
