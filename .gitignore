@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# Local Claude bridge (runs Godot/git jobs on the Mac; not part of the game)
+.bridge/
+Claude Bridge.command
