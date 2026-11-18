@@ -3,6 +3,10 @@ extends RefCounted
 const NAMES := ["Working", "Paused", "Hostile", "Charged", "Disabled", "Destroyed"]
 var model: Node3D
 var shoulder: Node3D
+var elbow: Node3D
+var elbow_rest: Transform3D
+var wrist: Node3D
+var wrist_rest: Transform3D
 var shoulder_rest: Transform3D
 var emitter: MeshInstance3D
 var emitter_rest: Transform3D
@@ -25,6 +29,10 @@ func _init(asset: Node3D) -> void:
 	wreck.hide()
 	shoulder = model.find_child("ToolShoulder",true,false)
 	shoulder_rest = shoulder.transform
+	elbow = model.find_child("ToolElbow",true,false)
+	elbow_rest = elbow.transform
+	wrist = model.find_child("ToolWrist",true,false)
+	wrist_rest = wrist.transform
 	emitter = model.find_child("DefensiveEmitter",true,false)
 	emitter_rest = emitter.transform
 	for node in model.find_child("WorkLights",true,false).get_children():
@@ -41,6 +49,8 @@ func apply(value: int) -> void:
 	for child in intact_roots: child.visible = index!=5
 	wreck.visible = index==5
 	shoulder.transform = shoulder_rest
+	elbow.transform = elbow_rest
+	wrist.transform = wrist_rest
 	emitter.transform = emitter_rest
 	# Static pose proposals: stow inward; defensive posture retracts the recovery tool.
 	if index==1: shoulder.rotation.z += deg_to_rad(28)
@@ -59,3 +69,12 @@ func apply(value: int) -> void:
 	emitter_material.emission_enabled = index==3
 	emitter_material.emission = Color("ff752b") if index==3 else Color.BLACK
 	emitter_material.emission_energy_multiplier = 1.4 if index==3 else 0.0
+
+func inspect_tool(angle_degrees: float) -> void:
+	# Manual clearance study around the authored X-axis hinge, not a work animation.
+	if index!=0: return
+	elbow.transform = elbow_rest
+	wrist.transform = wrist_rest
+	var angle := deg_to_rad(clampf(angle_degrees,-15,20))
+	elbow.rotate_object_local(Vector3.RIGHT,angle)
+	wrist.rotate_object_local(Vector3.RIGHT,-angle)

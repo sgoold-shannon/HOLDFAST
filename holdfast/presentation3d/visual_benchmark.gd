@@ -2,6 +2,8 @@ extends Node3D
 ## Design blockout only. No encounter controller, commands, saves or collision rules.
 var machine_states: RefCounted
 var machine_state_button: Button
+var tool_slider: HSlider
+var tool_pose_label: Label
 var machine_cue: Label
 var machine_cargo_cue: Label
 var soldier: Node3D
@@ -248,6 +250,21 @@ func build_hud() -> void:
 		button.pressed.connect(select_group.bind(i))
 		group_row.add_child(button)
 		group_buttons.append(button)
+	var tool_row := HBoxContainer.new()
+	tool_row.position = Vector2(24,162)
+	layer.add_child(tool_row)
+	tool_pose_label = Label.new()
+	tool_pose_label.text = "Tool clearance: 0°"
+	tool_pose_label.add_theme_font_size_override("font_size",20)
+	tool_pose_label.custom_minimum_size.x = 240
+	tool_row.add_child(tool_pose_label)
+	tool_slider = HSlider.new()
+	tool_slider.min_value = -15
+	tool_slider.max_value = 20
+	tool_slider.step = 1
+	tool_slider.custom_minimum_size = Vector2(280,38)
+	tool_slider.value_changed.connect(inspect_tool)
+	tool_row.add_child(tool_slider)
 	var controls_bg := ColorRect.new()
 	controls_bg.color = Color("17232d")
 	controls_bg.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -442,8 +459,12 @@ func refresh_group_markers() -> void:
 		marker.text = "%s%d" % [["A","B"][group],member+1]
 
 func cycle_machine_state() -> void:
+	tool_slider.set_value_no_signal(0)
+	tool_pose_label.text = "Tool clearance: 0°"
 	machine_states.apply((machine_states.index+1)%machine_states.NAMES.size())
 	machine_state_button.text = "State: "+machine_states.NAMES[machine_states.index]
+	tool_slider.editable = machine_states.index==0
+	tool_pose_label.text = "Tool clearance: 0°" if machine_states.index==0 else "Tool study: Working only"
 	refresh_cargo_label()
 	status.text = ["Working: lamps on, recovery tool ready.","Paused: powered, recovery tool stowed. Not disabled.","Hostile: recovery tool retracted; emitter not charging.","Charged: extended lit emitter. Actual gameplay still requires a target-cell warning.","Disabled: intact shell, lowered tool, all lamps and emitter off.","Destroyed: collapsed broken shell; no lights, collision or extra damage."][machine_states.index]+"\nStatic art review only. No orders, shots, damage or mission-state changes."
 
@@ -455,3 +476,8 @@ func refresh_machine_cues() -> void:
 	machine_cue.text = "MACHINE A · ART REVIEW\n"+names[state]+"\n"+details[state]
 	machine_cargo_cue.visible = focus_index==2
 	machine_cargo_cue.text = "Cargo: hidden by wreck" if state==5 else ["Cargo: empty bay", "Cargo: skid / pump study", "Cargo: alternate component"][cargo_mode]
+
+func inspect_tool(value: float) -> void:
+	machine_states.inspect_tool(value)
+	tool_pose_label.text = "Tool clearance: %d°" % int(value)
+	status.text = "Manual elbow-range study; wrist stays level. Compare empty, skid and alternate cargo.\nWorking state only. State changes reset the pose. This does not collect cargo or animate gameplay."
