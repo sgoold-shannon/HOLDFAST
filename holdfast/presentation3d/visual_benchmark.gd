@@ -3,6 +3,8 @@ extends Node3D
 var camera: Camera3D
 var environment: Environment
 var sun: DirectionalLight3D
+var rim: DirectionalLight3D
+var fixture_materials: Array[StandardMaterial3D] = []
 var lamps: Array[OmniLight3D] = []
 var night := false
 var helmet: Node3D
@@ -85,6 +87,8 @@ func shell_panel(parent: Node3D, theta0: float, theta1: float, phi0: float, phi1
 				surface.add_vertex(point)
 	var node := shape(parent,surface.commit(),Vector3.ZERO,color)
 	node.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
+	node.material_override.metallic = 0.28
+	node.material_override.roughness = 0.62
 func _ready() -> void:
 	readability = get_node_or_null("/root/Readability")
 	if readability:
@@ -102,6 +106,10 @@ func _ready() -> void:
 	sun.rotation_degrees = Vector3(-50,-35,0)
 	sun.shadow_enabled = true
 	add_child(sun)
+	rim = DirectionalLight3D.new()
+	rim.rotation_degrees = Vector3(-32,145,0)
+	rim.light_color = Color("cbd5dc")
+	add_child(rim)
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.position = Vector3(-12,15,13)
@@ -110,7 +118,8 @@ func _ready() -> void:
 	camera.size = 16
 	camera.current = true
 	box(self,Vector3(0,-0.12,0),Vector3(10,0.2,10),"666c52")
-	box(self,Vector3(0,0,0),Vector3(9.9,0.06,3.0),"535b5c")
+	var road := box(self,Vector3(0,0,0),Vector3(9.9,0.06,3.0),"41494b")
+	road.material_override.roughness = 0.98
 	for x in range(-4,5,2): box(self,Vector3(x,0.04,0),Vector3(0.7,0.015,0.07),"b8af88")
 	# One-unit footprint marks establish relative scale, not a new tactical map.
 	for x in range(-5,6): box(self,Vector3(x,0.005,0),Vector3(0.012,0.012,10),"7c806c")
@@ -135,11 +144,15 @@ func _ready() -> void:
 	label("MACHINE A / SHAPE STUDY",Vector3(2,2,0.5))
 	for x in [-3,3]:
 		box(self,Vector3(x,1.3,-3.6),Vector3(0.08,2.6,0.08),"434b4d")
-		box(self,Vector3(x,2.55,-3.6),Vector3(0.35,0.12,0.22),"b8a57c")
+		var fixture := box(self,Vector3(x,2.55,-3.6),Vector3(0.35,0.12,0.22),"b8a57c")
+		var glow: StandardMaterial3D = fixture.material_override
+		glow.emission_enabled = true
+		glow.emission = Color("ffd7a1")
+		fixture_materials.append(glow)
 		var light := OmniLight3D.new()
 		light.position = Vector3(x,2.5,-3.6)
 		light.light_color = Color("ffcf91")
-		light.omni_range = 5.5
+		light.omni_range = 7.5
 		add_child(light)
 		lamps.append(light)
 	build_hud()
@@ -212,10 +225,12 @@ func toggle_light() -> void:
 func apply_light() -> void:
 	environment.background_color = Color("111b25") if night else Color("64717b")
 	environment.ambient_light_color = Color("9daebd") if night else Color("d6dcce")
-	environment.ambient_light_energy = 0.45 if night else 0.7
+	environment.ambient_light_energy = 0.32 if night else 0.48
 	sun.light_color = Color("b8cad6") if night else Color("fff0d5")
-	sun.light_energy = 0.3 if night else 1.1
-	for light in lamps: light.light_energy = 1.2 if night else 0.0
+	sun.light_energy = 0.48 if night else 0.85
+	rim.light_energy = 0.42 if night else 0.12
+	for light in lamps: light.light_energy = 1.7 if night else 0.0
+	for glow in fixture_materials: glow.emission_energy_multiplier = 1.0 if night else 0.0
 	phase_label.text = "Night → Day" if night else "Day → Night"
 func toggle_headgear() -> void:
 	helmet.visible = not helmet.visible
