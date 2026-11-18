@@ -48,6 +48,24 @@ func run() -> void:
 	expect(scene.soldier.position==Vector3(-3,0,1),"Leaving overlap restores original placement")
 	for i in range(scene.civilians.size()):
 		expect(scene.civilians[i].position.is_equal_approx(original_positions[i]),"Formation inspection restores every civilian position")
+	scene.cycle_stress()
+	expect(scene.stress_mode==1 and scene.stress_wall.visible,"Wall stress scenario available")
+	for civilian in scene.civilians:
+		expect(civilian.position.x+0.24<scene.stress_wall.position.x-0.125,"Civilian body envelope does not enter wall")
+	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("/private/tmp/holdfast-stress-wall.png")
+	scene.cycle_stress()
+	expect(scene.stress_mode==2 and not scene.stress_wall.visible,"Crowd test replaces wall test")
+	for extra in scene.extra_civilians: expect(extra.visible,"Second cohort has four visible figures")
+	if OS.get_environment("HOLDFAST_CAPTURE_BENCHMARK")=="1":
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("/private/tmp/holdfast-stress-crowd.png")
+	scene.cycle_stress()
+	expect(scene.stress_mode==0 and not scene.stress_wall.visible,"Stress cycle clears temporary scenery")
+	for extra in scene.extra_civilians: expect(not extra.visible,"Stress cycle hides second group")
 	scene.close()
 	await process_frame
 	await process_frame

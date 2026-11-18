@@ -3,6 +3,10 @@ extends Node3D
 var soldier: Node3D
 var machine: Node3D
 var civilians: Array[Node3D] = []
+var stress_mode := 0
+var stress_wall: MeshInstance3D
+var extra_civilians: Array[Node3D] = []
+var stress_button: Button
 var silhouettes := false
 var overlap := false
 var focus_index := 0
@@ -168,6 +172,12 @@ func _ready() -> void:
 		light.omni_range = 7.5
 		add_child(light)
 		lamps.append(light)
+	stress_wall = box(self,Vector3(0.55,0.75,1.94),Vector3(0.25,1.5,2),"999b8f")
+	stress_wall.hide()
+	for i in range(4):
+		var extra := person(Vector3.ZERO,["70889b","9b8870","788d79","a69e88"][i],0.65)
+		extra.hide()
+		extra_civilians.append(extra)
 	build_hud()
 	apply_light()
 func build_machine(at: Vector3) -> void:
@@ -243,7 +253,7 @@ func build_hud() -> void:
 			_: button.pressed.connect(close)
 	var inspect_row := HBoxContainer.new()
 	panel.add_child(inspect_row)
-	for action in ["View: whole scene","Silhouettes: off","Overlap: off"]:
+	for action in ["View: whole scene","Silhouettes: off","Overlap: off","Stress: off"]:
 		var button := Button.new()
 		button.text = action
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -257,6 +267,9 @@ func build_hud() -> void:
 			"Silhouettes: off":
 				silhouette_button = button
 				button.pressed.connect(toggle_silhouettes)
+			"Stress: off":
+				stress_button = button
+				button.pressed.connect(cycle_stress)
 			_:
 				overlap_button = button
 				button.pressed.connect(toggle_overlap)
@@ -319,6 +332,10 @@ func apply_focus() -> void:
 func update_inspection_labels() -> void:
 	for l in inspection_labels: l.visible = not silhouettes and focus_index==0 and not overlap
 func toggle_overlap() -> void:
+	stress_mode = 0
+	if is_instance_valid(stress_wall): stress_wall.hide()
+	for extra in extra_civilians: extra.hide()
+	if is_instance_valid(stress_button): stress_button.text = "Stress: off"
 	overlap = not overlap
 	soldier.position = Vector3(-0.46,0,1.94) if overlap else Vector3(-3,0,1)
 	var right := Vector3(13,0,12).normalized()
@@ -335,7 +352,7 @@ func toggle_silhouettes() -> void:
 		for node in find_children("*","MeshInstance3D",true,false):
 			original_materials[node] = node.material_override
 			var actor: bool = soldier.is_ancestor_of(node) or machine.is_ancestor_of(node)
-			for civilian in civilians: actor = actor or civilian.is_ancestor_of(node)
+			for civilian in civilians+extra_civilians: actor = actor or civilian.is_ancestor_of(node)
 			var flat := mat("151515" if actor else "d7d7d7")
 			flat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 			flat.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -346,3 +363,17 @@ func toggle_silhouettes() -> void:
 	silhouette_button.text = "Silhouettes: on" if silhouettes else "Silhouettes: off"
 	update_inspection_labels()
 	apply_light()
+
+func cycle_stress() -> void:
+	var next_mode := (stress_mode+1)%3
+	if not overlap: toggle_overlap()
+	stress_mode = next_mode
+	stress_wall.visible = stress_mode==1
+	for i in range(extra_civilians.size()):
+		extra_civilians[i].visible = stress_mode==2
+		extra_civilians[i].position = civilians[i].position+Vector3(0.8,0,-0.4)
+	stress_button.text = ["Stress: off","Stress: wall","Stress: 2 groups"][stress_mode]
+	focus_index = 3
+	apply_focus()
+	camera.size = 5
+	status.text = ["Shared-space formation; stress obstacles hidden.","Wall test: check figure bodies and equipment against the adjacent wall.","Two-group test: eight civilians share the display area. Check which figures become hidden."][stress_mode]+"\nVisual test only; no logical movement, collisions or group membership changes."
