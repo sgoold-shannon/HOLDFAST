@@ -19,6 +19,8 @@ func cell_point(shell, cell: Vector2i) -> Vector2:
 
 func hud_press(shell, key: String) -> void:
 	var button: Button = shell.actions[key]
+	if shell.widgets["sidebar_scroll"].is_ancestor_of(button): shell.widgets["sidebar_scroll"].ensure_control_visible(button)
+	await process_frame
 	await hud_click(button.get_global_rect().get_center())
 
 func run() -> void:
@@ -53,7 +55,17 @@ func run() -> void:
 	reference.finish_opening()
 	expect(board.scene_view=="","Skip closes the opening")
 	shell.refresh()
-	expect(not shell.modal_root.visible,"Modal hides after the opening")
+	expect(shell.modal_root.visible and shell.should_brief(),"Mission briefing follows the opening")
+	expect(shell.widgets["priority_box"].visible and String(shell.widgets["priority"].text).contains("STOP THE MACHINE"),"Priority box warns about the machine")
+	var got_it: Button = null
+	for row in shell.modal_box.get_children():
+		if row is HBoxContainer:
+			for button in row.get_children():
+				if button is Button and button.text == "Got it": got_it = button
+	expect(got_it != null,"Briefing has a Got it button")
+	if got_it: await hud_click(got_it.get_global_rect().get_center())
+	shell.refresh()
+	expect(not shell.modal_root.visible,"Modal hides after the briefing")
 	# Select MSG, move one square, end the turn: HUD clicks vs. direct calls.
 	var start: Vector2i = board.soldiers[0]["cell"]
 	await hud_click(cell_point(shell,start))

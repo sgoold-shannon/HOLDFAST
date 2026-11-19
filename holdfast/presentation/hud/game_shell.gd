@@ -155,11 +155,19 @@ func build_sidebar() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.focus_mode = Control.FOCUS_NONE
+	widgets["sidebar_scroll"] = scroll
 	column.add_child(scroll)
 	var body := VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation",8)
 	scroll.add_child(body)
+
+	var priority := panel(Color("5a2a22"))
+	widgets["priority_box"] = priority
+	body.add_child(priority)
+	widgets["priority"] = label("",20,Color("ffe1d6"))
+	widgets["priority"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	priority.add_child(widgets["priority"])
 
 	body.add_child(heading("SELECTED SOLDIER"))
 	widgets["selected"] = label("",22,TEXT)
@@ -400,6 +408,7 @@ func refresh() -> void:
 	refresh_squad()
 	refresh_civilians()
 	refresh_threat()
+	refresh_priority()
 	refresh_modal()
 
 func refresh_top() -> void:
@@ -533,6 +542,26 @@ func arrival_text(index: int) -> String:
 		return "  ·  TOO SLOW: needs until round %d, road closes after round %d" % [arrival,board.deadline()]
 	return "  ·  reaches EXIT end of round %d" % arrival
 
+## Farm Road's real objective: stop the machine before it reaches its cargo.
+func machine_threat_active() -> bool:
+	return not board.return_state["active"] and board.machine_present() and board.machine["collected_round"] == 0 and not board.protocol["diverted"] and not board.disabled() and not board.ended
+
+func cargo_round() -> int:
+	return board.phase+3-board.machine["stage"]
+
+func refresh_priority() -> void:
+	var box: Control = widgets["priority_box"]
+	if machine_threat_active():
+		var turns: int = cargo_round()-board.phase
+		var when := "THIS round" if turns <= 0 else ("next round" if turns == 1 else "in %d rounds (round %d)" % [turns,cargo_round()])
+		set_text("priority","STOP THE MACHINE — it grabs its cargo %s, then the road closes a round later. Shoot it (Aim → click MACHINE → Fire, %d HP), cut power at breaker B (9,4), or divert it at console C (11,12)." % [when,board.enemies[0]["hp"]])
+		box.visible = true
+	elif not board.return_state["active"] and board.machine["collected_round"] > 0 and not board.ended:
+		set_text("priority","The machine took its cargo. The road closes after round %d — get every group moving now." % board.deadline())
+		box.visible = true
+	else:
+		box.visible = false
+
 func refresh_threat() -> void:
 	set_text("intent",board.enemy_intent())
 	set_text("danger",board.danger_summary())
@@ -614,6 +643,7 @@ func strip_callables(value):
 
 func modal_content() -> Dictionary:
 	if start_menu: return start_content()
+	if should_brief(): return briefing_content()
 	if confirm_new: return new_game_content()
 	if board.has_meta("hud_help"): return help_content()
 	if board.roster_open: return roster_content()
@@ -621,6 +651,20 @@ func modal_content() -> Dictionary:
 	if board.result_ready: return results_content()
 	if board.isolate_pending: return breaker_content()
 	return {}
+
+func should_brief() -> bool:
+	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
+
+func briefing_content() -> Dictionary:
+	return {"items":[["title","MISSION: FARM ROAD"],
+		["text","You have two jobs, and they pull against each other.",25,GOLD],
+		["heading","1.  STOP THE MACHINE (first)"],
+		["text","The machine heads for its cargo. When it gets there (round %d), the road closes the next round. Shoot it, cut its power at breaker B (9,4), or divert it at console C (11,12). The red box at the top right counts down and lists how." % cargo_round(),23],
+		["heading","2.  HERD THE CIVILIANS"],
+		["text","12 civilians in groups A, B and C. You can give ONE group an order each turn, and orders stick. Groups walk up to 3 squares when you press End turn, toward the teal CIVILIAN EXIT on the right. Get a different group moving every turn.",23],
+		["heading","3.  GET YOUR SQUAD OUT"],
+		["text","Move soldiers onto an EXIT square and press Extract [E]. MSG must get out.",23],
+		["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]]]}
 
 func start_content() -> Dictionary:
 	var where := "Return to Farm Road (deployment %d)" % board.campaign.get("deployment",2) if board.return_state["active"] else "Farm Road"
