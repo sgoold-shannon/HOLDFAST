@@ -56,6 +56,48 @@ static func record_farm_road(path: String, board) -> bool:
 	save_record(path,record)
 	return true
 
+## Mission 02 entry built from a finished River Bridge board.
+static func river_bridge_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"]})
+	return {"mission":2,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"lanes":board.lanes,
+		"supplies":"kept" if board.lanes == "heavy" else "lost","sensor":board.sensor_recovered,
+		"taken":board.greys["taken"].duplicate(),"craft_shield":board.greys["shield_used"],
+		"greys":"collector_down" if board.greys["withdraw_reason"].begins_with("Collector") else ("withdrew" if board.greys["withdrawn"] else "present")}
+
+static func record_river_bridge(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := river_bridge_entry(board)
+	var previous: Dictionary = record["missions"].get(2,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][2] = entry
+	save_record(path,record)
+	return true
+
+static func carry_forward_river(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("River Bridge: MSG lost. Retry the mission.")
+		return lines
+	lines.append("River Bridge: %d of 12 civilians across. They corroborate it: machines went around people, Greys went for them." % entry["evacuated"])
+	lines.append("Supplies %s (%s)." % ["kept: the heavy lane got the trucks across" if entry["supplies"] == "kept" else "lost: the trucks turned back so people could cross", "lanes: " + (entry["lanes"] if entry["lanes"] != "" else "never set")])
+	lines.append("Damaged sensor %s." % ("recovered: better intel confidence for Main Street (Mission 03)" if entry["sensor"] else "left in the reeds"))
+	if not entry["taken"].is_empty():
+		lines.append("Taken by the Greys: group %s. Named and unresolved; a rescue opportunity at Rail Yard (Mission 05)." % ", ".join(entry["taken"]))
+	if entry["craft_shield"]:
+		lines.append("An unidentified craft spent its shield and left damaged. Verified later at the Regional Airfield (Mission 08).")
+	return lines
+
 ## What carries into later missions, in plain language. Effects past Mission 01 are
 ## planned in the GDD and will apply as those missions are built.
 static func carry_forward(entry: Dictionary) -> Array[String]:

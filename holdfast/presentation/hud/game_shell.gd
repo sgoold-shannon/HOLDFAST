@@ -4,6 +4,8 @@ extends Control
 ## Keyboard shortcuts still go straight to the controller, so they behave exactly as before.
 
 const BoardScene = preload("res://farm_final.tscn")
+const RiverScene = preload("res://river_bridge.tscn")
+const Greys = preload("res://systems/grey_team.gd")
 const MapInput = preload("res://presentation/hud/map_input.gd")
 const MapLayer = preload("res://presentation/hud/map_layer.gd")
 const Command = preload("res://systems/civilian_command.gd")
@@ -205,7 +207,10 @@ func build_sidebar() -> void:
 			["transmit","Transmit  [P]",func(): board.protocol_action("transmit")],
 			["authenticate","Authenticate  [A]",func(): board.protocol_action("authenticate")],
 			["divert","Divert  [D]",func(): board.protocol_action("divert")],
-			["cooling","Cooling move  [Y]",func(): board.use_cooling_move()]]:
+			["cooling","Cooling move  [Y]",func(): board.use_cooling_move()],
+			["lanes_people","Bridge: people first",func(): board.set_lanes("people")],
+			["lanes_heavy","Bridge: heavy lane",func(): board.set_lanes("heavy")],
+			["sensor","Recover sensor",func(): board.recover_sensor()]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
@@ -417,10 +422,11 @@ func refresh() -> void:
 	dirty = false
 	if not ensure_board(): return
 	if board.result_ready and not board.return_state["active"]:
-		var signature := var_to_str(Record.farm_road_entry(board))
+		var signature := var_to_str(Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))
 		if signature != last_record_signature:
 			last_record_signature = signature
-			Record.record_farm_road(campaign_record_path,board)
+			if is_river(): Record.record_river_bridge(campaign_record_path,board)
+			else: Record.record_farm_road(campaign_record_path,board)
 	fit_map()
 	refresh_top()
 	refresh_strip()
@@ -434,8 +440,8 @@ func refresh() -> void:
 
 func refresh_top() -> void:
 	var returning: bool = board.return_state["active"]
-	set_text("mission","Continuity test · Return to Farm Road" if returning else Arc.label(1))
-	set_text("round","Round %d   ·   Road closes after round %d   ·   Evacuated %d / 12" % [board.phase,board.deadline(),board.evacuated_people()])
+	set_text("mission","Continuity test · Return to Farm Road" if returning else Arc.label(mission_number()))
+	set_text("round","Round %d   ·   Closes after round %d   ·   Evacuated %d / 12" % [board.phase,board.deadline(),board.evacuated_people()])
 	actions["roster"].disabled = not board.result_ready
 	actions["log"].disabled = board.roster_open
 
@@ -492,7 +498,15 @@ func refresh_actions() -> void:
 	actions["drop"].text = "Cancel put down" if board.drop_mode else "Put down  [J]"
 	gate("drop","" if carrying or board.drop_mode else "Only a soldier carrying a casualty can put them down.")
 	actions["casualty"].text = "Casualty: %s  [V]" % (board.soldiers[target]["name"] if casualty else "none")
-	if returning:
+	var river := is_river()
+	for action in ["lanes_people","lanes_heavy","sensor"]: actions[action].visible = river
+	actions["breaker"].visible = not river
+	if river:
+		var lane_reason: String = "" if can_act and board.lanes == "" else ("Lanes already set: " + board.lanes if board.lanes != "" else "Select a soldier at the checkpoint (8,8).")
+		gate("lanes_people",lane_reason)
+		gate("lanes_heavy",lane_reason)
+		gate("sensor","" if can_act and not board.sensor_recovered else ("Sensor recovered." if board.sensor_recovered else "Select a soldier next to the reeds (6,14)."))
+	elif returning:
 		actions["breaker"].text = "Repair machine  [I]  %d/2" % board.return_state["repair"]
 		gate("breaker","" if can_act else "Select an active soldier next to the machine.")
 	else:
@@ -500,8 +514,8 @@ func refresh_actions() -> void:
 		actions["breaker"].text = "Open breaker  [I]" if progress == 0 else ("Isolate drive  [I]" if progress == 1 else "Drive isolated")
 		gate("breaker",board.breaker_reason())
 	for action in ["observe","transmit","authenticate","divert"]:
-		actions[action].visible = not returning
-		if not returning: gate(action,board.protocol_reason(action))
+		actions[action].visible = not returning and not river
+		if not returning and not river: gate(action,board.protocol_reason(action))
 	actions["cooling"].visible = returning
 	if returning:
 		gate("cooling","" if board.cooling_ready() and board.return_state["bonus_event"] == "" else "Cooling move unavailable or already used.")
@@ -584,6 +598,21 @@ func cargo_round() -> int:
 
 func refresh_priority() -> void:
 	var box: Control = widgets["priority_box"]
+	if is_river():
+		var greys: Dictionary = board.greys
+		var text := ""
+		if board.ended: text = ""
+		elif board.lanes == "": text = "SET THE BRIDGE LANES — nobody can cross until a soldier at the checkpoint (8,8) chooses: People first (all rows, supplies lost) or Heavy lane (supplies cross, civilians single file)."
+		elif not greys["withdrawn"] and not greys["lift"].is_empty():
+			var cohort: Dictionary = board.cohorts[greys["lift"]["group"]]
+			text = "LIFT on group %s — %d more Grey phase. Shoot the Collector to break it, or get the group into the barn (14–15, 11–12). Distance won't save them." % [cohort["id"],greys["lift"]["count"]]
+		elif not greys["withdrawn"] and not greys["aim"].is_empty():
+			text = "BEAM aimed at (%d,%d). Move that soldier off the line before you end the turn." % [greys["aim"]["cell"].x,greys["aim"]["cell"].y]
+		elif not greys["withdrawn"]:
+			text = "GREYS on the far bank. They take people, not ground. They leave after round %d; the crossing closes after round %d." % [Greys.WITHDRAW_ROUND,board.deadline()]
+		set_text("priority",text)
+		box.visible = text != ""
+		return
 	if machine_threat_active():
 		var turns: int = cargo_round()-board.phase
 		var when := "THIS round" if turns <= 0 else ("next round" if turns == 1 else "in %d rounds (round %d)" % [turns,cargo_round()])
@@ -712,9 +741,19 @@ func modal_content() -> Dictionary:
 	return {}
 
 func should_brief() -> bool:
+	if is_river(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
+	if is_river():
+		var briefing: Dictionary = Arc.mission(2)["briefing"]
+		var items: Array = [["heading","ACT I · THE BREAKING OF SILENCE"],["title","MISSION 02: RIVER BRIDGE"]]
+		for key in ["objective","intel","risks","choice","delay"]:
+			items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],22])
+		items.append(["heading","HOW IT PLAYS"])
+		items.append(["text","1. A soldier at the checkpoint (8,8) sets the bridge lanes (1 AP). Until then, nobody crosses.\n2. The Collector marks a group with LIFT 2. Once it's locked on, only hitting the Collector or getting the group into the barn breaks it.\n3. The Sentry leaves you alone until you shoot a Grey or crowd the Collector. Then it aims a beam: move off the red line.\n4. Optional: recover the sensor in the reeds (6,14). The Greys leave after round %d; dusk closes the crossing after round %d." % [Greys.WITHDRAW_ROUND,board.deadline()],22])
+		items.append(["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]])
+		return {"items":items}
 	return {"items":[["heading","ACT I · THE BREAKING OF SILENCE"],["title","MISSION 01: FARM ROAD"],
 		["text","You have two jobs, and they pull against each other.",25,GOLD],
 		["heading","1.  STOP THE MACHINE (first)"],
@@ -743,6 +782,7 @@ func replay_farm_road() -> void:
 func operations_content() -> Dictionary:
 	var record := Record.load_record(campaign_record_path)
 	var entry: Dictionary = record["missions"].get(1,{})
+	var river: Dictionary = record["missions"].get(2,{})
 	var acts: Array = []
 	for act_index in range(Arc.ACTS.size()):
 		var act: Dictionary = Arc.ACTS[act_index]
@@ -751,7 +791,11 @@ func operations_content() -> Dictionary:
 			if mission["act"] != act_index: continue
 			var state := ""
 			match mission["status"]:
-				"playable": state = ("PLAYED · %d/12 out · machine %s" % [entry["evacuated"],entry["machine"]] if not entry.is_empty() and not entry["retry_required"] else ("RETRY NEEDED" if not entry.is_empty() else "PLAY NOW"))
+				"playable":
+					var done: Dictionary = record["missions"].get(mission["id"],{})
+					var detail := ""
+					if not done.is_empty(): detail = "machine %s" % done["machine"] if mission["id"] == 1 else ("%d taken" % (done["taken"].size()*4) if not done["taken"].is_empty() else "supplies %s" % done["supplies"])
+					state = ("PLAYED · %d/12 out · %s" % [done["evacuated"],detail] if not done.is_empty() and not done["retry_required"] else ("RETRY NEEDED" if not done.is_empty() else "PLAY NOW"))
 				"next": state = "NEXT · in development"
 				_: state = "planned"
 			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
@@ -764,12 +808,34 @@ func operations_content() -> Dictionary:
 		["heading","WHAT THE TASK FORCE KNOWS"]]
 	for line in Record.knowledge(entry): items.append(["text",line,20,TEXT])
 	items.append(["heading","WHAT FARM ROAD CARRIES FORWARD"])
+	if not river.is_empty():
+		items.append(["text","OBSERVED: at River Bridge the Greys went for people, not ground; the Farm Road machine went around them. Two different patterns.",20,TEXT])
+	items.append(["heading","WHAT CARRIES FORWARD"])
 	for line in Record.carry_forward(entry): items.append(["text","•  "+line,20,GOLD])
-	items.append(["heading","NEXT: MISSION 02 · RIVER BRIDGE  (briefing — mission in development)"])
+	for line in Record.carry_forward_river(river): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","MISSION 02 · RIVER BRIDGE  (playable)"])
 	for key in ["objective","intel","risks","choice","delay"]:
 		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
-	items.append(["row",[["Back",close_operations],["Replay Mission 01 (starts over)",replay_farm_road],["Mission 02: River Bridge — not built yet",noop,true]]])
+	items.append(["row",[["Back",close_operations],["Play Mission 01: Farm Road",replay_farm_road],["Play Mission 02: River Bridge",play_river_bridge]]])
 	return {"items":items}
+
+func play_river_bridge() -> void:
+	show_operations = false
+	start_menu = false
+	if valid_board(): board.queue_free()
+	board = null
+	var fresh = RiverScene.instantiate()
+	fresh.auto_resume = false
+	fresh.record_path = campaign_record_path
+	holder.add_child(fresh)
+	modal_signature = ""
+	dirty = true
+
+func is_river() -> bool:
+	return valid_board() and board.has_method("set_lanes")
+
+func mission_number() -> int:
+	return 2 if is_river() else 1
 
 func start_content() -> Dictionary:
 	var where := "Return to Farm Road (deployment %d)" % board.campaign.get("deployment",2) if board.return_state["active"] else "Farm Road"
@@ -797,7 +863,7 @@ func new_game() -> void:
 	var dir := DirAccess.open("user://")
 	if dir and board_campaign_path == "":
 		var stamp := Time.get_datetime_string_from_system().replace(":","-")
-		for file in ["holdfast_d1_campaign.save","holdfast_c2_campaign.save","holdfast_d1.save"]:
+		for file in ["holdfast_d1_campaign.save","holdfast_c2_campaign.save","holdfast_d1.save","holdfast_campaign_record.save"]:
 			if dir.file_exists(file): dir.rename(file,file+"."+stamp+".bak")
 	if valid_board(): board.queue_free()
 	board = null
@@ -825,7 +891,7 @@ func story_content() -> Dictionary:
 	var options: Array = board.scene_options()
 	for index in range(options.size()):
 		items.append(["option","%d.  %s" % [index+1,options[index]],func(): board.choose_scene_option(index)])
-	var opening_choice: bool = board.scene_view == "opening" and board.scene_page == 0
+	var opening_choice: bool = board.scene_view == "opening" and board.scene_page == 0 and not board.scene_options().is_empty()
 	var next_text := "Choose an option above" if opening_choice else ("Next  [Enter]" if board.scene_page+1 < pages.size() else ("Begin mission  [Enter]" if board.scene_view == "opening" else "Return  [Enter]"))
 	items.append(["row",[[next_text,func(): board.advance_scene(),opening_choice],
 		["Skip opening  [Esc]" if board.scene_view == "opening" else "Back  [Esc]",func(): story_back()],

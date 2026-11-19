@@ -15,6 +15,8 @@ static func render(board) -> void:
 	var projection = board.board_projection
 	board.draw_rect(CROP, Color("0e1412"))
 	BoardView.render(board,font,projection,board.board_view_snapshot())
+	var custom: bool = board.has_method("draw_mission_layer")
+	if custom: board.draw_mission_layer(projection,font)
 	var path: Array[Vector2i] = []
 	if not board.sight_mode and not board.drop_mode:
 		path = board.path_to(board.hovered_cell)
@@ -24,7 +26,7 @@ static func render(board) -> void:
 	for index in range(board.soldiers.size()):
 		if board.soldier_visible(index):
 			board.draw_soldier_marker(index,board.cell_to_local(board.soldiers[index]["cell"])+Vector2(18,18))
-	MachineView.render(board,font,projection,board.machine_view_snapshot())
+	if not custom: MachineView.render(board,font,projection,board.machine_view_snapshot())
 	CivilianView.render(board,font,projection,board.civilian_view_snapshot())
 	# Label the machine (the only enemy on Farm Road) so it reads as a target.
 	if board.machine_present():

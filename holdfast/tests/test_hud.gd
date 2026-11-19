@@ -126,6 +126,13 @@ func run() -> void:
 	if record["missions"].has(1):
 		expect(record["missions"][1]["machine"] == Record.machine_state(board) and record["missions"][1]["evacuated"] == board.evacuated_people(),"Record matches the mission's outcome")
 		expect(Record.carry_forward(record["missions"][1]).size() >= 3,"Record explains what carries forward")
+	# Mission 02 launches from the operations board in HUD mode.
+	shell.play_river_bridge()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_river() and shell.board.hud_mode and shell.board.command_model == "authority","River Bridge launches in the HUD")
+	expect(String(shell.widgets["mission"].text).contains("Mission 02") and shell.actions["lanes_people"].visible,"HUD shows River Bridge controls")
+	expect(shell.modal_root.visible,"River Bridge opens with its story")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()

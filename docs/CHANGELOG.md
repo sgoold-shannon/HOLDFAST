@@ -2,6 +2,18 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 02 · River Bridge, v1 greybox (Nov 2026)
+
+Spec: `docs/missions/river-bridge.md` (approved by Spence). Launch it from the Operations board.
+
+- `river_bridge.gd` + `river_bridge.tscn` + `missions/river_bridge.tres`: extends the encounter controller with the Farm Road machine switched off. Reuses squad actions, civilian command and panic, and rescue.
+- `systems/grey_team.gd`: Collector (LIFT 2 on the nearest civilian group; broken only by hitting it or reaching the barn), Sentry (passive until provoked, then a dodgeable beam aim line), withdrawal at the end of round 8 or when the Collector drops, and the unidentified craft's one-time shield. All balance numbers at the top of the file.
+- Bridge lanes: People first (all rows, supplies lost) or Heavy lane (row 7 only, single file, supplies kept), set once by a soldier at the checkpoint for 1 AP. Optional sensor in the reeds.
+- Farm Road's record carries in: soldiers lost there are replaced by named replacements, and wounded soldiers start at 4 HP.
+- Campaign record gains a mission 02 entry (groups crossed/taken, lanes and supplies, sensor, craft, Greys), and the Operations board shows what it carries forward.
+- Not yet: save/load inside River Bridge (buttons say so), named replacement backstories, final art.
+- Tests: `test_river_bridge.gd` (lanes, lift, shield, beam, withdrawal, sensor, record, carry-over) plus HUD launch checks. `sim_river.gd` runs balance passes. With perfect play (instant calming, no panic) everyone gets across, so the pressure in real play comes from panic, the beam and MSG's positioning. Tune after playtests.
+
 ### Campaign arc connected (Nov 2026)
 
 **Canon decision (Spence, 19 Nov 2026):** GDD v3.1 is the story authority. Drovers, Kesh, and four separate factions (Greys and Reptilians are not Fallow castes); companion deaths come from play, with no fixed quota. The earlier Kingdom Rush–style design doc is superseded where they conflict.

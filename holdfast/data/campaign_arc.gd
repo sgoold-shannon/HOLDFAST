@@ -15,7 +15,7 @@ const ACTS := [
 const MISSIONS := [
 	{"id":1,"act":0,"title":"Farm Road","status":"playable",
 		"brief":"Protect a checkpoint and move civilians east before power loss and machinery block the road. A recovery machine bypasses the squad to take a pump skid: the first contradiction to the invasion story."},
-	{"id":2,"act":0,"title":"River Bridge","status":"next",
+	{"id":2,"act":0,"title":"River Bridge","status":"playable",
 		"brief":"Secure a crossing, recover a damaged sensor and escort a civilian column, while reports of selective machine interference clash with real hostile fire elsewhere.",
 		"briefing":{
 			"objective":"Establish a safe crossing, recover a damaged sensor, and escort a civilian column across.",

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://missions/mission_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+mission_id = "river_bridge"
+grid_size = Vector2i(20,16)
+walls = Array[Vector2i]([Vector2i(13,5),Vector2i(14,5),Vector2i(17,6),Vector2i(5,3),Vector2i(6,3),Vector2i(12,13)])
+cover_edges = {Vector2i(13,6): "north",Vector2i(14,6): "north",Vector2i(5,4): "north",Vector2i(6,4): "north",Vector2i(12,12): "south"}
+fixtures = Array[Vector2i]([Vector2i(9,1),Vector2i(9,2),Vector2i(9,3),Vector2i(9,4),Vector2i(9,5),Vector2i(9,6),Vector2i(9,10),Vector2i(9,11),Vector2i(9,12),Vector2i(9,13),Vector2i(9,14),Vector2i(9,15),Vector2i(9,16),Vector2i(10,1),Vector2i(10,2),Vector2i(10,3),Vector2i(10,4),Vector2i(10,5),Vector2i(10,6),Vector2i(10,10),Vector2i(10,11),Vector2i(10,12),Vector2i(10,13),Vector2i(10,14),Vector2i(10,15),Vector2i(10,16)])
+squad_spawns = Array[Vector2i]([Vector2i(2,7),Vector2i(2,8),Vector2i(2,9),Vector2i(2,10)])
+civilian_spawns = Array[Vector2i]([Vector2i(4,5),Vector2i(4,8),Vector2i(4,11)])
+squad_exits = Array[Vector2i]([Vector2i(19,6),Vector2i(19,7),Vector2i(19,8),Vector2i(19,9),Vector2i(19,10)])
+civilian_exit = Vector2i(19,8)
+civilian_routes = {"north":Vector2i(11,7),"south":Vector2i(11,9)}
+disabled_routes = {"north":Vector2i(11,7),"south":Vector2i(11,9)}
+machine_spawn = Vector2i(-1,-1)
+machine_hp = 0
+closing_round = 9
+collection_shortens_deadline = false
+closure_reason = "Dusk: crossing closed"
+evacuation_reason = "Column across"
+squad_exit_hint = "Extraction: east bank, column 19, rows 6–10."
