@@ -35,6 +35,8 @@ var dirty := true
 var board_auto_resume := true
 var board_campaign_path := ""
 var confirm_new := false
+## Shown at launch when a saved campaign exists: New game or Continue.
+var start_menu := false
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -46,6 +48,7 @@ func _ready() -> void:
 	add_child(layer)
 	visibility_changed.connect(func(): layer.visible = is_visible_in_tree())
 	build_ui()
+	start_menu = board_auto_resume and board_campaign_path == "" and (FileAccess.file_exists("user://holdfast_d1_campaign.save") or FileAccess.file_exists("user://holdfast_c2_campaign.save"))
 	var fresh = BoardScene.instantiate()
 	fresh.auto_resume = board_auto_resume
 	if board_campaign_path != "": fresh.campaign_path = board_campaign_path
@@ -610,6 +613,7 @@ func strip_callables(value):
 	return value
 
 func modal_content() -> Dictionary:
+	if start_menu: return start_content()
 	if confirm_new: return new_game_content()
 	if board.has_meta("hud_help"): return help_content()
 	if board.roster_open: return roster_content()
@@ -617,6 +621,21 @@ func modal_content() -> Dictionary:
 	if board.result_ready: return results_content()
 	if board.isolate_pending: return breaker_content()
 	return {}
+
+func start_content() -> Dictionary:
+	var where := "Return to Farm Road (deployment %d)" % board.campaign.get("deployment",2) if board.return_state["active"] else "Farm Road"
+	var machine := "machine destroyed — no enemy on this map" if not board.machine_present() else "machine still active"
+	return {"items":[["title","HOLDFAST"],
+		["text","Saved game found: %s, round %d, %d / 12 civilians evacuated, %s." % [where,board.phase,board.evacuated_people(),machine],24],
+		["option","New game  —  Farm Road, deployment 1, machine active (old save kept as a backup)",start_new],
+		["option","Continue saved game",continue_saved]]}
+
+func start_new() -> void:
+	start_menu = false
+	new_game()
+
+func continue_saved() -> void:
+	start_menu = false
 
 func new_game_content() -> Dictionary:
 	return {"items":[["title","START A NEW GAME?"],
