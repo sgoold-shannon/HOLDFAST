@@ -2,6 +2,11 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Controller split, step 1 (Nov 2026)
+
+- The original single-page layout's drawing and click handling (18 functions, ~320 lines) moved from `encounter_controller.gd` to `presentation/legacy_screen.gd`. The controller is down from 2,595 to 2,279 lines and now holds game state and rules plus thin `_draw`/`_unhandled_input` hooks.
+- No behavior change: the full suite (including the 119-action parity and all 3D suites) passes on Godot 4.7.2 / macOS.
+
 ### Desktop interface (Nov 2026)
 
 - New main scene `game.tscn` (`presentation/hud/game_shell.gd`): 1920×1080 landscape, window opens maximized.

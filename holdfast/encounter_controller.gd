@@ -280,6 +280,7 @@ const ViewRouter = preload("res://presentation/view_router.gd")
 const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
 const HudMapLayer = preload("res://presentation/hud/map_layer.gd")
+const LegacyScreen = preload("res://presentation/legacy_screen.gd")
 ## Desktop HUD (game.tscn) sets this: the board then draws only the map and
 ## leaves mouse input to the HUD. Keyboard shortcuts keep working unchanged.
 var hud_mode := false
@@ -622,38 +623,7 @@ func sight_target() -> Vector2i:
 func _unhandled_input(event: InputEvent) -> void:
 	if hud_mode and not (event is InputEventKey):
 		return
-	InputRouter.dispatch(event,{
-		"ending":handle_ending_input,"return":handle_return_input,"roster":handle_roster_input,
-		"story":handle_story_input,"results":handle_results_input,"rescue":handle_rescue_input,
-		"protocol":handle_protocol_input,"breaker":handle_breaker_input,"civilian":handle_civilian_input,
-		"tactical":handle_tactical_input})
-
-func handle_tactical_input(event: InputEvent) -> bool:
-	var command := TacticalInput.key_command(event)
-	if command != "":
-		run_tactical_command(command)
-	if event is InputEventMouse:
-		var local_position: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-		hovered_cell = local_to_cell(local_position)
-		queue_redraw()
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			command = TacticalInput.button_command(local_position,tactical_buttons())
-			if command != "":
-				run_tactical_command(command)
-				return true
-			if not cell_is_in_bounds(hovered_cell):
-				return true
-			if sight_mode and active_soldier >= 0:
-				pinned_target = hovered_cell if pinned_target != hovered_cell else NONE
-				return true
-			var index := soldier_at(hovered_cell)
-			if index >= 0:
-				select_soldier(index)
-			elif active_soldier >= 0:
-				try_move(hovered_cell)
-			else:
-				try_select_cell(hovered_cell)
-	return true
+	LegacyScreen.handle_input(self,event)
 
 func soldier_role(index: int) -> String:
 	return {"MSG":"PSYOP", "Ortiz":"MEDIC", "Bell":"ENGINEER", "Park":"RECON"}.get(soldiers[index]["name"], "RIFLE")
@@ -668,33 +638,7 @@ func _draw() -> void:
 	if hud_mode:
 		HudMapLayer.render(self)
 		return
-	ViewRouter.render(ViewRouter.screen(roster_open,scene_view,result_ready),{
-		"tactical":draw_tactical_layer,"machine":draw_machine_layer,"civilian":draw_civilian_layer,
-		"breaker":draw_breaker_layer,"protocol":draw_protocol_layer,"rescue":draw_rescue_layer,
-		"roster":func(): RosterPanel.render(self,font,board_projection,roster_panel_snapshot()),
-		"story":func(): StoryPanel.render(self,font,board_projection,story_panel_snapshot()),
-		"results":func(): ResultsPanel.render(self,font,board_projection,results_panel_snapshot()),
-		"results_header":func(): SceneChrome.header(self,font,"HOLDFAST / B6 MISSION RESULTS",790,Color.WHITE),
-		"story_navigation":draw_story_navigation,
-		"roster_navigation":draw_roster_navigation,
-		"return":func(): ReturnOverlay.render(self,font,board_projection,return_overlay_snapshot()),
-		"ending":func(): EndingOverlay.render(self,font,board_projection,ending_overlay_snapshot())})
-
-func draw_tactical_layer() -> void:
-	SceneChrome.sandbox_header(self,font)
-	BoardView.render(self,font,board_projection,board_view_snapshot())
-	var path: Array[Vector2i] = []
-	if not sight_mode:
-		path = path_to(hovered_cell)
-	var target := sight_target()
-	OverlayView.render(self,board_projection,tactical_overlay_snapshot(path,target))
-	draw_targets()
-	for i in range(soldiers.size()):
-		if not soldier_visible(i):
-			continue
-		var center := cell_to_local(soldiers[i]["cell"]) + Vector2(18, 18)
-		draw_soldier_marker(i, center)
-	TacticalPanel.render(self,font,board_projection,tactical_panel_snapshot(path,target))
+	LegacyScreen.render(self)
 
 func draw_targets() -> void:
 	pass # Farm Road draws its machine after hazard overlays.
@@ -900,12 +844,6 @@ func machine_track() -> Array[Vector2i]:
 func skid_visible() -> bool:
 	if return_state["active"]: return not campaign["missions"][0]["feeder"].contains("severed")
 	return machine["collected_round"] == 0
-
-func draw_machine_layer() -> void:
-	# Scene-specific title and footer replace the Gate A test labels.
-	SceneChrome.header(self,font,"HOLDFAST / B1 FARM ROAD MACHINE",790,Color("e5e9e7"))
-	MachineView.render(self,font,board_projection,machine_view_snapshot())
-	MachineStatus.render(self,font,board_projection,machine_status_snapshot())
 
 func machine_plan() -> Dictionary:
 	return {"collect_stage":mission_definition().machine_collect_stage,"depart_stage":ROUTE.size()-1,
@@ -1140,60 +1078,6 @@ func begin_player_phase() -> void:
 		status_text = "Briefing: external road closure confirmed at the end of round 10."
 	rebuild_movement()
 
-func handle_civilian_input(event: InputEvent) -> bool:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-		var action := interaction_command(event,{}, {"exit":EXIT_ORDER_RECT,"follow":FOLLOW_RECT})
-		if action == "exit":
-			order_exit(cohort_selected)
-			return true
-		if action == "follow":
-			order_cohort(cohort_selected,"follow")
-			return true
-		var clicked_cell := local_to_cell(point)
-		if soldier_at(clicked_cell) < 0 and not sight_mode:
-			for index in range(3):
-				if cohorts[index]["status"] == "active" and cohorts[index]["cell"] == clicked_cell:
-					cohort_selected = index
-					status_text = "Group %s selected. Choose Move to Exit or Follow Soldier at right." % cohorts[index]["id"]
-					queue_redraw()
-					return true
-		var rows := []
-		for index in range(3): rows.append(Rect2(876,132+index*112,248,100))
-		# Cards retain priority over the route/closure controls.
-		action = interaction_command(event,{}, {},rows)
-		if action.begins_with("row:"):
-			cohort_selected = int(action.get_slice(":",1))
-			queue_redraw()
-			return true
-		action = interaction_command(event,{}, {"north":NORTH_RECT,"south":SOUTH_RECT,"hold":HOLD_RECT,"close":CLOSE_RECT,"cancel":CANCEL_RECT})
-		if action in ["north","south","hold"]: order_cohort(cohort_selected,action)
-		elif action == "close": request_close()
-		elif action == "cancel":
-			close_pending = false
-			queue_redraw()
-		if action != "": return true
-	if ended:
-		if event is InputEventKey and event.pressed and not event.echo:
-			if event.keycode == KEY_K:
-				save_encounter()
-			elif event.keycode == KEY_L:
-				load_encounter()
-		if event is InputEventMouseButton and event.pressed:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-			if SAVE_RECT.has_point(point):
-				save_encounter()
-			elif LOAD_RECT.has_point(point):
-				load_encounter()
-		return true
-	return false
-
-func draw_civilian_layer() -> void:
-	SceneChrome.header(self,font,"HOLDFAST / B2 CIVILIAN EVACUATION",790,Color("e5e9e7"))
-	SceneChrome.rescue_guide(self,font)
-	CivilianView.render(self,font,board_projection,civilian_view_snapshot())
-	CivilianPanel.render(self,font,board_projection,civilian_panel_snapshot())
-
 func mission_completion_reason(round_number: int) -> String:
 	return MissionObjectives.completion_reason(mission_definition(),round_number,
 		machine["collected_round"],all_extracted(),remaining_civilians())
@@ -1342,22 +1226,6 @@ func origin_machine_outcome() -> String:
 		return "Departed unresolved: machine and cooling unit unavailable."
 	return "Active: no intervention completed."
 
-func handle_breaker_input(event: InputEvent) -> bool:
-	if isolate_pending:
-		var action := interaction_command(event,{KEY_I:"confirm",KEY_ESCAPE:"cancel"},{"confirm":CONFIRM_RECT,"cancel":ABORT_RECT})
-		if action == "confirm": try_breaker(true)
-		elif action == "cancel": isolate_pending = false
-		queue_redraw()
-		return true
-	var buttons := {} if sight_mode else {"breaker":BREAKER_RECT}
-	if interaction_command(event,{KEY_I:"breaker"},buttons) == "breaker":
-		try_breaker()
-		return true
-	return false
-
-func draw_breaker_layer() -> void:
-	BreakerPanel.render(self,font,board_projection,breaker_panel_snapshot())
-
 func breaker_panel_snapshot() -> Dictionary:
 	return {
 		"sight_mode":sight_mode,
@@ -1472,20 +1340,6 @@ func apply_protocol_betrayal(fired: bool, was_diverted: bool) -> void:
 		machine["hostile"] = true
 		if machine_present():
 			status_text += " Safe routing canceled; returning to skid."
-
-func handle_protocol_input(event: InputEvent) -> bool:
-	if isolate_pending:
-		return false
-	var action := interaction_command(event,
-		{KEY_O:"observe",KEY_P:"transmit",KEY_A:"authenticate",KEY_D:"divert"},
-		{"observe":OBSERVE_RECT,"transmit":TRANSMIT_RECT,"authenticate":AUTH_RECT,"divert":DIVERT_RECT})
-	if action != "":
-		protocol_action(action)
-		return true
-	return false
-
-func draw_protocol_layer() -> void:
-	ProtocolPanel.render(self,font,board_projection,protocol_panel_snapshot())
 
 func protocol_panel_snapshot() -> Dictionary:
 	var reasons := {}
@@ -1708,39 +1562,6 @@ func restore_extra_snapshot(snapshot: Dictionary) -> void:
 	Snapshot.restore_extras(snapshot,{"return_map":restore_return_state,"results":restore_results_state,
 		"story":restore_story_state,"campaign":restore_campaign_state})
 
-func handle_rescue_input(event: InputEvent) -> bool:
-	if isolate_pending:
-		return false
-	if drop_mode:
-		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-			drop_mode = false
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-			try_drop(local_to_cell(point))
-		queue_redraw()
-		return true
-	var action := interaction_command(event,
-		{KEY_S:"stabilize",KEY_U:"pickup",KEY_J:"drop",KEY_V:"cycle"},
-		{"cycle":CASUALTY_RECT,"stabilize":STABILIZE_RECT,"pickup":PICKUP_RECT,"drop":DROP_RECT})
-	match action:
-		"stabilize": try_stabilize()
-		"pickup": try_pickup()
-		"drop": request_drop()
-		"cycle": cycle_casualty()
-	if action != "": return true
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-		var index := soldier_at(local_to_cell(point))
-		if casualty_available(index) and not ended:
-			rescue_target = index
-			status_text = "%s selected for rescue. Choose an adjacent rescuer, then S or U." % soldiers[index]["name"]
-			queue_redraw()
-			return true
-	return false
-
-func draw_rescue_layer() -> void:
-	RescuePanel.render(self,font,board_projection,rescue_panel_snapshot())
-
 func rescue_panel_snapshot() -> Dictionary:
 	var visible := []
 	for index in range(soldiers.size()): visible.append(soldier_visible(index))
@@ -1852,27 +1673,6 @@ func restart_attempt() -> void:
 		state["active"] = true
 		state["source"] = return_state["source"]
 	replace_return_attempt(campaign.duplicate(true),state)
-
-func handle_results_input(event: InputEvent) -> bool:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_H:
-		load_encounter(report_path)
-		return true
-	if not ended:
-		return false
-	if not result_ready:
-		return true
-	var point := Vector2.ZERO
-	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
-	var action := ResultInput.command(event,point,{KEY_Q:"retry",KEY_L:"load",KEY_K:"save"},
-		{"retry":RETRY_RECT,"load":RESUME_RECT,"save":RECORD_RECT})
-	match action:
-		"retry": restart_attempt()
-		"load": load_encounter()
-		"save":
-			save_encounter()
-			result_feedback = save_feedback
-	queue_redraw()
-	return true
 
 func results_panel_snapshot() -> Dictionary:
 	var dispositions := []
@@ -2094,46 +1894,6 @@ func advance_origin_scene() -> void:
 	else: scene_view = ""
 	queue_redraw()
 
-func handle_story_input(event: InputEvent) -> bool:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_TAB:
-			toggle_log()
-			return true
-		if event.keycode == KEY_L:
-			load_encounter()
-			return true
-		if event.keycode == KEY_K:
-			save_encounter()
-			return true
-		if scene_view == "" and event.keycode == KEY_B and result_ready:
-			begin_debrief()
-			return true
-	if scene_view == "":
-		if result_ready and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-			if DEBRIEF_RECT.has_point(point):
-				begin_debrief()
-				return true
-		return false
-	var rows := []
-	for index in range(3): rows.append(Rect2(60,770+index*70,980,58))
-	var point := Vector2.ZERO
-	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
-	var action := ModalInput.command(event,point,
-		{KEY_ESCAPE:"back",KEY_ENTER:"next",KEY_SPACE:"next",KEY_1:"row:0",KEY_2:"row:1",KEY_3:"row:2"},
-		{"next":NEXT_RECT,"back":SKIP_RECT,"log":LOG_RECT},rows)
-	match action:
-		"back":
-			if scene_view == "opening": finish_opening()
-			elif scene_view == "log": toggle_log()
-			else: scene_view = ""
-		"next": advance_scene()
-		"log": toggle_log()
-		_:
-			if action.begins_with("row:"): choose_scene_option(int(action.get_slice(":",1)))
-	queue_redraw()
-	return true
-
 func choose_scene_option(index: int) -> void:
 	if not return_state["active"]: choose_origin_scene_option(index)
 
@@ -2307,44 +2067,6 @@ func open_roster() -> void:
 	scene_view = ""
 	queue_redraw()
 
-func handle_roster_input(event: InputEvent) -> bool:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_G:
-		if roster_open: roster_open = false
-		else: open_roster()
-		queue_redraw()
-		return true
-	if not roster_open:
-		if result_ready and scene_view == "" and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-			if ROSTER_RECT.has_point(point):
-				open_roster()
-				return true
-		return false
-	var rows := []
-	for index in range(campaign["members"].size()): rows.append(Rect2(60,210+index*67,300,58))
-	var point := Vector2.ZERO
-	if event is InputEventMouse: point = get_global_transform_with_canvas().affine_inverse()*event.position
-	var action := ModalInput.command(event,point,
-		{KEY_ESCAPE:"back",KEY_ENTER:"deploy",KEY_T:"care",KEY_RIGHT:"right",KEY_LEFT:"left",KEY_DOWN:"down",KEY_UP:"up",KEY_K:"save",KEY_L:"load"},
-		{"care":CARE_RECT,"deploy":DEPLOY_RECT,"back":BACK_RECT},rows)
-	match action:
-		"back": roster_open = false
-		"deploy": start_second_deployment()
-		"care": provide_staging_care()
-		"right": history_page += 1
-		"left": history_page = maxi(0,history_page-1)
-		"down", "up":
-			roster_index = posmod(roster_index+(1 if action=="down" else -1),campaign["members"].size())
-			history_page = 0
-		"save": save_encounter()
-		"load": load_encounter()
-		_:
-			if action.begins_with("row:"):
-				roster_index = int(action.get_slice(":",1))
-				history_page = 0
-	queue_redraw()
-	return true
-
 func roster_details(actor: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	lines.append("Traits: %s / %s" % actor["traits"])
@@ -2513,18 +2235,6 @@ func return_log_pages() -> Array:
 	if result_ready and not retry_required(): pages.append_array(debrief_pages())
 	return pages
 
-func handle_return_input(event: InputEvent) -> bool:
-	if return_state["active"] and scene_view == "" and not roster_open and not result_ready:
-		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_Y:
-			use_cooling_move()
-			return true
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-			if COOLING_BUTTON.has_point(point):
-				use_cooling_move()
-				return true
-	return false
-
 func return_overlay_snapshot() -> Dictionary:
 	return {
 		"roster_open":roster_open,
@@ -2553,32 +2263,6 @@ func open_ending_test() -> bool:
 	hide()
 	set_process_unhandled_input(false)
 	return true
-
-func handle_ending_input(event: InputEvent) -> bool:
-	if ending_available():
-		if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_Z or (roster_open and event.keycode == KEY_ENTER)):
-			open_ending_test()
-			return true
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var point: Vector2 = get_global_transform_with_canvas().affine_inverse()*event.position
-			if (roster_open and DEPLOY_RECT.has_point(point)) or (not roster_open and scene_view == "" and ENDING_RECT.has_point(point)):
-				open_ending_test()
-				return true
-	return false
-
-func draw_story_navigation() -> void:
-	if not result_ready:
-		SceneChrome.header(self,font,"HOLDFAST / C1 · TAB: SCENE LOG",790,Color.WHITE)
-	elif not retry_required():
-		SceneChrome.button(self,font,DEBRIEF_RECT,"Debrief [B]",Color("344f46"),27,18)
-
-func draw_roster_navigation() -> void:
-	if not result_ready:
-		SceneChrome.header(self,font,"HOLDFAST / C2 · DEPLOYMENT %d / 2" % campaign.get("deployment",1),805,Color.WHITE)
-	else:
-		SceneChrome.button(self,font,ROSTER_RECT,"Roster / service history [G]",Color("344f46"),27,17)
-		if campaign["committed"]:
-			SceneChrome.button(self,font,RETRY_RECT,"Roster [Q / G]",Color("304965"),35,19)
 
 func ending_overlay_snapshot() -> Dictionary:
 	return {
