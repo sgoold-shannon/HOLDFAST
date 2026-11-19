@@ -281,6 +281,12 @@ const EndingOverlay = preload("res://presentation/ending_overlay.gd")
 const ENDING_RECT := Rect2(60,945,320,40)
 const HudMapLayer = preload("res://presentation/hud/map_layer.gd")
 const LegacyScreen = preload("res://presentation/legacy_screen.gd")
+const CivilianCommand = preload("res://systems/civilian_command.gd")
+## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
+## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
+var command_model := "phase"
+## Gunfire this round; scares civilians nearby at the end of the round (authority model).
+var round_noise: Array[Vector2i] = []
 ## Desktop HUD (game.tscn) sets this: the board then draws only the map and
 ## leaves mouse input to the HUD. Keyboard shortcuts keep working unchanged.
 var hud_mode := false
@@ -459,7 +465,11 @@ func rifle_block_reason() -> String:
 func try_fire() -> bool:
 	if return_state["active"]: return reject_return_fire()
 	var was_diverted: bool = protocol["diverted"]
+	var shooter_cell: Vector2i = soldiers[active_soldier]["cell"] if active_soldier >= 0 and active_soldier < soldiers.size() else NONE
 	var success := fire_at_machine()
+	if success and command_model == "authority":
+		round_noise.append(shooter_cell)
+		round_noise.append(enemies[0]["cell"])
 	apply_protocol_betrayal(success,was_diverted)
 	check_recovery_failure()
 	finalize_result()
@@ -938,6 +948,8 @@ func order_cohort(index: int, order: String) -> bool:
 
 func issue_civilian_order(index: int, order: String) -> bool:
 	close_pending = false
+	if command_model == "authority":
+		return issue_authority_order(index,order)
 	if ended or order_used or index < 0 or index >= 3 or cohorts[index]["status"] != "active" or not ["hold", "north", "south", "follow"].has(order):
 		status_text = "Order unavailable: one free group order per player phase."
 		queue_redraw()
@@ -954,6 +966,54 @@ func issue_civilian_order(index: int, order: String) -> bool:
 	status_text = "Group %s: %s. End turn [N] to move; this order stays active." % [cohorts[index]["id"], cohort_order_label(cohorts[index])]
 	queue_redraw()
 	return true
+
+func issue_authority_order(index: int, order: String) -> bool:
+	if ended or index < 0 or index >= 3 or cohorts[index]["status"] != "active" or not ["hold", "north", "south", "follow"].has(order):
+		status_text = "Order unavailable."
+		queue_redraw()
+		return false
+	var cohort: Dictionary = cohorts[index]
+	var authority := CivilianCommand.order_authority(soldiers,active_soldier,cohort)
+	if not authority["ok"]:
+		status_text = "Group %s: %s." % [cohort["id"],authority["text"]]
+		queue_redraw()
+		return false
+	if order == "follow" and not soldier_can_act(active_soldier):
+		status_text = "Select a standing soldier on the map, then choose Follow Soldier."
+		queue_redraw()
+		return false
+	if authority["cost"] > 0:
+		soldiers[authority["by"]]["ap"] -= authority["cost"]
+	cohort["leader"] = active_soldier if order == "follow" else -1
+	cohort["order"] = order
+	cohort["passed"] = cohort["cell"] == civilian_waypoint(order)
+	cohort["note"] = "Waiting for your order" if order == "hold" else "Moves after End turn [N]"
+	status_text = "Group %s: %s — %s. Moves when you end the turn." % [cohort["id"],cohort_order_label(cohort),authority["text"]]
+	queue_redraw()
+	return true
+
+func calm_cohort(index: int) -> bool:
+	if command_model != "authority" or ended or index < 0 or index >= cohorts.size() or cohorts[index]["status"] != "active":
+		return false
+	var cohort: Dictionary = cohorts[index]
+	var authority := CivilianCommand.calm_authority(soldiers,active_soldier,cohort)
+	if not authority["ok"]:
+		status_text = "Group %s: %s." % [cohort["id"],authority["text"]]
+		queue_redraw()
+		return false
+	soldiers[authority["by"]]["ap"] -= authority["cost"]
+	cohort["panic"] = maxi(CivilianCommand.CALM,CivilianCommand.level(cohort)-authority["steps"])
+	status_text = "Group %s: %s. Now %s." % [cohort["id"],authority["text"],CivilianCommand.level_name(cohort)]
+	queue_redraw()
+	return true
+
+func civilian_threats() -> Array[Vector2i]:
+	var threats: Array[Vector2i] = []
+	if machine_present():
+		threats.append(enemies[0]["cell"])
+		if machine["pending_shot"] != NONE: threats.append(machine["pending_shot"])
+	threats.append_array(round_noise)
+	return threats
 
 func route_label(order: String) -> String:
 	if return_state["active"]:
@@ -1008,8 +1068,30 @@ func resolve_civilian_phase() -> void:
 	if ended or last_civilian_phase == phase:
 		return
 	last_civilian_phase = phase
+	if command_model == "authority":
+		resolve_authority_civilians()
+		return
 	for cohort in cohorts:
 		move_cohort(cohort,3)
+
+func resolve_authority_civilians() -> void:
+	var threats := civilian_threats()
+	for cohort in cohorts:
+		if cohort["status"] != "active": continue
+		var fear := CivilianCommand.update_panic(cohort,threats,soldiers)
+		if fear == CivilianCommand.PANICKED:
+			var step := CivilianCommand.scatter_step(cohort,threats,civilian_safe)
+			if step != cohort["cell"]:
+				cohort["cell"] = step
+				on_civilian_step(cohort,step)
+				cohort["note"] = "PANICKED — scattering away from danger"
+			else:
+				cohort["note"] = "PANICKED — frozen in place"
+			continue
+		move_cohort(cohort,CivilianCommand.MOVE_BUDGET[fear])
+		if fear == CivilianCommand.SHAKEN and cohort["status"] == "active":
+			cohort["note"] = "SHAKEN (moves 2) — " + cohort["note"]
+	round_noise.clear()
 
 func move_cohort(cohort: Dictionary, budget: int) -> void:
 	evacuation_rules.move_cohort(cohort, budget, soldiers)

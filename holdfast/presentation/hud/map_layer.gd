@@ -5,6 +5,7 @@ const BoardView = preload("res://presentation/board_view.gd")
 const OverlayView = preload("res://presentation/tactical_overlay.gd")
 const MachineView = preload("res://presentation/machine_view.gd")
 const CivilianView = preload("res://presentation/civilian_view.gd")
+const Command = preload("res://systems/civilian_command.gd")
 
 ## Region of the legacy page that holds the board and its coordinate labels.
 const CROP := Rect2(24, 68, 776, 608)
@@ -34,6 +35,40 @@ static func render(board) -> void:
 	var civ_exit: Vector2 = projection.cell_anchor(board.civilian_exit())
 	board.draw_rect(Rect2(civ_exit+Vector2(-22,-15),Vector2(80,14)),Color(0.05,0.08,0.07,0.85))
 	board.draw_string(font,civ_exit+Vector2(-22,-4),"CIVILIANS",HORIZONTAL_ALIGNMENT_CENTER,80,11,Color("8be6de"))
+	# Civilian command: MSG's voice range and each group's fear level.
+	if board.command_model == "authority" and not board.ended:
+		var msg: int = Command.msg_index(board.soldiers)
+		if Command.standing(board.soldiers,msg):
+			var origin: Vector2i = board.soldiers[msg]["cell"]
+			var gold := Color(0.95,0.8,0.42,0.55)
+			for x in range(origin.x-Command.VOICE_RANGE,origin.x+Command.VOICE_RANGE+1):
+				for y in range(origin.y-Command.VOICE_RANGE,origin.y+Command.VOICE_RANGE+1):
+					var cell := Vector2i(x,y)
+					if Command.distance(origin,cell) > Command.VOICE_RANGE or not board.cell_is_in_bounds(cell): continue
+					var at: Vector2 = projection.cell_anchor(cell)
+					for direction in Command.DIRECTIONS:
+						var outside: Vector2i = cell+direction
+						if Command.distance(origin,outside) <= Command.VOICE_RANGE and board.cell_is_in_bounds(outside): continue
+						var size: float = board.CELL_SIZE
+						var a := at
+						var b := at+Vector2(size,0)
+						if direction == Vector2i.RIGHT:
+							a = at+Vector2(size,0)
+							b = at+Vector2(size,size)
+						elif direction == Vector2i.LEFT:
+							b = at+Vector2(0,size)
+						elif direction == Vector2i.DOWN:
+							a = at+Vector2(0,size)
+							b = at+Vector2(size,size)
+						board.draw_line(a,b,gold,2)
+		for cohort in board.cohorts:
+			if cohort["status"] != "active": continue
+			var fear: int = Command.level(cohort)
+			if fear == 0: continue
+			var spot: Vector2 = projection.cell_anchor(cohort["cell"])+Vector2(22,-2)
+			var tint := Color("ffb75a") if fear == 1 else Color("ff5c4d")
+			board.draw_rect(Rect2(spot,Vector2(18,14)),Color(0.05,0.05,0.05,0.85))
+			board.draw_string(font,spot+Vector2(0,12),"!" if fear == 1 else "!!",HORIZONTAL_ALIGNMENT_CENTER,18,12,tint)
 	# Breaker: locked civilian gates after isolation.
 	if board.disabled():
 		for gate in board.GATES:

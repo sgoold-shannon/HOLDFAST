@@ -37,7 +37,8 @@ func run() -> void:
 	board.report_path = test_path("hud-report.save")
 	board.completion_path = test_path("hud-complete.save")
 	var reference = new_board("hud-reference")
-	expect(board != null and board.hud_mode,"Shell adopts the encounter in HUD mode")
+	reference.command_model = "authority"
+	expect(board != null and board.hud_mode and board.command_model == "authority","Shell adopts the encounter in HUD mode with MSG command rules")
 	expect(not root.get_node("Readability").overlay.visible,"Magnifier toolbar hidden under the HUD")
 	for child in board.get_children():
 		if child is Camera2D: expect(not child.enabled,"Legacy fixed camera disabled")
@@ -112,7 +113,7 @@ func run() -> void:
 	await process_frame
 	shell.refresh()
 	expect(shell.board != old and shell.board.hud_mode and shell.board.phase==1 and not shell.board.return_state["active"],"New game starts a fresh Farm Road in HUD mode")
-	expect(String(shell.widgets["civ_how"].text).contains("ONE group"),"Civilian panel explains the order rule")
+	expect(String(shell.widgets["civ_how"].text).contains("MSG can order"),"Civilian panel explains the command rules")
 	current_scene = null
 	shell.free()
 	reference.free()

@@ -2,6 +2,18 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Civilian command and panic (Nov 2026)
+
+Spence's design: MSG (PSYOP NCO, male, modeled on Spence) directs the crowd; crowd control is his job.
+
+- `systems/civilian_command.gd` holds the rules and every tuning number.
+- MSG orders any group within 6 squares (walking distance) for free. The map shows his range as a gold outline.
+- Any other soldier can order a group within 2 squares for 1 AP.
+- Panic: the machine, its target square, or gunfire within 3 squares at the end of a round raises a group one step: calm → SHAKEN (moves 2) → PANICKED (ignores orders, runs one square from danger or freezes). A quiet round with a soldier close by lowers it one step.
+- MSG within 3 squares keeps a group from getting more scared. **Calm** (C): MSG within 6 squares spends 1 AP to settle a group completely; another soldier within 2 squares spends 1 AP to settle it one step.
+- The one-order-per-turn rule is gone in the desktop game (`command_model = "authority"`). The legacy layout and its parity tests keep the original rule (`command_model = "phase"`, the default).
+- Balance runs on a fresh Farm Road: machine left running → 0–4 of 12 saved; machine stopped → 8/12 if MSG stays put, 12/12 if he moves up to keep everyone in range.
+
 ### Controller split, step 1 (Nov 2026)
 
 - The original single-page layout's drawing and click handling (18 functions, ~320 lines) moved from `encounter_controller.gd` to `presentation/legacy_screen.gd`. The controller is down from 2,595 to 2,279 lines and now holds game state and rules plus thin `_draw`/`_unhandled_input` hooks.

@@ -6,6 +6,7 @@ extends Control
 const BoardScene = preload("res://farm_final.tscn")
 const MapInput = preload("res://presentation/hud/map_input.gd")
 const MapLayer = preload("res://presentation/hud/map_layer.gd")
+const Command = preload("res://systems/civilian_command.gd")
 
 const SIDEBAR_WIDTH := 600.0
 const TOP_HEIGHT := 64.0
@@ -201,13 +202,6 @@ func build_sidebar() -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
 
-	body.add_child(heading("SQUAD"))
-	for index in range(4):
-		var button := action_button("squad%d" % index,"",func(): pick_soldier(index))
-		button.toggle_mode = true
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		body.add_child(button)
-
 	body.add_child(heading("CIVILIANS"))
 	widgets["civ_how"] = label("",18,MUTED)
 	widgets["civ_how"].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -232,7 +226,8 @@ func build_sidebar() -> void:
 			["follow","Follow soldier",func(): board.order_cohort(board.cohort_selected,"follow")],
 			["hold","Hold position",func(): board.order_cohort(board.cohort_selected,"hold")],
 			["north","North route",func(): board.order_cohort(board.cohort_selected,"north")],
-			["south","South route",func(): board.order_cohort(board.cohort_selected,"south")]]:
+			["south","South route",func(): board.order_cohort(board.cohort_selected,"south")],
+			["calm","Calm group  [C]",func(): board.calm_cohort(board.cohort_selected)]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		orders.add_child(button)
@@ -246,6 +241,13 @@ func build_sidebar() -> void:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		close_row.add_child(button)
+
+	body.add_child(heading("SQUAD"))
+	for index in range(4):
+		var button := action_button("squad%d" % index,"",func(): pick_soldier(index))
+		button.toggle_mode = true
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		body.add_child(button)
 
 	body.add_child(heading("THREAT"))
 	for key in ["intent","danger","enemy","forecast","return_info"]:
@@ -306,6 +308,7 @@ func _on_holder_child(node: Node) -> void:
 
 func adopt(node) -> void:
 	node.hud_mode = true
+	node.command_model = "authority"
 	for child in node.get_children():
 		if child is Camera2D: child.enabled = false
 	board = node
@@ -390,6 +393,11 @@ func show_help() -> void:
 	dirty = true
 
 # ---------------------------------------------------------------- refresh
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_C and valid_board() and layer.visible and not modal_root.visible:
+		run_action(func(): board.calm_cohort(board.cohort_selected))
+		get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
 	refresh_timer += delta
@@ -508,20 +516,32 @@ func refresh_squad() -> void:
 func refresh_civilians() -> void:
 	var view: Dictionary = board.civilian_panel_snapshot()
 	var exit_cell: Vector2i = view["exit"]
-	set_text("civ_how","12 civilians in 3 groups (A, B, C — little blue tags on the map). You can give ONE group an order per turn, and orders stick. Groups only walk when you press End turn: up to 3 squares toward the teal CIVILIAN EXIT at (%d, %d). Give a different group its order each turn." % [exit_cell.x,exit_cell.y])
-	set_text("civ_state","Operation ended: " + view["end_reason"] if view["ended"] else ("Group order already used this turn" if view["order_used"] else "One free group order available this turn"))
+	set_text("civ_how","MSG can order any group within %d squares, free. Any other soldier can order a group within %d squares for 1 AP. Gunfire or the machine within %d squares scares a group: SHAKEN groups move 2, PANICKED groups won't take orders and run. MSG within %d squares keeps a group steady, and Calm talks them down (1 AP). Groups walk when you end the turn, toward the CIVILIAN EXIT at (%d, %d)." % [Command.VOICE_RANGE,Command.NEAR_RANGE,Command.THREAT_RANGE,Command.STEADY_RANGE,exit_cell.x,exit_cell.y])
+	var selected: int = view["cohort_selected"]
+	var selected_cohort: Dictionary = board.cohorts[selected]
+	var authority: Dictionary = Command.order_authority(board.soldiers,board.active_soldier,selected_cohort)
+	var calm: Dictionary = Command.calm_authority(board.soldiers,board.active_soldier,selected_cohort)
+	if view["ended"]: set_text("civ_state","Operation ended: " + view["end_reason"])
+	elif selected_cohort["status"] != "active": set_text("civ_state","Group %s is %s." % [selected_cohort["id"],selected_cohort["status"]])
+	else: set_text("civ_state","Group %s selected · %s · %s" % [selected_cohort["id"],Command.level_name(selected_cohort),authority["text"]])
 	for index in range(3):
 		var cohort: Dictionary = view["cohorts"][index]
 		var button: Button = actions["group%d" % index]
-		button.text = "Group %s  ·  4 people  ·  HP %d/4  ·  %s" % [cohort["id"],cohort["hp"],view["labels"][index] if cohort["status"] == "active" else cohort["status"].to_upper()]
-		button.set_pressed_no_signal(index == view["cohort_selected"])
+		var state: String = view["labels"][index] if cohort["status"] == "active" else cohort["status"].to_upper()
+		var fear: int = Command.level(board.cohorts[index])
+		button.text = "Group %s  ·  HP %d/4  ·  %s%s" % [cohort["id"],cohort["hp"],state,"" if fear == 0 or cohort["status"] != "active" else "  ·  " + Command.level_name(board.cohorts[index])]
+		button.add_theme_color_override("font_color",[Color.WHITE,WARN,Color("ff8a80")][fear] if cohort["status"] == "active" else MUTED)
+		button.set_pressed_no_signal(index == selected)
 		set_text("group_note%d" % index,view["notes"][index]+arrival_text(index))
-	var locked: bool = view["order_used"] or view["ended"]
-	for action in ["exit","follow","hold","north","south"]: actions[action].disabled = locked
+	var locked: bool = view["ended"] or selected_cohort["status"] != "active" or not authority["ok"]
+	for action in ["exit","follow","hold","north","south"]:
+		actions[action].disabled = locked
+		actions[action].tooltip_text = authority["text"]
 	actions["north"].disabled = locked or not view["north_available"]
 	actions["follow"].text = "Follow " + view["leader"]
 	actions["north"].text = view["north_label"]
 	actions["south"].text = view["south_label"]
+	gate("calm","" if calm["ok"] and not view["ended"] else calm["text"])
 	var left := 0
 	for soldier in view["soldiers"]: left += 0 if soldier["extracted"] else 1
 	set_text("close_warning","Close now? %d civilians will be stranded and %d soldiers left behind." % [view["remaining"],left] if view["close_pending"] else "")
@@ -661,7 +681,7 @@ func briefing_content() -> Dictionary:
 		["heading","1.  STOP THE MACHINE (first)"],
 		["text","The machine heads for its cargo. When it gets there (round %d), the road closes the next round. Shoot it, cut its power at breaker B (9,4), or divert it at console C (11,12). The red box at the top right counts down and lists how." % cargo_round(),23],
 		["heading","2.  HERD THE CIVILIANS"],
-		["text","12 civilians in groups A, B and C. You can give ONE group an order each turn, and orders stick. Groups walk up to 3 squares when you press End turn, toward the teal CIVILIAN EXIT on the right. Get a different group moving every turn.",23],
+		["text","12 civilians in groups A, B and C. MSG is your PSYOP NCO: he can order any group within %d squares for free (the gold outline on the map). Other soldiers can order a group within %d squares for 1 AP. Orders stick, and groups walk when you end the turn.\nCrowds scare easily. The machine or gunfire within %d squares makes a group SHAKEN (slower), then PANICKED (they ignore orders and run). Keep MSG within %d squares to hold them steady, and use Calm to talk them down." % [Command.VOICE_RANGE,Command.NEAR_RANGE,Command.THREAT_RANGE,Command.STEADY_RANGE],23],
 		["heading","3.  GET YOUR SQUAD OUT"],
 		["text","Move soldiers onto an EXIT square and press Extract [E]. MSG must get out.",23],
 		["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]]]}
@@ -706,6 +726,7 @@ func help_content() -> Dictionary:
 		["text","Mouse: left-click a soldier to select it, then click a highlighted square to move (green = 1 AP, blue = 2 AP). Right-click clears the selection. Click a civilian group on the map, or in the Civilians panel, to give it an order."],
 		["text","Aiming: press Aim (T), click the target square to pin it, read the hit chance in the sidebar, then Fire (F)."],
 		["text","Rescue: click a downed soldier to mark them, select an adjacent soldier, then Stabilize (S) or Pick up (U). Put down (J), then click a square."],
+		["text","Civilians: MSG orders any group inside the gold outline for free; other soldiers order groups within 2 squares for 1 AP. Calm (C) settles a scared group.",22],
 		["text","Keys: T aim/move · F fire · R reload · E extract · N end turn · I breaker · O/P/A/D protocol · S/U/J/V rescue · Y cooling move · K save · L load · Tab scene log · G roster · Esc clear/back."],
 		["row",[["Close",func(): board.remove_meta("hud_help")]]]]}
 
