@@ -31,6 +31,7 @@ Every file in `holdfast/tests/` runs the same way. A passing run prints `FAILURE
 | `holdfast/systems/` | Game rules that don't draw anything: turns, machine behavior, civilians, saving |
 | `holdfast/presentation/` | Screens, panels and input handling |
 | `holdfast/presentation/hud/` | The desktop interface (`game.tscn` is the main scene) |
+| `holdfast/encounter_controller.gd` | Coordinator: shared state, turn order, thin wrappers into `systems/` |
 | `holdfast/missions/` | Mission layouts as data files |
 | `holdfast/tests/` | Automated tests |
 | `docs/` | Plans, decisions, art direction and test evidence |

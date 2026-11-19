@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Controller split, steps 6–9: done (Nov 2026)
+
+`encounter_controller.gd` is now a 1,140-line coordinator (from 2,595 at the start): shared state accessors, constants, the turn sequence, and one-line wrappers that keep every public name stable. The logic lives in:
+
+- `systems/campaign_flow.gd`: roster, knowledge, recording results, staging care, deployment
+- `systems/return_mission.gd`: deployment 2 rules, repair, cooling move, attempt swap, ending test
+- `systems/civilian_orders.gd`: both civilian command models, civilian turn, closing early
+- `systems/squad_actions.gd`: select, move, aim, fire, reload, extract, start of player turn
+- `systems/machine_turn.gd`: the machine's plan, route, intent, activation, damage, blast
+- `systems/mission_results.gd`: recovery failure, recording, dispositions, restart
+- `systems/encounter_lifecycle.gd`: starting state, save/load, restoring sections
+
+Every step passed the full suite (24 suites, including the 119-action parity and all 3D suites) on Godot 4.7.2 / macOS before it was committed. To add a mission rule, edit the system file for that area; the controller only needs a new wrapper if the HUD or tests must call it by name.
+
 ### Controller split, steps 2–5 (Nov 2026)
 
 `encounter_controller.gd` 2,361 → 1,805 lines. Each step moved one area into its own file as static functions taking the board, left one-line wrappers with the original names (so tests, HUD and legacy panels are untouched), and passed the full suite on Godot 4.7.2 / macOS before commit:

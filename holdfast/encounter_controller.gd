@@ -292,6 +292,7 @@ const CivilianOrders = preload("res://systems/civilian_orders.gd")
 const MissionResults = preload("res://systems/mission_results.gd")
 const MachineTurn = preload("res://systems/machine_turn.gd")
 const SquadActions = preload("res://systems/squad_actions.gd")
+const EncounterLifecycle = preload("res://systems/encounter_lifecycle.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -316,12 +317,7 @@ func _ready() -> void:
 	initialize_return(auto_resume)
 
 func initialize_tactical() -> void:
-	shot_rng.seed = COMBAT_SEED
-	board_projection = GridProjection.new(GRID_ORIGIN,Vector2(CELL_SIZE,0),Vector2(0,CELL_SIZE))
-	for index in range(soldiers.size()):
-		soldiers[index]["cell"] = mission_definition().squad_spawns[index]
-	enemies[0]["cell"] = mission_definition().machine_spawn
-	enemies[0]["hp"] = mission_definition().machine_hp
+	return EncounterLifecycle.initialize_tactical(self)
 
 func encounter_snapshot() -> Dictionary:
 	return Snapshot.assemble(rescue_layout(),{
@@ -331,36 +327,10 @@ func encounter_snapshot() -> Dictionary:
 		"campaign":campaign,"return_map":return_state})
 
 func save_encounter(path: String = RETURN_SLOT) -> bool:
-	var error := Persistence.write(encounter_snapshot(),encounter_slot(path))
-	if error != "":
-		save_feedback = error
-		queue_redraw()
-		return false
-	# Preserve the existing contract: the requested slot succeeded even if its
-	# separate campaign checkpoint fails. Feedback reports the checkpoint error.
-	var problem := checkpoint()
-	save_feedback = "C2 saved: deployment, roster, service history and current actions." if problem == "" else problem
-	queue_redraw()
-	return true
+	return EncounterLifecycle.save_encounter(self, path)
 
 func load_encounter(path: String = RETURN_SLOT) -> bool:
-	# Migration historically examines the requested source before lower-gate
-	# aliases are mapped. Keep that order for existing legacy saves.
-	if [TACTICAL_SLOT,STORY_SLOT,RESULT_SLOT].has(path): path = RETURN_SLOT
-	var migration := SaveMigration.return_slot(path,campaign_path,rescue_layout())
-	if migration["error"] != "":
-		save_feedback = migration["error"]
-		return false
-	var error := Persistence.restore(encounter_slot(migration["path"]),rescue_layout(),
-		"Save belongs to another encounter.",apply_loaded_encounter)
-	if error != "":
-		save_feedback = error
-		result_feedback = error
-		queue_redraw()
-		return false
-	save_feedback = "D1 restored: original outcome, repair progress and one-use cooling record."
-	queue_redraw()
-	return true
+	return EncounterLifecycle.load_encounter(self, path)
 
 func soldier_can_act(index: int) -> bool:
 	return index >= 0 and index < soldiers.size() and not soldiers[index]["extracted"] and soldiers[index]["hp"] > 0 and soldiers[index].get("condition","active") == "active" and soldiers[index].get("carried_by",-1) == -1
@@ -568,21 +538,10 @@ func ui_state_snapshot() -> Dictionary:
 	return {"active":active_soldier,"selected":selected_cell,"pinned":pinned_target,"sight":sight_mode,"status":status_text}
 
 func restore_tactical_section(snapshot: Dictionary) -> void:
-	var ui: Dictionary = snapshot["ui"]
-	active_soldier = ui["active"]
-	restore_combat(snapshot["combat"])
-	selected_cell = ui["selected"]
-	pinned_target = ui["pinned"]
-	sight_mode = ui["sight"]
-	status_text = ui["status"]
-	hovered_cell = NONE
+	return EncounterLifecycle.restore_tactical_section(self, snapshot)
 
 func initialize_machine() -> void:
-	machine_behavior = MachineActivation.new(next_machine_cell, enemy_target, cell_occupied_by_people, damage_cell, machine_path)
-	enemies.assign([{"cell": mission_definition().machine_spawn, "hp": mission_definition().machine_hp, "ammo": 4}])
-	status_text = "Farm Road: neutral machine. Orange = next movement; red = charged shot."
-	enemy_message = "Observed route: (10,8) → (9,8) → (8,8) → skid (7,8), then return."
-	save_feedback = "B1 has its own save slot. Gate A scene and save remain available."
+	return EncounterLifecycle.initialize_machine(self)
 
 func machine_present() -> bool:
 	return enemies[0]["hp"] > 0 and not machine["departed"]
@@ -638,14 +597,7 @@ func restore_machine_section(snapshot: Dictionary) -> void:
 	machine_state.restore_machine(snapshot["machine"])
 
 func initialize_evacuation() -> void:
-	evacuation_rules = EvacuationRules.new(civilian_safe, civilian_waypoint, civilian_exit,
-		route_available, soldier_can_act, on_civilian_step)
-	for index in range(cohorts.size()):
-		cohorts[index]["cell"] = mission_definition().civilian_spawns[index]
-	for soldier in soldiers:
-		soldier["left_behind"] = false
-	status_text = "Order one group each player phase. Machine → civilians → closure."
-	save_feedback = "B2 save slot. Cohort manifest IDs are placeholders for named civilians."
+	return EncounterLifecycle.initialize_evacuation(self)
 
 func deadline() -> int:
 	return MissionObjectives.deadline(mission_definition(),machine["collected_round"])
@@ -755,10 +707,7 @@ func evac_state_snapshot() -> Dictionary:
 		"order_used": order_used, "ended": ended, "reason": end_reason, "last_phase": last_civilian_phase}
 
 func restore_evac_section(snapshot: Dictionary) -> void:
-	var evac: Dictionary = snapshot["evac"]
-	evacuation_state.restore(evac)
-	cohort_selected = evac["selected"]
-	close_pending = false
+	return EncounterLifecycle.restore_evac_section(self, snapshot)
 
 func initialize_breaker() -> void:
 	status_text = "Breaker (9,4): stand adjacent, then I to open for 1 AP. I again previews isolation."
@@ -833,11 +782,7 @@ func restore_protocol_section(snapshot: Dictionary) -> void:
 	machine_state.restore_protocol(snapshot["protocol"])
 
 func initialize_rescue() -> void:
-	for index in range(soldiers.size()):
-		soldiers[index].merge({"condition":"active","bleed":0,"critical_epoch":0,
-			"medical":2 if index == 1 else 0,"carrying":-1,"carried_by":-1})
-	status_text = "Rescue: select a rescuer, then click a casualty. S stabilize, U pick up, J put down."
-	save_feedback = "B5 save slot. V cycles casualties. Critical timer counts three subsequent player phases."
+	return EncounterLifecycle.initialize_rescue(self)
 
 func kill_soldier(index: int) -> void:
 	return RescueActions.kill_soldier(self, index)
@@ -963,10 +908,7 @@ func initialize_story() -> void:
 	save_feedback = "C1: Tab opens the scene log / intelligence. K save / L load."
 
 func restore_story_state(snapshot: Dictionary) -> void:
-	story_state.restore(snapshot["story"])
-	scene_view = "" if opening_done else "opening"
-	scene_page = opening_step
-	return_view = ""
+	return EncounterLifecycle.restore_story_state(self, snapshot)
 
 func apply_rescue_knowledge(actor: int) -> void:
 	return StoryFlow.apply_rescue_knowledge(self, actor)
@@ -1078,18 +1020,7 @@ func story_state_snapshot() -> Dictionary:
 	return story_state.snapshot()
 
 func initialize_roster(resume: bool) -> void:
-	report_path = "user://holdfast_c2_result.save"
-	completion_path = "user://holdfast_c2_completed.save"
-	if campaign.is_empty(): campaign = Roster.initial()
-	apply_assignments()
-	if campaign["deployment"] == 2:
-		opening_done = true
-		opening_step = 2
-		scene_view = ""
-		status_text = "Deployment 2 roster test: same map, new civilian manifest. Existing wounds remain."
-	save_feedback = "C2: K save / L load. G roster after resolution. Campaign resumes saved progress."
-	if resume and FileAccess.file_exists(campaign_path):
-		load_encounter(campaign_path)
+	return EncounterLifecycle.initialize_roster(self, resume)
 
 func apply_assignments() -> void:
 	return CampaignFlow.apply_assignments(self)
@@ -1146,13 +1077,7 @@ func prepare_return_startup() -> void:
 	if campaign_path == CAMPAIGN_SLOT: campaign_path = RETURN_CAMPAIGN
 
 func initialize_return(resume: bool) -> void:
-	report_path = "user://holdfast_d1_result.save"
-	completion_path = "user://holdfast_d1_completed.save"
-	if return_state["active"]: configure_return()
-	if resume:
-		if FileAccess.file_exists(campaign_path): load_encounter(campaign_path)
-		elif FileAccess.file_exists(CAMPAIGN_SLOT): load_encounter(CAMPAIGN_SLOT)
-	save_feedback = "D1: K save / L load. G roster; return map uses the original machine outcome."
+	return EncounterLifecycle.initialize_return(self, resume)
 
 func restore_return_state(snapshot: Dictionary) -> void:
 	campaign_state.restore_return(snapshot["return_map"])
