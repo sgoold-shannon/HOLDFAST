@@ -283,6 +283,7 @@ const HudMapLayer = preload("res://presentation/hud/map_layer.gd")
 const LegacyScreen = preload("res://presentation/legacy_screen.gd")
 const CivilianCommand = preload("res://systems/civilian_command.gd")
 const ViewModels = preload("res://presentation/view_models.gd")
+const RescueActions = preload("res://systems/rescue_actions.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -1315,188 +1316,49 @@ func initialize_rescue() -> void:
 	save_feedback = "B5 save slot. V cycles casualties. Critical timer counts three subsequent player phases."
 
 func kill_soldier(index: int) -> void:
-	var soldier: Dictionary = soldiers[index]
-	soldier["condition"] = "dead"
-	soldier["ap"] = 0
-	soldier["bleed"] = 0
-	var passenger: int = soldier["carrying"]
-	if passenger >= 0:
-		soldiers[passenger]["carried_by"] = -1
-		soldier["carrying"] = -1
-	var host: int = soldier["carried_by"]
-	if host >= 0:
-		soldiers[host]["carrying"] = -1
-		soldier["carried_by"] = -1
-	if active_soldier == index:
-		active_soldier = -1
-		selected_cell = NONE
+	return RescueActions.kill_soldier(self, index)
 
 func apply_casualty_damage(cell: Vector2i, amount: int) -> String:
-	var reports: Array[String] = []
-	for index in range(soldiers.size()):
-		var soldier: Dictionary = soldiers[index]
-		if soldier["extracted"] or soldier["condition"] == "dead" or soldier["cell"] != cell:
-			continue
-		var new_hp: int = soldier["hp"] - amount
-		soldier["hp"] = maxi(-4,new_hp)
-		if new_hp <= -4:
-			kill_soldier(index)
-		elif new_hp <= 0:
-			if soldier["condition"] != "critical":
-				soldier["bleed"] = 3
-				soldier["critical_epoch"] = phase
-			soldier["condition"] = "critical"
-			soldier["ap"] = 0
-			if active_soldier == index:
-				active_soldier = -1
-				selected_cell = NONE
-		reports.append("%s -%d HP (%s)" % [soldier["name"],amount,soldier["condition"]])
-	for cohort in cohorts:
-		if cohort["status"] == "active" and cohort["cell"] == cell:
-			cohort["hp"] = maxi(0,cohort["hp"]-amount)
-			if cohort["hp"] == 0:
-				cohort["status"] = "stranded"
-				cohort["note"] = "Dispersed; four stranded"
-			reports.append("group %s -%d HP" % [cohort["id"],amount])
-	if soldiers[0]["condition"] == "dead" and not ended:
-		finish_operation("MSG killed: retry required")
-	return "empty cell" if reports.is_empty() else "; ".join(reports)
+	return RescueActions.apply_casualty_damage(self, cell, amount)
 
 func resolve_bleeding() -> bool:
-	drop_mode = false
-	for index in range(soldiers.size()):
-		var soldier: Dictionary = soldiers[index]
-		if soldier["condition"] == "critical" and not soldier["extracted"] and phase > soldier["critical_epoch"]:
-			soldier["bleed"] -= 1
-			if soldier["bleed"] == 0:
-				kill_soldier(index)
-	if soldiers[0]["condition"] == "dead":
-		finish_operation("MSG bled out: retry required")
-		return false
-	return true
+	return RescueActions.resolve_bleeding(self)
 
 func casualty_available(index: int) -> bool:
-	return index >= 0 and index < soldiers.size() and not soldiers[index]["extracted"] and ["critical","stable"].has(soldiers[index]["condition"])
+	return RescueActions.casualty_available(self, index)
 
 func casualty_in_reach(index: int) -> bool:
-	if not soldier_can_act(active_soldier) or not casualty_available(index):
-		return false
-	if soldiers[active_soldier]["carrying"] == index:
-		return true
-	var delta: Vector2i = soldiers[active_soldier]["cell"] - soldiers[index]["cell"]
-	return absi(delta.x)+absi(delta.y) == 1
+	return RescueActions.casualty_in_reach(self, index)
 
 func target_for_rescue() -> int:
-	if active_soldier >= 0 and soldiers[active_soldier]["carrying"] >= 0:
-		return soldiers[active_soldier]["carrying"]
-	return rescue_target
+	return RescueActions.target_for_rescue(self)
 
 func try_stabilize() -> bool:
-	var actor := active_soldier
-	var casualty := target_for_rescue()
-	var success := stabilize_casualty()
-	if success: record_rescue("stabilized",actor,casualty)
-	return success
+	return RescueActions.try_stabilize(self)
 
 func stabilize_casualty() -> bool:
-	var target := target_for_rescue()
-	if ended or not casualty_in_reach(target) or soldiers[active_soldier]["ap"] < 1:
-		status_text = "Stabilize: select a rescuer with 1 AP and an adjacent or carried casualty."
-	elif soldiers[target]["condition"] != "critical":
-		status_text = "Casualty already stable."
-	elif soldiers[active_soldier]["medical"] < 1:
-		status_text = "No medical charges. The deployed medic starts with two."
-	else:
-		soldiers[active_soldier]["ap"] -= 1
-		soldiers[active_soldier]["medical"] -= 1
-		soldiers[target]["hp"] = 1
-		soldiers[target]["condition"] = "stable"
-		soldiers[target]["bleed"] = 0
-		status_text = "%s stabilized %s: 1 HP, bleeding stopped, still incapacitated." % [soldiers[active_soldier]["name"],soldiers[target]["name"]]
-		rebuild_movement()
-		return true
-	queue_redraw()
-	return false
+	return RescueActions.stabilize_casualty(self)
 
 func try_pickup() -> bool:
-	var actor := active_soldier
-	var casualty := rescue_target
-	var success := pick_up_casualty()
-	if success: record_rescue("picked_up",actor,casualty)
-	return success
+	return RescueActions.try_pickup(self)
 
 func pick_up_casualty() -> bool:
-	var target := rescue_target
-	if ended or not casualty_in_reach(target) or soldiers[active_soldier]["ap"] < 1:
-		status_text = "Pick up: select a rescuer with 1 AP and an adjacent casualty."
-	elif soldiers[active_soldier]["carrying"] >= 0:
-		status_text = "Already carrying a casualty."
-	elif soldiers[target]["carrying"] >= 0:
-		status_text = "This fallen carrier has a casualty. Rescue their passenger first (V cycles)."
-	elif soldiers[target]["carried_by"] >= 0 and soldier_can_act(soldiers[target]["carried_by"]):
-		status_text = "Another active soldier is carrying this casualty. Put them down first."
-	else:
-		var old_host: int = soldiers[target]["carried_by"]
-		if old_host >= 0:
-			soldiers[old_host]["carrying"] = -1
-		soldiers[active_soldier]["ap"] -= 1
-		soldiers[active_soldier]["carrying"] = target
-		soldiers[target]["carried_by"] = active_soldier
-		soldiers[target]["cell"] = soldiers[active_soldier]["cell"]
-		status_text = "%s picked up %s. Move ≤2 squares; no firing or machinery." % [soldiers[active_soldier]["name"],soldiers[target]["name"]]
-		rebuild_movement()
-		return true
-	queue_redraw()
-	return false
+	return RescueActions.pick_up_casualty(self)
 
 func request_drop() -> void:
-	if ended or not soldier_can_act(active_soldier) or soldiers[active_soldier]["carrying"] < 0 or soldiers[active_soldier]["ap"] < 1:
-		status_text = "Put down requires a carrier with 1 AP."
-	else:
-		drop_mode = true
-		status_text = "Click a free adjacent cell to put down the casualty. Esc cancels."
-	queue_redraw()
+	return RescueActions.request_drop(self)
 
 func try_drop(cell: Vector2i) -> bool:
-	if ended or not soldier_can_act(active_soldier) or soldiers[active_soldier]["carrying"] < 0 or soldiers[active_soldier]["ap"] < 1:
-		return false
-	var delta: Vector2i = cell - soldiers[active_soldier]["cell"]
-	if absi(delta.x)+absi(delta.y) != 1 or not is_walkable(cell) or soldier_at(cell) >= 0 or cell_occupied_by_people(cell):
-		status_text = "Choose a free adjacent ground cell."
-		queue_redraw()
-		return false
-	var target: int = soldiers[active_soldier]["carrying"]
-	soldiers[active_soldier]["ap"] -= 1
-	soldiers[active_soldier]["carrying"] = -1
-	soldiers[target]["carried_by"] = -1
-	soldiers[target]["cell"] = cell
-	drop_mode = false
-	status_text = "%s put down at (%d,%d) for 1 AP." % [soldiers[target]["name"],cell.x,cell.y]
-	rebuild_movement()
-	return true
+	return RescueActions.try_drop(self, cell)
 
 func limit_carrier_movement() -> void:
-	if soldier_can_act(active_soldier) and soldiers[active_soldier].get("carrying",-1) >= 0:
-		for cell in distances.keys():
-			if distances[cell] > 2:
-				distances.erase(cell)
-	queue_redraw()
+	return RescueActions.limit_carrier_movement(self)
 
 func close_rescue() -> void:
-	for soldier in soldiers:
-		if soldier.get("condition","active") == "dead":
-			soldier["left_behind"] = false
-	drop_mode = false
+	return RescueActions.close_rescue(self)
 
 func cycle_casualty() -> void:
-	for offset in range(1,5):
-		var index := (rescue_target+offset) % 4
-		if casualty_available(index):
-			rescue_target = index
-			queue_redraw()
-			return
-	rescue_target = -1
-	queue_redraw()
+	return RescueActions.cycle_casualty(self)
 
 func rescue_layout() -> String: return "gdd3.1-d1-return"
 
