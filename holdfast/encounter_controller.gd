@@ -288,6 +288,7 @@ const MachineControls = preload("res://systems/machine_controls.gd")
 const StoryFlow = preload("res://systems/story_flow.gd")
 const CampaignFlow = preload("res://systems/campaign_flow.gd")
 const ReturnMission = preload("res://systems/return_mission.gd")
+const CivilianOrders = preload("res://systems/civilian_orders.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -863,98 +864,28 @@ func deadline() -> int:
 	return MissionObjectives.deadline(mission_definition(),machine["collected_round"])
 
 func remaining_civilians() -> int:
-	var count := 0
-	for cohort in cohorts:
-		if cohort["status"] == "active":
-			count += 4
-	return count
+	return CivilianOrders.remaining_civilians(self)
 
 func civilian_waypoint(order: String) -> Vector2i:
-	var route := "north" if order == "north" else "south"
-	if return_state["active"]: return mission_definition().civilian_routes[route]
-	if disabled(): return mission_definition().disabled_routes[route]
-	return NORTH_WAYPOINT if order == "north" else SOUTH_WAYPOINT
+	return CivilianOrders.civilian_waypoint(self, order)
 
 func order_cohort(index: int, order: String) -> bool:
-	if return_state["active"] and order == "north" and not cooling_ready():
-		status_text = "Cooling route unavailable. Choose the manual route; disabled equipment needs two repairs."
-		queue_redraw()
-		return false
-	return issue_civilian_order(index,order)
+	return CivilianOrders.order_cohort(self, index, order)
 
 func issue_civilian_order(index: int, order: String) -> bool:
-	close_pending = false
-	if command_model == "authority":
-		return issue_authority_order(index,order)
-	if ended or order_used or index < 0 or index >= 3 or cohorts[index]["status"] != "active" or not ["hold", "north", "south", "follow"].has(order):
-		status_text = "Order unavailable: one free group order per player phase."
-		queue_redraw()
-		return false
-	if order == "follow" and not soldier_can_act(active_soldier):
-		status_text = "Select a standing soldier on the map, then choose Follow Soldier."
-		queue_redraw()
-		return false
-	cohorts[index]["leader"] = active_soldier if order == "follow" else -1
-	cohorts[index]["order"] = order
-	cohorts[index]["passed"] = cohorts[index]["cell"] == civilian_waypoint(order)
-	cohorts[index]["note"] = "Waiting for your order" if order == "hold" else "Moves after End turn [N]"
-	order_used = true
-	status_text = "Group %s: %s. End turn [N] to move; this order stays active." % [cohorts[index]["id"], cohort_order_label(cohorts[index])]
-	queue_redraw()
-	return true
+	return CivilianOrders.issue_civilian_order(self, index, order)
 
 func issue_authority_order(index: int, order: String) -> bool:
-	if ended or index < 0 or index >= 3 or cohorts[index]["status"] != "active" or not ["hold", "north", "south", "follow"].has(order):
-		status_text = "Order unavailable."
-		queue_redraw()
-		return false
-	var cohort: Dictionary = cohorts[index]
-	var authority := CivilianCommand.order_authority(soldiers,active_soldier,cohort)
-	if not authority["ok"]:
-		status_text = "Group %s: %s." % [cohort["id"],authority["text"]]
-		queue_redraw()
-		return false
-	if order == "follow" and not soldier_can_act(active_soldier):
-		status_text = "Select a standing soldier on the map, then choose Follow Soldier."
-		queue_redraw()
-		return false
-	if authority["cost"] > 0:
-		soldiers[authority["by"]]["ap"] -= authority["cost"]
-	cohort["leader"] = active_soldier if order == "follow" else -1
-	cohort["order"] = order
-	cohort["passed"] = cohort["cell"] == civilian_waypoint(order)
-	cohort["note"] = "Waiting for your order" if order == "hold" else "Moves after End turn [N]"
-	status_text = "Group %s: %s — %s. Moves when you end the turn." % [cohort["id"],cohort_order_label(cohort),authority["text"]]
-	queue_redraw()
-	return true
+	return CivilianOrders.issue_authority_order(self, index, order)
 
 func calm_cohort(index: int) -> bool:
-	if command_model != "authority" or ended or index < 0 or index >= cohorts.size() or cohorts[index]["status"] != "active":
-		return false
-	var cohort: Dictionary = cohorts[index]
-	var authority := CivilianCommand.calm_authority(soldiers,active_soldier,cohort)
-	if not authority["ok"]:
-		status_text = "Group %s: %s." % [cohort["id"],authority["text"]]
-		queue_redraw()
-		return false
-	soldiers[authority["by"]]["ap"] -= authority["cost"]
-	cohort["panic"] = maxi(CivilianCommand.CALM,CivilianCommand.level(cohort)-authority["steps"])
-	status_text = "Group %s: %s. Now %s." % [cohort["id"],authority["text"],CivilianCommand.level_name(cohort)]
-	queue_redraw()
-	return true
+	return CivilianOrders.calm_cohort(self, index)
 
 func civilian_threats() -> Array[Vector2i]:
-	var threats: Array[Vector2i] = []
-	if machine_present():
-		threats.append(enemies[0]["cell"])
-		if machine["pending_shot"] != NONE: threats.append(machine["pending_shot"])
-	threats.append_array(round_noise)
-	return threats
+	return CivilianOrders.civilian_threats(self)
 
 func route_label(order: String) -> String:
-	if return_state["active"]:
-		return ("Cooling" if cooling_ready() else "Cooling locked") if order == "north" else "Manual route"
-	return "Upper route" if order == "north" else "Lower route"
+	return CivilianOrders.route_label(self, order)
 
 func route_available(order: String) -> bool:
 	return not (return_state["active"] and order == "north" and not cooling_ready())
@@ -963,20 +894,10 @@ func route_preview(cohort: Dictionary, order: String) -> Array[Vector2i]:
 	return evacuation_rules.route_preview(cohort, order, soldiers)
 
 func order_exit(index: int) -> bool:
-	if index < 0 or index >= cohorts.size(): return false
-	var best := evacuation_rules.best_exit_route(cohorts[index], soldiers)
-	if best == "":
-		status_text = "No safe route to exit right now. Clear the marked hazard, then try again."
-		queue_redraw()
-		return false
-	return order_cohort(index, best)
+	return CivilianOrders.order_exit(self, index)
 
 func cohort_order_label(cohort: Dictionary) -> String:
-	if cohort["order"] == "hold": return "HOLD — needs an order"
-	if cohort["order"] == "follow":
-		var leader: int = cohort.get("leader", -1)
-		return "Follow " + (soldiers[leader]["name"] if leader >= 0 and leader < soldiers.size() else "missing leader")
-	return "To EXIT / " + route_label(cohort["order"])
+	return CivilianOrders.cohort_order_label(self, cohort)
 
 func follow_path(cohort: Dictionary) -> Array[Vector2i]:
 	return evacuation_rules.follow_path(cohort, soldiers)
@@ -1001,75 +922,22 @@ func civilian_exit() -> Vector2i:
 	return EXIT_CELL
 
 func resolve_civilian_phase() -> void:
-	if ended or last_civilian_phase == phase:
-		return
-	last_civilian_phase = phase
-	if command_model == "authority":
-		resolve_authority_civilians()
-		return
-	for cohort in cohorts:
-		move_cohort(cohort,3)
+	return CivilianOrders.resolve_civilian_phase(self)
 
 func resolve_authority_civilians() -> void:
-	var threats := civilian_threats()
-	for cohort in cohorts:
-		if cohort["status"] != "active": continue
-		var fear := CivilianCommand.update_panic(cohort,threats,soldiers)
-		if fear == CivilianCommand.PANICKED:
-			var step := CivilianCommand.scatter_step(cohort,threats,civilian_safe)
-			if step != cohort["cell"]:
-				cohort["cell"] = step
-				on_civilian_step(cohort,step)
-				cohort["note"] = "PANICKED — scattering away from danger"
-			else:
-				cohort["note"] = "PANICKED — frozen in place"
-			continue
-		move_cohort(cohort,CivilianCommand.MOVE_BUDGET[fear])
-		if fear == CivilianCommand.SHAKEN and cohort["status"] == "active":
-			cohort["note"] = "SHAKEN (moves 2) — " + cohort["note"]
-	round_noise.clear()
+	return CivilianOrders.resolve_authority_civilians(self)
 
 func move_cohort(cohort: Dictionary, budget: int) -> void:
 	evacuation_rules.move_cohort(cohort, budget, soldiers)
 
 func finish_operation(reason: String) -> void:
-	if ended or pending_finish_reason != "":
-		return
-	pending_finish_reason = reason
-	call_deferred("finalize_result")
+	return CivilianOrders.finish_operation(self, reason)
 
 func close_evacuation(reason: String) -> void:
-	if ended:
-		return
-	ended = true
-	end_reason = reason
-	close_pending = false
-	for cohort in cohorts:
-		if cohort["status"] == "active":
-			cohort["status"] = "stranded"
-			cohort["note"] = "Road closed; four stranded" if reason == "Road closed" else "Four left stranded"
-	for soldier in soldiers:
-		if not soldier["extracted"]:
-			soldier["left_behind"] = true
-	active_soldier = -1
-	selected_cell = NONE
-	pinned_target = NONE
-	status_text = reason + (". MSG not extracted: retry required." if not soldiers[0]["extracted"] else ". Dispositions recorded at right.")
-	rebuild_movement()
+	return CivilianOrders.close_evacuation(self, reason)
 
 func request_close() -> bool:
-	if ended:
-		return false
-	if not soldiers[0]["extracted"]:
-		status_text = "MSG must extract before you can close the operation early."
-		queue_redraw()
-		return false
-	if not close_pending:
-		close_pending = true
-		queue_redraw()
-		return false
-	finish_operation("Operation closed early")
-	return true
+	return CivilianOrders.request_close(self)
 
 func before_turn_resolution() -> bool:
 	return resolve_bleeding()
