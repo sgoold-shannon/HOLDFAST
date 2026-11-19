@@ -282,6 +282,7 @@ const ENDING_RECT := Rect2(60,945,320,40)
 const HudMapLayer = preload("res://presentation/hud/map_layer.gd")
 const LegacyScreen = preload("res://presentation/legacy_screen.gd")
 const CivilianCommand = preload("res://systems/civilian_command.gd")
+const ViewModels = preload("res://presentation/view_models.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -664,16 +665,7 @@ func sight_preview(shooter: Vector2i, target: Vector2i) -> Dictionary:
 	return Rules.preview(shooter,target,mission_definition())
 
 func board_view_snapshot() -> Dictionary:
-	var costs := {}
-	if not sight_mode:
-		for y in range(1,GRID_SIZE.y+1):
-			for x in range(1,GRID_SIZE.x+1):
-				var cell := Vector2i(x,y)
-				var cost := move_cost(cell)
-				if cost > 0: costs[cell] = cost
-	return {"size":GRID_SIZE,"cell_size":CELL_SIZE,"origin":GRID_ORIGIN,
-		"walls":WALL_CELLS.duplicate(),"exits":mission_definition().squad_exits.duplicate(),
-		"selected":selected_cell,"costs":costs}
+	return ViewModels.board_view_snapshot(self)
 
 func tactical_buttons() -> Dictionary:
 	return {"save":SAVE_RECT,"load":LOAD_RECT,"extract":EXTRACT_RECT,
@@ -695,52 +687,13 @@ func run_tactical_command(command: String) -> void:
 			rebuild_movement()
 
 func soldier_marker_snapshot(index: int) -> Dictionary:
-	return {"shape":index%4,"mark":soldiers[index]["mark"],"selected":index==active_soldier,
-		"color":soldier_color(index) if soldiers[index]["hp"] > 0 else Color("b36b6b")}
+	return ViewModels.soldier_marker_snapshot(self, index)
 
 func tactical_overlay_snapshot(path: Array[Vector2i], target: Vector2i) -> Dictionary:
-	var aim := {}
-	if sight_mode and active_soldier >= 0 and cell_is_in_bounds(target):
-		var source: Vector2i = soldiers[active_soldier]["cell"]
-		var info := sight_preview(source,target)
-		aim = {"source":source,"target":target,"cells":info["cells"].duplicate(),
-			"blockers":info["blockers"].duplicate(),"clear":info["clear"],"protected":info["protected"]}
-	return {"path":path.duplicate(),"aim":aim,"cover":mission_definition().cover_edges.duplicate(true),"cell_size":CELL_SIZE}
+	return ViewModels.tactical_overlay_snapshot(self, path, target)
 
 func tactical_panel_snapshot(path: Array[Vector2i], target: Vector2i) -> Dictionary:
-	var roles := []
-	var colors := []
-	for index in range(soldiers.size()):
-		roles.append(soldier_role(index))
-		colors.append(soldier_color(index))
-	return {
-		"active_soldier":active_soldier,
-		"selected_cell":selected_cell,
-		"NONE":NONE,
-		"hovered_cell":hovered_cell,
-		"sight_mode":sight_mode,
-		"pinned_target":pinned_target,
-		"status_text":status_text,
-		"phase":phase,
-		"enemy_message":enemy_message,
-		"save_feedback":save_feedback,
-		"NEXT_PHASE_RECT":NEXT_PHASE_RECT,
-		"MODE_RECT":MODE_RECT,
-		"FIRE_RECT":FIRE_RECT,
-		"RELOAD_RECT":RELOAD_RECT,
-		"EXTRACT_RECT":EXTRACT_RECT,
-		"SAVE_RECT":SAVE_RECT,
-		"LOAD_RECT":LOAD_RECT,
-		"soldiers":soldiers.duplicate(true),
-		"path":path.duplicate(),
-		"target":target,
-		"cost":move_cost(hovered_cell),
-		"valid_target":cell_is_in_bounds(target),
-		"info":sight_preview(soldiers[active_soldier]["cell"],target).duplicate(true) if active_soldier >= 0 and cell_is_in_bounds(target) else {},
-		"roles":roles,
-		"colors":colors,
-		"intent":enemy_intent(),
-		"fire_reason":fire_block_reason()}
+	return ViewModels.tactical_panel_snapshot(self, path, target)
 
 func interaction_command(event: InputEvent, keys: Dictionary, buttons: Dictionary, rows: Array = []) -> String:
 	var point := Vector2.ZERO
@@ -883,32 +836,10 @@ func machine_path(start: Vector2i, goal: Vector2i, avoid_people: bool) -> Array[
 	return result
 
 func machine_view_snapshot() -> Dictionary:
-	return {
-		"track":machine_track().duplicate(),
-		"FIXTURES":FIXTURES.duplicate(),
-		"breaker":mission_definition().breaker_cell,
-		"skid":mission_definition().skid_cell,
-		"skid_visible":skid_visible(),
-		"next":next_machine_cell(),
-		"present":machine_present(),
-		"machine":machine.duplicate(true),
-		"enemies":enemies.duplicate(true),
-		"sight_mode":sight_mode,
-		"pinned_target":pinned_target,
-		"NONE":NONE}
+	return ViewModels.machine_view_snapshot(self)
 
 func machine_status_snapshot() -> Dictionary:
-	return {
-		"phase":phase,
-		"enemy_message":enemy_message,
-		"save_feedback":save_feedback,
-		"sight_mode":sight_mode,
-		"pinned_target":pinned_target,
-		"machine":machine.duplicate(true),
-		"enemies":enemies.duplicate(true),
-		"danger":danger_summary(),
-		"present":machine_present(),
-		"intent":enemy_intent()}
+	return ViewModels.machine_status_snapshot(self)
 
 func restore_machine_section(snapshot: Dictionary) -> void:
 	machine_state.restore_machine(snapshot["machine"])
@@ -1165,47 +1096,10 @@ func mission_completion_reason(round_number: int) -> String:
 		machine["collected_round"],all_extracted(),remaining_civilians())
 
 func civilian_view_snapshot() -> Dictionary:
-	return {
-		"cohorts":cohorts.duplicate(true),
-		"cohort_selected":cohort_selected,
-		"waypoints":[civilian_waypoint("north"),civilian_waypoint("south")],
-		"route":route_preview(cohorts[cohort_selected],cohorts[cohort_selected]["order"]).duplicate() if cohorts[cohort_selected]["status"] == "active" else [],
-		"exit":civilian_exit()}
+	return ViewModels.civilian_view_snapshot(self)
 
 func civilian_panel_snapshot() -> Dictionary:
-	var labels := []
-	var notes := []
-	for cohort in cohorts:
-		labels.append(cohort_order_label(cohort))
-		notes.append(follow_wait_reason(cohort) if cohort["status"] == "active" and cohort["order"] == "follow" and follow_path(cohort).is_empty() else ("Waiting for your order" if cohort["order"] == "hold" and cohort["status"] == "active" else cohort["note"]))
-	return {
-		"cohort_selected":cohort_selected,
-		"ended":ended,
-		"order_used":order_used,
-		"close_pending":close_pending,
-		"end_reason":end_reason,
-		"phase":phase,
-		"save_feedback":save_feedback,
-		"EXIT_ORDER_RECT":EXIT_ORDER_RECT,
-		"FOLLOW_RECT":FOLLOW_RECT,
-		"HOLD_RECT":HOLD_RECT,
-		"NORTH_RECT":NORTH_RECT,
-		"SOUTH_RECT":SOUTH_RECT,
-		"CLOSE_RECT":CLOSE_RECT,
-		"CANCEL_RECT":CANCEL_RECT,
-		"cohorts":cohorts.duplicate(true),
-		"soldiers":soldiers.duplicate(true),
-		"machine":machine.duplicate(true),
-		"labels":labels,
-		"notes":notes,
-		"leader":soldiers[active_soldier]["name"] if soldier_can_act(active_soldier) else "select soldier",
-		"north_label":route_label("north"),
-		"south_label":route_label("south"),
-		"north_available":route_available("north"),
-		"exit":civilian_exit(),
-		"deadline":deadline(),
-		"remaining":remaining_civilians(),
-		"present":machine_present()}
+	return ViewModels.civilian_panel_snapshot(self)
 
 func evac_state_snapshot() -> Dictionary:
 	return {"cohorts": cohorts.duplicate(true), "selected": cohort_selected,
@@ -1309,23 +1203,7 @@ func origin_machine_outcome() -> String:
 	return "Active: no intervention completed."
 
 func breaker_panel_snapshot() -> Dictionary:
-	return {
-		"sight_mode":sight_mode,
-		"breaker_progress":breaker_progress,
-		"pinned_target":pinned_target,
-		"isolate_pending":isolate_pending,
-		"BREAKER_RECT":BREAKER_RECT,
-		"CONFIRM_RECT":CONFIRM_RECT,
-		"ABORT_RECT":ABORT_RECT,
-		"save_feedback":save_feedback,
-		"GATES":GATES.duplicate(),
-		"enemies":enemies.duplicate(true),
-		"disabled":disabled(),
-		"reason":breaker_reason(),
-		"present":machine_present(),
-		"victims":blast_victims(),
-		"outcome":machine_outcome(),
-		"deadline":deadline()}
+	return ViewModels.breaker_panel_snapshot(self)
 
 func restore_breaker_section(snapshot: Dictionary) -> void:
 	breaker_progress = snapshot["breaker"]
@@ -1424,23 +1302,7 @@ func apply_protocol_betrayal(fired: bool, was_diverted: bool) -> void:
 			status_text += " Safe routing canceled; returning to skid."
 
 func protocol_panel_snapshot() -> Dictionary:
-	var reasons := {}
-	for action in ["observe","transmit","authenticate","divert"]: reasons[action] = protocol_reason(action)
-	return {
-		"OBSERVE_RECT":OBSERVE_RECT,
-		"TRANSMIT_RECT":TRANSMIT_RECT,
-		"AUTH_RECT":AUTH_RECT,
-		"DIVERT_RECT":DIVERT_RECT,
-		"phase":phase,
-		"protocol":protocol.duplicate(true),
-		"soldiers":soldiers.duplicate(true),
-		"machine":machine.duplicate(true),
-		"DIVERSION":DIVERSION.duplicate(),
-		"reasons":reasons,
-		"present":machine_present(),
-		"disabled":disabled(),
-		"path":machine_path(enemies[0]["cell"],SKID_CELL,false).duplicate() if machine["collected_round"] == 0 and machine_present() and not disabled() and not protocol["diverted"] else [],
-		"deadline":deadline()}
+	return ViewModels.protocol_panel_snapshot(self)
 
 func restore_protocol_section(snapshot: Dictionary) -> void:
 	machine_state.restore_protocol(snapshot["protocol"])
@@ -1645,22 +1507,7 @@ func restore_extra_snapshot(snapshot: Dictionary) -> void:
 		"story":restore_story_state,"campaign":restore_campaign_state})
 
 func rescue_panel_snapshot() -> Dictionary:
-	var visible := []
-	for index in range(soldiers.size()): visible.append(soldier_visible(index))
-	var target := target_for_rescue()
-	return {
-		"active_soldier":active_soldier,
-		"close_pending":close_pending,
-		"ended":ended,
-		"CASUALTY_RECT":CASUALTY_RECT,
-		"STABILIZE_RECT":STABILIZE_RECT,
-		"PICKUP_RECT":PICKUP_RECT,
-		"DROP_RECT":DROP_RECT,
-		"soldiers":soldiers.duplicate(true),
-		"visible":visible,
-		"target":target,
-		"target_available":casualty_available(target),
-		"can_act":soldier_can_act(active_soldier)}
+	return ViewModels.rescue_panel_snapshot(self)
 
 func restore_rescue_section(snapshot: Dictionary) -> void:
 	rescue_target = snapshot["rescue_target"]
@@ -1757,25 +1604,7 @@ func restart_attempt() -> void:
 	replace_return_attempt(campaign.duplicate(true),state)
 
 func results_panel_snapshot() -> Dictionary:
-	var dispositions := []
-	for index in range(soldiers.size()): dispositions.append(soldier_disposition(index))
-	return {
-		"phase":phase,
-		"end_reason":end_reason,
-		"result_feedback":result_feedback,
-		"RETRY_RECT":RETRY_RECT,
-		"RESUME_RECT":RESUME_RECT,
-		"RECORD_RECT":RECORD_RECT,
-		"soldiers":soldiers.duplicate(true),
-		"cohorts":cohorts.duplicate(true),
-		"protocol":protocol.duplicate(true),
-		"rescue_events":rescue_events.duplicate(true),
-		"title":result_title(),
-		"retry":retry_required(),
-		"dispositions":dispositions,
-		"evacuated":evacuated_people(),
-		"outcome":machine_outcome(),
-		"feeder":feeder_result()}
+	return ViewModels.results_panel_snapshot(self)
 
 func initialize_story() -> void:
 	report_path = "user://holdfast_c1_result.save"
@@ -1994,15 +1823,7 @@ func origin_scene_options() -> Array:
 	return []
 
 func story_panel_snapshot() -> Dictionary:
-	return {
-		"scene_view":scene_view,
-		"scene_page":scene_page,
-		"NEXT_RECT":NEXT_RECT,
-		"SKIP_RECT":SKIP_RECT,
-		"LOG_RECT":LOG_RECT,
-		"save_feedback":save_feedback,
-		"pages":current_pages().duplicate(true),
-		"options":scene_options().duplicate()}
+	return ViewModels.story_panel_snapshot(self)
 
 func story_state_snapshot() -> Dictionary:
 	return story_state.snapshot()
@@ -2186,19 +2007,7 @@ func annotate_historical_pages(pages: Array) -> Array:
 	return pages
 
 func roster_panel_snapshot() -> Dictionary:
-	var details := roster_details(campaign["members"][roster_index])
-	history_page = clampi(history_page,0,maxi(1,ceili(details.size()/9.0))-1)
-	return {
-		"roster_index":roster_index,
-		"history_page":history_page,
-		"CARE_RECT":CARE_RECT,
-		"DEPLOY_RECT":DEPLOY_RECT,
-		"BACK_RECT":BACK_RECT,
-		"result_feedback":result_feedback,
-		"campaign":campaign.duplicate(true),
-		"details":details,
-		"care":can_receive_staging_care(),
-		"deploy":can_deploy()}
+	return ViewModels.roster_panel_snapshot(self)
 
 func prepare_return_startup() -> void:
 	if campaign_path == CAMPAIGN_SLOT: campaign_path = RETURN_CAMPAIGN
@@ -2318,20 +2127,7 @@ func return_log_pages() -> Array:
 	return pages
 
 func return_overlay_snapshot() -> Dictionary:
-	return {
-		"roster_open":roster_open,
-		"scene_view":scene_view,
-		"result_ready":result_ready,
-		"DEPLOY_RECT":DEPLOY_RECT,
-		"BREAKER_RECT":BREAKER_RECT,
-		"COOLING_BUTTON":COOLING_BUTTON,
-		"save_feedback":save_feedback,
-		"return_state":return_state.duplicate(true),
-		"campaign":campaign.duplicate(true),
-		"source_outcome":ReturnRules.outcome(campaign),
-		"deploy":can_deploy(),
-		"outcome":machine_outcome(),
-		"cooling":cooling_ready()}
+	return ViewModels.return_overlay_snapshot(self)
 
 func ending_available() -> bool:
 	return result_ready and return_state["active"] and not retry_required() and campaign["committed"]
@@ -2347,12 +2143,7 @@ func open_ending_test() -> bool:
 	return true
 
 func ending_overlay_snapshot() -> Dictionary:
-	return {
-		"scene_view":scene_view,
-		"roster_open":roster_open,
-		"DEPLOY_RECT":DEPLOY_RECT,
-		"ENDING_RECT":ENDING_RECT,
-		"available":ending_available()}
+	return ViewModels.ending_overlay_snapshot(self)
 
 func encounter_slot(path: String) -> String:
 	if [SaveStore.SAVE_PATH,FARM_SLOT,EVAC_SLOT,OPTIONS_SLOT,PROTOCOL_SLOT,RESCUE_SLOT,
