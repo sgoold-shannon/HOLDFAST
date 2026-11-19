@@ -286,6 +286,8 @@ const ViewModels = preload("res://presentation/view_models.gd")
 const RescueActions = preload("res://systems/rescue_actions.gd")
 const MachineControls = preload("res://systems/machine_controls.gd")
 const StoryFlow = preload("res://systems/story_flow.gd")
+const CampaignFlow = preload("res://systems/campaign_flow.gd")
+const ReturnMission = preload("res://systems/return_mission.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -1496,26 +1498,7 @@ func initialize_roster(resume: bool) -> void:
 		load_encounter(campaign_path)
 
 func apply_assignments() -> void:
-	for index in range(4):
-		var id: String = campaign["assignments"][index]
-		var soldier: Dictionary = soldiers[index]
-		soldier["actor_id"] = id
-		if id == "":
-			soldier["name"] = "Vacant"
-			soldier["mark"] = "-"
-			soldier["extracted"] = true
-			soldier["ap"] = 0
-			soldier["medical"] = 0
-		else:
-			var actor := Roster.actor(campaign,id)
-			soldier["name"] = actor["name"]
-			soldier["mark"] = actor["name"].left(1)
-			soldier["hp"] = actor["hp"]
-	for cohort in cohorts:
-		var id: String = cohort["id"]
-		cohort["manifest"] = []
-		for number in range(1,5): cohort["manifest"].append("D%d-%s-%02d" % [campaign["deployment"],id,number])
-	rebuild_movement()
+	return CampaignFlow.apply_assignments(self)
 
 func restore_campaign_state(snapshot: Dictionary) -> void:
 	campaign_state.restore_campaign(snapshot["campaign"])
@@ -1530,134 +1513,37 @@ func append_unique(array: Array, value: String) -> void:
 	if not array.has(value): array.append(value)
 
 func sync_knowledge() -> void:
-	for index in range(4):
-		var actor := Roster.actor(campaign,campaign["assignments"][index])
-		if actor.is_empty(): continue
-		for fact in knowledge[index]: append_unique(actor["knowledge"],"D%d:%s" % [campaign["deployment"],fact])
-
-	# A patient forms this relationship memory only after receiving the event record.
-	for event in rescue_events:
-		if event["kind"] != "stabilized" or not knows(event["casualty"],event["id"]): continue
-		var patient := Roster.actor(campaign,campaign["assignments"][event["casualty"]])
-		var rescuer_id: String = campaign["assignments"][event["actor"]]
-		if patient.is_empty() or rescuer_id == "": continue
-		if not patient["relationships"].has(rescuer_id): patient["relationships"][rescuer_id] = []
-		append_unique(patient["relationships"][rescuer_id],"Stabilized me during deployment %d." % campaign["deployment"])
+	return CampaignFlow.sync_knowledge(self)
 
 func commit_roster() -> void:
-	record_campaign_result()
-	record_return_result()
+	return CampaignFlow.commit_roster(self)
 
 func record_campaign_result() -> void:
-	if not result_ready or retry_required() or campaign["committed"]: return
-	var mission := {"id":"deployment-%d" % campaign["deployment"],"machine":machine_outcome(),
-		"feeder":feeder_result(),"cohorts":cohorts.duplicate(true),"soldiers":[]}
-	for index in range(4):
-		var id: String = campaign["assignments"][index]
-		if id == "": continue
-		var actor := Roster.actor(campaign,id)
-		var soldier: Dictionary = soldiers[index]
-		actor["hp"] = soldier["hp"]
-		actor["condition"] = soldier["condition"]
-		actor["status"] = "dead" if soldier["condition"] == "dead" else ("left_behind" if not soldier["extracted"] else ("recovering" if soldier["condition"] != "active" else ("wounded" if soldier["hp"] < 8 else "ready")))
-		var disposition := soldier_disposition(index)
-		append_unique(actor["history"],"D%d: %s" % [campaign["deployment"],disposition])
-		mission["soldiers"].append({"id":id,"disposition":disposition})
-	for event in rescue_events:
-		var rescuer := Roster.actor(campaign,campaign["assignments"][event["actor"]])
-		var patient := Roster.actor(campaign,campaign["assignments"][event["casualty"]])
-		if rescuer.is_empty() or patient.is_empty(): continue
-		var action: String = {"stabilized":"stabilized","picked_up":"picked up","extracted_with":"carried out"}[event["kind"]]
-		var memory := "D%d / %s: %s %s %s." % [campaign["deployment"],event["id"],rescuer["name"],action,patient["name"]]
-		append_unique(rescuer["history"],memory)
-		append_unique(patient["history"],memory)
-	sync_knowledge()
-	campaign["missions"].append(mission)
-	campaign["committed"] = true
-	if campaign["deployment"] == 1:
-		for index in range(1,4):
-			var actor := Roster.actor(campaign,campaign["assignments"][index])
-			if not actor.is_empty() and actor["status"] == "dead" and Roster.actor(campaign,"reserve-%d" % index).is_empty():
-				campaign["members"].append(Roster.replacement(index))
+	return CampaignFlow.record_campaign_result(self)
 
 func persist_campaign_result() -> void:
-	var problem := CampaignPersistence.campaign_result(encounter_snapshot,campaign_path,report_path,completion_path,not retry_required())
-	result_feedback = "Mission and roster saved. G: review service records." if problem == "" else problem
+	return CampaignFlow.persist_campaign_result(self)
 
 func can_receive_staging_care() -> bool:
-	if not campaign["committed"]: return false
-	for actor in campaign["members"]:
-		if actor["status"] == "recovering": return true
-	return false
+	return CampaignFlow.can_receive_staging_care(self)
 
 func provide_staging_care() -> bool:
-	if not can_receive_staging_care(): return false
-	# An explicit between-deployment interval, not a tactical heal or resurrection.
-	for actor in campaign["members"]:
-		if actor["status"] != "recovering": continue
-		actor["hp"] = 1
-		actor["condition"] = "active"
-		actor["status"] = "wounded"
-		append_unique(actor["history"],"After deployment %d: treatment and rest; cleared for duty at 1 HP." % campaign["deployment"])
-	persist_campaign_result()
-	queue_redraw()
-	return true
+	return CampaignFlow.provide_staging_care(self)
 
 func can_deploy() -> bool:
-	return not return_state["active"] and campaign["committed"] and campaign["deployment"] < 3 and Roster.next_assignments(campaign)[0] == "msg"
+	return CampaignFlow.can_deploy(self)
 
 func start_second_deployment() -> bool:
-	if not can_deploy(): return false
-	var next := campaign.duplicate(true)
-	next["deployment"] += 1
-	next["committed"] = false
-	next["assignments"] = Roster.next_assignments(campaign)
-	var state := ReturnRules.initial()
-	state["active"] = true
-	state["source"] = ReturnRules.outcome(campaign)
-	return replace_return_attempt(next,state)
+	return CampaignFlow.start_second_deployment(self)
 
 func open_roster() -> void:
-	if not result_ready: return
-	roster_open = true
-	scene_view = ""
-	queue_redraw()
+	return CampaignFlow.open_roster(self)
 
 func roster_details(actor: Dictionary) -> Array[String]:
-	var lines: Array[String] = []
-	lines.append("Traits: %s / %s" % actor["traits"])
-	lines.append(actor["hook"])
-	lines.append("")
-	lines.append("RELATIONSHIPS")
-	if actor["relationships"].is_empty(): lines.append("No established relationships.")
-	for id in actor["relationships"]:
-		for note in actor["relationships"][id]: lines.append(Roster.actor(campaign,id)["name"]+": "+note)
-	lines.append("")
-	lines.append("SERVICE HISTORY")
-	if actor["history"].is_empty(): lines.append("No deployment history. New to this element.")
-	for memory in actor["history"]:
-		var parts: PackedStringArray = memory.split(": ",true,1)
-		lines.append(parts[0].split(" / ")[0].replace("D","Deployment ")+": "+parts[1] if parts.size() == 2 else memory)
-	lines.append("")
-	lines.append("Briefed / witnessed records: %d" % actor["knowledge"].size())
-	for mission in campaign["missions"]:
-		var participated := false
-		for entry in mission["soldiers"]: participated = participated or entry["id"] == actor["id"]
-		if not participated: continue
-		var evacuated := 0
-		for cohort in mission["cohorts"]:
-			if cohort["status"] == "extracted": evacuated += cohort["manifest"].size()
-		lines.append("")
-		lines.append(mission["id"].replace("deployment-","Deployment ")+": %d evacuated / %d stranded" % [evacuated,12-evacuated])
-		lines.append(mission["machine"])
-		lines.append(mission["feeder"])
-	return lines
+	return CampaignFlow.roster_details(self, actor)
 
 func annotate_historical_pages(pages: Array) -> Array:
-	if campaign["deployment"] == 2:
-		# The original opening is historical, not a new scene performed by replacements.
-		for index in range(3): pages[index]["speaker"] = "DEPLOYMENT 1 TRANSCRIPT / "+pages[index]["speaker"]
-	return pages
+	return CampaignFlow.annotate_historical_pages(self, pages)
 
 func roster_panel_snapshot() -> Dictionary:
 	return ViewModels.roster_panel_snapshot(self)
@@ -1678,13 +1564,7 @@ func restore_return_state(snapshot: Dictionary) -> void:
 	campaign_state.restore_return(snapshot["return_map"])
 
 func configure_return() -> void:
-	opening_done = true
-	opening_step = 2
-	scene_view = ""
-	# A stationary retained asset or an empty footprint; no new enemy is implied.
-	enemies[0]["hp"] = 16 if ["diverted","disabled"].has(return_state["source"]) else 0
-	machine["pending_shot"] = NONE
-	status_text = "Return to Farm Road: civilians exit north at (10,1). Manual route always available."
+	return ReturnMission.configure_return(self)
 
 func cooling_ready() -> bool:
 	return return_state["source"] == "diverted" or (return_state["source"] == "disabled" and return_state["repair"] == 2)
@@ -1693,82 +1573,25 @@ func return_scene_path() -> String:
 	return "res://farm_final.tscn"
 
 func replace_return_attempt(next: Dictionary, state: Dictionary) -> bool:
-	var fresh = load(return_scene_path()).instantiate()
-	fresh.auto_resume = false
-	fresh.campaign = next
-	fresh.return_state = state
-	fresh.campaign_path = campaign_path
-	fresh.preference = preference
-	get_parent().add_child(fresh)
-	fresh.report_path = report_path
-	fresh.completion_path = completion_path
-	var problem: String = fresh.checkpoint()
-	if problem != "":
-		fresh.queue_free()
-		result_feedback = problem
-		queue_redraw()
-		return false
-	if get_tree().current_scene == self: get_tree().current_scene = fresh
-	queue_free()
-	return true
+	return ReturnMission.replace_return_attempt(self, next, state)
 
 func activate_return_staging() -> void:
-	last_enemy_phase = phase
-	enemy_message = "Return staging: no hostile activation. North access closes after round 10."
+	return ReturnMission.activate_return_staging(self)
 
 func repair_return_machine() -> bool:
-	if ended or return_state["source"] != "disabled" or return_state["repair"] == 2:
-		status_text = "Repairs apply only to the retained disabled machine, once per step."
-	elif not soldier_can_act(active_soldier) or soldiers[active_soldier]["ap"] < 1:
-		status_text = "Select an active soldier with 1 AP."
-	elif soldiers[active_soldier]["carrying"] >= 0:
-		status_text = "Put down the casualty before repairing machinery."
-	elif (soldiers[active_soldier]["cell"]-REPAIR_CELL).abs().x+(soldiers[active_soldier]["cell"]-REPAIR_CELL).abs().y != 1:
-		status_text = "Stand adjacent to the retained machine at (10,8)."
-	else:
-		soldiers[active_soldier]["ap"] -= 1
-		return_state["repair"] += 1
-		status_text = "Repair %d/2 complete for 1 AP. %s" % [return_state["repair"],"Cooling route and one free move available." if cooling_ready() else "One more adjacent action required; another soldier may finish."]
-		rebuild_movement()
-		return true
-	queue_redraw()
-	return false
+	return ReturnMission.repair_return_machine(self)
 
 func use_cooling_move() -> bool:
-	if ended or not return_state["active"] or not cooling_ready() or return_state["bonus_event"] != "":
-		status_text = "Cooling move unavailable or already used."
-		queue_redraw()
-		return false
-	var cohort: Dictionary = cohorts[cohort_selected]
-	if cohort["status"] != "active" or cohort["order"] == "hold":
-		status_text = "Select an active civilian group and give it an evacuation order first."
-		queue_redraw()
-		return false
-	var before: Vector2i = cohort["cell"]
-	move_cohort(cohort,3)
-	if cohort["cell"] == before:
-		status_text = "No safe movement available; cooling move retained."
-		queue_redraw()
-		return false
-	return_state["bonus_event"] = "return-cooling-move-1"
-	return_state["bonus_group"] = cohort["id"]
-	status_text = "Cooling-assisted move used by group %s: up to 3 squares, no AP. One use per return." % cohort["id"]
-	queue_redraw()
-	return true
+	return ReturnMission.use_cooling_move(self)
 
 func reject_return_fire() -> bool:
-	status_text = "No hostile targets in this return-map test."
-	queue_redraw()
-	return false
+	return ReturnMission.reject_return_fire(self)
 
 func reject_return_protocol() -> bool:
-	status_text = "Original protocol outcome retained. Use I to repair or Y for the cooling move."
-	queue_redraw()
-	return false
+	return ReturnMission.reject_return_protocol(self)
 
 func record_return_result() -> void:
-	if return_state["active"] and campaign["committed"]:
-		campaign["missions"][-1]["return_map"] = return_state.duplicate(true)
+	return ReturnMission.record_return_result(self)
 
 func return_debrief_pages() -> Array:
 	return [{"speaker":"FARM ROAD RETURN / VERIFIED REPORT","text":report_text(),"tag":"Return-map outcomes; original losses remain recorded."},
@@ -1786,14 +1609,7 @@ func ending_available() -> bool:
 	return result_ready and return_state["active"] and not retry_required() and campaign["committed"]
 
 func open_ending_test() -> bool:
-	if not ending_available(): return false
-	var test = load("res://ending_test.tscn").instantiate()
-	test.source_snapshot = encounter_snapshot()
-	test.return_board = self
-	get_parent().add_child(test)
-	hide()
-	set_process_unhandled_input(false)
-	return true
+	return ReturnMission.open_ending_test(self)
 
 func ending_overlay_snapshot() -> Dictionary:
 	return ViewModels.ending_overlay_snapshot(self)
