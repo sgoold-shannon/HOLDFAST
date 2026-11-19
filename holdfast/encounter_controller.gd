@@ -285,6 +285,7 @@ const CivilianCommand = preload("res://systems/civilian_command.gd")
 const ViewModels = preload("res://presentation/view_models.gd")
 const RescueActions = preload("res://systems/rescue_actions.gd")
 const MachineControls = preload("res://systems/machine_controls.gd")
+const StoryFlow = preload("res://systems/story_flow.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -1372,33 +1373,25 @@ func restore_story_state(snapshot: Dictionary) -> void:
 	return_view = ""
 
 func apply_rescue_knowledge(actor: int) -> void:
-	rescue_events[-1]["closure_warning"] = closure_warning
-	# The acting soldier knows the action; an unconscious patient is not assumed to.
-	knowledge[actor].append(rescue_events[-1]["id"])
+	return StoryFlow.apply_rescue_knowledge(self, actor)
 
 func update_closure_knowledge() -> void:
-	if not ended and phase >= 3: closure_warning = true
+	return StoryFlow.update_closure_knowledge(self)
 
 func update_protocol_observation(action: String, success: bool) -> void:
 	return MachineControls.update_protocol_observation(self, action, success)
 
 func present(index: int) -> bool:
-	return soldiers[index].get("actor_id","") != "" and soldiers[index]["extracted"] and ["active","stable"].has(soldiers[index]["condition"])
+	return StoryFlow.present(self, index)
 
 func original_actor(index: int, original_name: String) -> bool:
-	return soldiers[index].get("actor_id","") == original_name.to_lower()
+	return StoryFlow.original_actor(self, index, original_name)
 
 func knows(index: int, fact: String) -> bool:
-	return present(index) and knowledge[index].has(fact)
+	return StoryFlow.knows(self, index, fact)
 
 func deliver_briefing() -> void:
-	for index in range(4):
-		if not present(index): continue
-		for fact in ["outcomes","machinery"]:
-			if not knowledge[index].has(fact): knowledge[index].append(fact)
-		for event in rescue_events:
-			if not knowledge[index].has(event["id"]): knowledge[index].append(event["id"])
-	persist_story_report()
+	return StoryFlow.deliver_briefing(self)
 
 func persist_story_report() -> void:
 	save_story_report()
@@ -1412,84 +1405,25 @@ func save_story_report() -> void:
 	result_feedback = "Debrief choices and knowledge saved." if problem == "" else problem
 
 func opening_pages() -> Array:
-	return [
-		{"speaker":"EXERCISE CHECKPOINT / BEFORE 09:17", "text":"Ortiz: ‘Patients wait in the shade. That buys us time.’\n\nBell: ‘If the truck cannot turn, nobody leaves.’\n\nPark moves a folding chair outside the turning arc.\n‘Both fit. Unless the next truck is bigger.’", "tag":"Ortiz · medic    Bell · engineer    Park · reconnaissance"},
-		{"speaker":"09:17 / NORTHERN RIDGE", "text":"A vertical distortion crosses the ridge. No explosion. The power trips. Radio recordings lose eleven seconds.\n\nPark closes his paper notebook. ‘That was not in the exercise.’\n\nA recovery machine emerges through the old service gate.","tag":"Observed disruption / cause unknown"},
-		{"speaker":"MAJOR ELENA WARD / TASK FORCE ALDER", "text":"‘Move the civilians east toward town. Keep the Farm Road junction usable. Report what you can verify.’\n\nA broken municipal transmission cuts through:\n‘Clear the service lane. Do not cut the buried feeder. People below need that power.’\n\nThe sender is unverified. The return channel is damaged.","tag":"Protect the route · evacuate civilians · extract the squad"}
-	]
+	return StoryFlow.opening_pages(self)
 
 func report_text() -> String:
-	var text := "Civilians: %d evacuated; %d stranded.\n" % [evacuated_people(),12-evacuated_people()]
-	for cohort in cohorts:
-		text += "Group %s: %s.\n" % [cohort["id"],"four evacuated" if cohort["status"] == "extracted" else "four stranded; fate unconfirmed"]
-	text += "\n"
-	for index in range(4): text += "%s: %s.\n" % [soldiers[index]["name"],soldier_disposition(index)]
-	return text
+	return StoryFlow.report_text(self)
 
 func evidence_pages() -> Array:
-	var recoveries: Array[String] = []
-	for event in rescue_events:
-		var line := "%s: %s %s." % [soldiers[event["actor"]]["name"],{"stabilized":"stabilized","picked_up":"picked up","extracted_with":"carried out"}[event["kind"]],soldiers[event["casualty"]]["name"]]
-		if not recoveries.has(line): recoveries.append(line)
-	if recoveries.is_empty(): recoveries.append("No casualty recovery actions recorded.")
-	var pages: Array = []
-	for first in range(0,recoveries.size(),6):
-		var evidence := machine_outcome()+"\n"+feeder_result()+"\n"+("ACK-01 received; a bounded channel only." if protocol["acknowledged"] else "No protocol acknowledgement recorded.")+"\n\n"+"\n".join(recoveries.slice(first,first+6))
-		pages.append({"speaker":"VERIFIED RECORD / READ TO SURVIVORS","text":evidence,"tag":"Available survivors receive these facts before personal dialogue."})
-	return pages
+	return StoryFlow.evidence_pages(self)
 
 func debrief_pages() -> Array:
 	return return_debrief_pages() if return_state["active"] else origin_debrief_pages()
 
 func origin_debrief_pages() -> Array:
-	var pages: Array = [{"speaker":"FARM ROAD / VERIFIED FIELD REPORT","text":report_text(),"tag":"This report is read to the available survivors before discussion."}]
-	pages.append_array(evidence_pages())
-	var machine_text := "The machine remained active when we withdrew. No intervention was completed."
-	if enemies[0]["hp"] <= 0:
-		machine_text = "Machine is down. Its cooling unit is gone."
-	elif disabled():
-		machine_text = "Drive isolated. The gates lost power with it."
-	elif protocol["diverted"]:
-		var used := false
-		for cohort in cohorts:
-			used = used or (powered_gate_groups.has(cohort["id"]) and cohort["status"] == "extracted")
-		machine_text = "The feeder stayed up. That gave the last group a route." if used else "The feeder stayed up. We kept that option."
-	elif machine["departed"]:
-		machine_text = "The machine departed without an intervention resolving it."
-	pages.append({"speaker":"BELL" if original_actor(2,"Bell") and knows(2,"machinery") else "TECHNICAL RECORD",
-		"text":machine_text+"\n\n"+feeder_result()+"\n\nA bounded protocol response does not establish an alliance." if protocol["acknowledged"] else machine_text+"\n\n"+feeder_result()+"\n\nNo protocol acknowledgement was recorded.",
-		"tag":"Recorded machinery outcome / wider purpose unconfirmed"})
-	var deaths: Array[String] = []
-	for soldier in soldiers:
-		if soldier["condition"] == "dead": deaths.append(soldier["name"])
-	if not deaths.is_empty():
-		pages.append({"speaker":"REST AREA / CASUALTY REPORT","text":"Confirmed dead: %s.\n\nAn empty place remains at the rest area. The casualty report replaces the usual conversation." % ", ".join(deaths),"tag":"Confirmed loss / no invented recovery"})
-	elif original_actor(1,"Ortiz") and original_actor(3,"Park") and present(1) and present(3):
-		for event in rescue_events:
-			if event["kind"] == "stabilized" and event["actor"] == 1 and event["casualty"] == 3 and knows(1,event["id"]) and knows(3,event["id"]):
-				pages.append({"speaker":"PARK / ORTIZ", "text":("Park: ‘You came back when the lane was closing.’" if event["closure_warning"] else "Park: ‘You came back for me.’")+"\n\nOrtiz: ‘You were still on this side of it.’\n\nTreatment continues. Extraction has not erased the injury.","tag":"Verified stabilization / both present and briefed"})
-				break
-	var response_text := "The report stays open for correction. What does the MSG say?"
-	if not present(0) or soldiers[0]["condition"] != "active":
-		response_text = "The MSG remains under medical care. Discussion waits for treatment; the verified report stands."
-	elif debrief_response != "unset":
-		response_text = response_line(debrief_response)
-	pages.append({"speaker":"MSG / THE RECORD", "text":response_text,"tag":"Acknowledgement changes no casualty or civilian totals."})
-	return pages
+	return StoryFlow.origin_debrief_pages(self)
 
 func response_line(value: String) -> String:
-	match value:
-		"cost": return "‘Keep the people we brought out and the people we lost in the same report.’"
-		"correction": return "‘Correct anything we cannot support. Keep the observation separate from the assessment.’"
-		"treatment": return "‘Treatment first. We can talk when everyone who can be helped is being helped.’"
-	return ""
+	return StoryFlow.response_line(self, value)
 
 func choose_opening(value: String) -> void:
-	if opening_done or opening_step != 0 or not ["procedure","patients","logistics"].has(value): return
-	preference = value
-	opening_step = 1
-	scene_page = 1
-	queue_redraw()
+	return StoryFlow.choose_opening(self, value)
 
 func finish_opening() -> void:
 	if preference == "unset": preference = "skipped"
@@ -1500,43 +1434,22 @@ func finish_opening() -> void:
 	queue_redraw()
 
 func begin_debrief() -> bool:
-	if not result_ready or retry_required(): return false
-	scene_view = "debrief"
-	scene_page = 0
-	queue_redraw()
-	return true
+	return StoryFlow.begin_debrief(self)
 
 func choose_response(value: String) -> void:
-	if scene_view != "debrief" or scene_page != debrief_pages().size()-1 or debrief_response != "unset" or not present(0) or soldiers[0]["condition"] != "active" or not ["cost","correction","treatment"].has(value): return
-	debrief_response = value
-	persist_story_report()
-	queue_redraw()
+	return StoryFlow.choose_response(self, value)
 
 func log_pages() -> Array:
 	return return_log_pages() if return_state["active"] else annotate_historical_pages(origin_log_pages())
 
 func origin_log_pages() -> Array:
-	var pages := opening_pages()
-	pages.append({"speaker":"MSG / SAVED DIALOGUE PREFERENCE","text":"Opening choice: %s\n\nThis preference changes no combat stats." % {"unset":"Not chosen yet.","skipped":"Opening skipped; no preference selected.","procedure":"Mark both spaces, then check the route.","patients":"Ortiz, walk me through the slowest patient.","logistics":"Bell, show me the failure point."}[preference],"tag":"Dialogue record"})
-	pages.append({"speaker":"INTELLIGENCE / OBSERVATION & ASSESSMENT", "text":("FACT: retrieving a marked component.\n\nASSESSMENT: evacuation equipment — unconfirmed." if protocol["observed"] else "No close observation has been completed.\n\nThe machine’s purpose is unconfirmed.")+ ("\n\nACK-01 received. This verifies a bounded channel only." if protocol["acknowledged"] else "\n\nNo protocol acknowledgement recorded."),"tag":"Facts and interpretation kept separate"})
-	if result_ready and not retry_required(): pages.append_array(debrief_pages())
-	return pages
+	return StoryFlow.origin_log_pages(self)
 
 func current_pages() -> Array:
-	if scene_view == "opening": return opening_pages()
-	if scene_view == "debrief": return debrief_pages()
-	return log_pages()
+	return StoryFlow.current_pages(self)
 
 func toggle_log() -> void:
-	if scene_view == "log":
-		scene_view = return_view
-		scene_page = return_page
-	else:
-		return_view = scene_view
-		return_page = scene_page
-		scene_view = "log"
-		scene_page = 0
-	queue_redraw()
+	return StoryFlow.toggle_log(self)
 
 func advance_scene() -> void:
 	if return_state["active"] and scene_view == "debrief":
@@ -1548,32 +1461,19 @@ func advance_scene() -> void:
 	else: advance_origin_scene()
 
 func advance_origin_scene() -> void:
-	if scene_view == "opening" and scene_page == 0: return
-	if scene_view == "debrief" and scene_page == evidence_pages().size(): deliver_briefing()
-	if scene_page+1 < current_pages().size():
-		scene_page += 1
-		if scene_view == "opening": opening_step = scene_page
-	elif scene_view == "opening": finish_opening()
-	elif scene_view == "log": toggle_log()
-	else: scene_view = ""
-	queue_redraw()
+	return StoryFlow.advance_origin_scene(self)
 
 func choose_scene_option(index: int) -> void:
 	if not return_state["active"]: choose_origin_scene_option(index)
 
 func choose_origin_scene_option(index: int) -> void:
-	if scene_view == "opening": choose_opening(["procedure","patients","logistics"][index])
-	elif scene_view == "debrief": choose_response(["cost","correction","treatment"][index])
+	return StoryFlow.choose_origin_scene_option(self, index)
 
 func scene_options() -> Array:
 	return [] if return_state["active"] else origin_scene_options()
 
 func origin_scene_options() -> Array:
-	if scene_view == "opening" and scene_page == 0:
-		return ["Mark both spaces, then check the route.","Ortiz, walk me through the slowest patient.","Bell, show me the failure point."]
-	if scene_view == "debrief" and scene_page == debrief_pages().size()-1 and debrief_response == "unset" and present(0) and soldiers[0]["condition"] == "active":
-		return ["Acknowledge the cost.","Ask for factual corrections.","Defer discussion until treatment."]
-	return []
+	return StoryFlow.origin_scene_options(self)
 
 func story_panel_snapshot() -> Dictionary:
 	return ViewModels.story_panel_snapshot(self)

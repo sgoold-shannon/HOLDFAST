@@ -2,6 +2,15 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Controller split, steps 2–5 (Nov 2026)
+
+`encounter_controller.gd` 2,361 → 1,805 lines. Each step moved one area into its own file as static functions taking the board, left one-line wrappers with the original names (so tests, HUD and legacy panels are untouched), and passed the full suite on Godot 4.7.2 / macOS before commit:
+
+- `presentation/view_models.gd`: the 16 `*_snapshot` builders panels and map layers draw from.
+- `systems/rescue_actions.gd`: damage, bleeding out, stabilize, carry, put down.
+- `systems/machine_controls.gd`: breaker and console protocol, including betrayal.
+- `systems/story_flow.gd`: briefing, knowledge flags, evidence/debrief/log pages and scene choices.
+
 ### Civilian command and panic (Nov 2026)
 
 Spence's design: MSG (PSYOP NCO, male, modeled on Spence) directs the crowd; crowd control is his job.
