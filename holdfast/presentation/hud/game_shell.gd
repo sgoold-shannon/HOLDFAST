@@ -7,6 +7,8 @@ const BoardScene = preload("res://farm_final.tscn")
 const MapInput = preload("res://presentation/hud/map_input.gd")
 const MapLayer = preload("res://presentation/hud/map_layer.gd")
 const Command = preload("res://systems/civilian_command.gd")
+const Arc = preload("res://data/campaign_arc.gd")
+const Record = preload("res://systems/campaign_record.gd")
 
 const SIDEBAR_WIDTH := 600.0
 const TOP_HEIGHT := 64.0
@@ -35,6 +37,10 @@ var dirty := true
 ## Tests point these at throwaway files so the player's campaign is never touched.
 var board_auto_resume := true
 var board_campaign_path := ""
+## Campaign record (what each mission leaves behind). Tests get a throwaway file.
+var campaign_record_path := ""
+var show_operations := false
+var last_record_signature := ""
 var confirm_new := false
 ## Shown at launch when a saved campaign exists: New game or Continue.
 var start_menu := false
@@ -48,6 +54,7 @@ func _ready() -> void:
 	layer.layer = 1
 	add_child(layer)
 	visibility_changed.connect(func(): layer.visible = is_visible_in_tree())
+	campaign_record_path = Record.PATH if board_campaign_path == "" else board_campaign_path.get_basename()+"-record.save"
 	build_ui()
 	start_menu = board_auto_resume and board_campaign_path == "" and (FileAccess.file_exists("user://holdfast_d1_campaign.save") or FileAccess.file_exists("user://holdfast_c2_campaign.save"))
 	var fresh = BoardScene.instantiate()
@@ -95,6 +102,7 @@ func build_top_bar() -> void:
 			["load","Load  [L]",func(): board.load_encounter()],
 			["log","Scene log  [Tab]",func(): board.toggle_log()],
 			["roster","Roster  [G]",func(): board.open_roster()],
+			["operations","Operations",func(): open_operations()],
 			["help","Controls",func(): show_help()]]:
 		var top_button := action_button(entry[0],entry[1],entry[2],0)
 		top_button.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -408,6 +416,11 @@ func refresh() -> void:
 	refresh_timer = 0.0
 	dirty = false
 	if not ensure_board(): return
+	if board.result_ready and not board.return_state["active"]:
+		var signature := var_to_str(Record.farm_road_entry(board))
+		if signature != last_record_signature:
+			last_record_signature = signature
+			Record.record_farm_road(campaign_record_path,board)
 	fit_map()
 	refresh_top()
 	refresh_strip()
@@ -421,7 +434,7 @@ func refresh() -> void:
 
 func refresh_top() -> void:
 	var returning: bool = board.return_state["active"]
-	set_text("mission","Return to Farm Road · deployment %d" % board.campaign.get("deployment",2) if returning else "Farm Road")
+	set_text("mission","Continuity test · Return to Farm Road" if returning else Arc.label(1))
 	set_text("round","Round %d   ·   Road closes after round %d   ·   Evacuated %d / 12" % [board.phase,board.deadline(),board.evacuated_people()])
 	actions["roster"].disabled = not board.result_ready
 	actions["log"].disabled = board.roster_open
@@ -630,6 +643,31 @@ func refresh_modal() -> void:
 					button.disabled = entry.size() > 2 and entry[2]
 					row.add_child(button)
 				modal_box.add_child(row)
+			"acts":
+				var row := HBoxContainer.new()
+				row.add_theme_constant_override("separation",12)
+				for act in item[1]:
+					var column := VBoxContainer.new()
+					column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					column.custom_minimum_size = Vector2(320,0)
+					column.add_theme_constant_override("separation",6)
+					column.add_child(heading(act["title"]))
+					var summary := label(act["summary"],16,MUTED)
+					summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+					column.add_child(summary)
+					for card in act["cards"]:
+						var tint: Color = {"playable":Color("2f6b57"),"next":Color("304965")}.get(card["status"],Color("22312a"))
+						var box := panel(tint)
+						box.tooltip_text = card["brief"]
+						box.mouse_filter = Control.MOUSE_FILTER_PASS
+						var lines := VBoxContainer.new()
+						lines.add_theme_constant_override("separation",2)
+						lines.add_child(label(card["title"],19,Color.WHITE if card["status"] != "planned" else MUTED))
+						lines.add_child(label(card["state"],15,GOLD if card["status"] != "planned" else Color("7c8782")))
+						box.add_child(lines)
+						column.add_child(box)
+					row.add_child(column)
+				modal_box.add_child(row)
 			"split":
 				var split := HBoxContainer.new()
 				split.add_theme_constant_override("separation",24)
@@ -662,6 +700,7 @@ func strip_callables(value):
 	return value
 
 func modal_content() -> Dictionary:
+	if show_operations: return operations_content()
 	if start_menu: return start_content()
 	if should_brief(): return briefing_content()
 	if confirm_new: return new_game_content()
@@ -676,7 +715,7 @@ func should_brief() -> bool:
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
-	return {"items":[["title","MISSION: FARM ROAD"],
+	return {"items":[["heading","ACT I · THE BREAKING OF SILENCE"],["title","MISSION 01: FARM ROAD"],
 		["text","You have two jobs, and they pull against each other.",25,GOLD],
 		["heading","1.  STOP THE MACHINE (first)"],
 		["text","The machine heads for its cargo. When it gets there (round %d), the road closes the next round. Shoot it, cut its power at breaker B (9,4), or divert it at console C (11,12). The red box at the top right counts down and lists how." % cargo_round(),23],
@@ -686,13 +725,60 @@ func briefing_content() -> Dictionary:
 		["text","Move soldiers onto an EXIT square and press Extract [E]. MSG must get out.",23],
 		["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]]]}
 
+func open_operations() -> void:
+	show_operations = true
+	dirty = true
+
+func close_operations() -> void:
+	show_operations = false
+
+func noop() -> void:
+	pass
+
+func replay_farm_road() -> void:
+	show_operations = false
+	start_new()
+
+## The campaign at a glance: four acts, seventeen missions, what Farm Road left behind.
+func operations_content() -> Dictionary:
+	var record := Record.load_record(campaign_record_path)
+	var entry: Dictionary = record["missions"].get(1,{})
+	var acts: Array = []
+	for act_index in range(Arc.ACTS.size()):
+		var act: Dictionary = Arc.ACTS[act_index]
+		var cards: Array = []
+		for mission in Arc.MISSIONS:
+			if mission["act"] != act_index: continue
+			var state := ""
+			match mission["status"]:
+				"playable": state = ("PLAYED · %d/12 out · machine %s" % [entry["evacuated"],entry["machine"]] if not entry.is_empty() and not entry["retry_required"] else ("RETRY NEEDED" if not entry.is_empty() else "PLAY NOW"))
+				"next": state = "NEXT · in development"
+				_: state = "planned"
+			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
+		acts.append({"title":"ACT %s · %s" % [act["number"],act["title"].to_upper()],"summary":act["summary"],"cards":cards})
+	var next: Dictionary = Arc.mission(2)
+	var briefing: Dictionary = next["briefing"]
+	var items: Array = [["title","OPERATIONS BOARD · TASK FORCE ALDER"],
+		["text","Earth may be lost, but humanity does not have to be. Seventeen missions across four acts; Farm Road is where it starts, and where it ends.",21,MUTED],
+		["acts",acts],
+		["heading","WHAT THE TASK FORCE KNOWS"]]
+	for line in Record.knowledge(entry): items.append(["text",line,20,TEXT])
+	items.append(["heading","WHAT FARM ROAD CARRIES FORWARD"])
+	for line in Record.carry_forward(entry): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","NEXT: MISSION 02 · RIVER BRIDGE  (briefing — mission in development)"])
+	for key in ["objective","intel","risks","choice","delay"]:
+		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
+	items.append(["row",[["Back",close_operations],["Replay Mission 01 (starts over)",replay_farm_road],["Mission 02: River Bridge — not built yet",noop,true]]])
+	return {"items":items}
+
 func start_content() -> Dictionary:
 	var where := "Return to Farm Road (deployment %d)" % board.campaign.get("deployment",2) if board.return_state["active"] else "Farm Road"
 	var machine := "machine destroyed — no enemy on this map" if not board.machine_present() else "machine still active"
 	return {"items":[["title","HOLDFAST"],
 		["text","Saved game found: %s, round %d, %d / 12 civilians evacuated, %s." % [where,board.phase,board.evacuated_people(),machine],24],
 		["option","New game  —  Farm Road, deployment 1, machine active (old save kept as a backup)",start_new],
-		["option","Continue saved game",continue_saved]]}
+		["option","Continue saved game",continue_saved],
+		["option","Operations board  —  the campaign so far",open_operations]]}
 
 func start_new() -> void:
 	start_menu = false
@@ -771,7 +857,8 @@ func results_content() -> Dictionary:
 		["Save this state  [K]",save_result]]
 	items.append(["row",buttons])
 	var more: Array = [["Debrief  [B]",func(): board.begin_debrief(),board.retry_required()],
-		["Roster / service history  [G]",func(): board.open_roster()]]
+		["Roster / service history  [G]",func(): board.open_roster()],
+		["Operations board",open_operations]]
 	if board.ending_available(): more.append(["Ending logic test  [Z]",func(): board.open_ending_test()])
 	items.append(["row",more])
 	return {"items":items}

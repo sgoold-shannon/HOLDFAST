@@ -2,6 +2,15 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Campaign arc connected (Nov 2026)
+
+**Canon decision (Spence, 19 Nov 2026):** GDD v3.1 is the story authority. Drovers, Kesh, and four separate factions (Greys and Reptilians are not Fallow castes); companion deaths come from play, with no fixed quota. The earlier Kingdom Rush–style design doc is superseded where they conflict.
+
+- `data/campaign_arc.gd`: the four acts and seventeen missions from GDD v3.1 Sections 08–12, condensed. Mission 01 playable, 02 River Bridge briefed as next, the rest planned.
+- `systems/campaign_record.gd`: what each finished mission leaves behind (GDD Section 29): machine state, feeder, protocol acknowledgement, each group's fate, each soldier's status. Written to `user://holdfast_campaign_record.save` when Farm Road's result is recorded (the deployment-2 continuity test doesn't write it). Also produces the plain-language "what the task force knows" and "what carries forward" lines.
+- HUD: **Operations** board (top bar, launch screen and results) shows the acts, mission cards, the record and the River Bridge briefing. Top bar reads "Act I · Mission 01 · Farm Road"; the briefing opens with the Act I title. The return map is labeled as a continuity test.
+- Tests: `test_hud.gd` checks the board and that finishing Farm Road writes a record matching the outcome, using a throwaway record file.
+
 ### Controller split, steps 6–9: done (Nov 2026)
 
 `encounter_controller.gd` is now a 1,140-line coordinator (from 2,595 at the start): shared state accessors, constants, the turn sequence, and one-line wrappers that keep every public name stable. The logic lives in:

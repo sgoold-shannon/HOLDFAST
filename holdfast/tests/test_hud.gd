@@ -104,6 +104,28 @@ func run() -> void:
 	root.push_input(key,true)
 	await process_frame
 	expect(board.sight_mode,"T still toggles aim mode under the HUD")
+	# Campaign: operations board and the record Farm Road leaves behind.
+	var Record = load("res://systems/campaign_record.gd")
+	if FileAccess.file_exists(shell.campaign_record_path): DirAccess.remove_absolute(shell.campaign_record_path)
+	expect(shell.campaign_record_path != Record.PATH,"Tests never touch the player's campaign record")
+	expect(String(shell.widgets["mission"].text).contains("Mission 01"),"Top bar places Farm Road in the campaign")
+	shell.open_operations()
+	shell.refresh()
+	var briefed := false
+	for child in shell.modal_box.get_children():
+		if child is Label and String(child.text).contains("RIVER BRIDGE"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 02")
+	shell.close_operations()
+	board.soldiers[0]["extracted"] = true
+	board.request_close()
+	board.request_close()
+	for i in range(4): await process_frame
+	shell.refresh()
+	var record: Dictionary = Record.load_record(shell.campaign_record_path)
+	expect(board.result_ready and record["missions"].has(1),"Finishing Farm Road writes the campaign record")
+	if record["missions"].has(1):
+		expect(record["missions"][1]["machine"] == Record.machine_state(board) and record["missions"][1]["evacuated"] == board.evacuated_people(),"Record matches the mission's outcome")
+		expect(Record.carry_forward(record["missions"][1]).size() >= 3,"Record explains what carries forward")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()
