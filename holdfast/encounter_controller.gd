@@ -284,6 +284,7 @@ const LegacyScreen = preload("res://presentation/legacy_screen.gd")
 const CivilianCommand = preload("res://systems/civilian_command.gd")
 const ViewModels = preload("res://presentation/view_models.gd")
 const RescueActions = preload("res://systems/rescue_actions.gd")
+const MachineControls = preload("res://systems/machine_controls.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -1125,55 +1126,14 @@ func breaker_reason() -> String:
 	return origin_breaker_reason()
 
 func origin_breaker_reason() -> String:
-	if ended:
-		return "Operation ended."
-	if not machine_present():
-		return "Machine destroyed or departed; breaker unavailable."
-	if disabled():
-		return "Drive already isolated."
-	if not soldier_can_act(active_soldier):
-		return "Select an active soldier."
-	var delta: Vector2i = soldiers[active_soldier]["cell"] - BREAKER_CELL
-	if absi(delta.x) + absi(delta.y) != 1:
-		return "Stand adjacent to breaker (9,4)."
-	if soldiers[active_soldier]["ap"] < 1:
-		return "Breaker action needs 1 AP."
-	return ""
+	return MachineControls.origin_breaker_reason(self)
 
 func try_breaker(confirm: bool = false) -> bool:
 	if return_state["active"]: return repair_return_machine()
 	return operate_origin_breaker(confirm)
 
 func operate_origin_breaker(confirm: bool = false) -> bool:
-	var reason := breaker_reason()
-	if reason != "":
-		status_text = reason
-		isolate_pending = false
-		queue_redraw()
-		return false
-	close_pending = false
-	if breaker_progress == 0:
-		soldiers[active_soldier]["ap"] -= 1
-		breaker_progress = 1
-		status_text = "%s opened the breaker for 1 AP. Housing stays open." % soldiers[active_soldier]["name"]
-		rebuild_movement()
-		return true
-	if not confirm or not isolate_pending:
-		isolate_pending = true
-		queue_redraw()
-		return false
-	soldiers[active_soldier]["ap"] -= 1
-	breaker_progress = 2
-	isolate_pending = false
-	machine["pending_shot"] = NONE
-	for cohort in cohorts:
-		if cohort["status"] == "active" and cohort["order"] in ["north", "south"] and not cohort["passed"]:
-			cohort["passed"] = cohort["cell"] == civilian_waypoint(cohort["order"])
-			cohort["note"] = "Using confirmed bypass"
-	status_text = "Drive isolated for 1 AP. Machine stopped; civilian gates locked; bypasses applied."
-	enemy_message = "Feeder unpowered. Machine retained for later repair."
-	rebuild_movement()
-	return true
+	return MachineControls.operate_origin_breaker(self, confirm)
 
 func blast_victims() -> String:
 	var names: Array[String] = []
@@ -1220,43 +1180,7 @@ func protocol_reason(action: String) -> String:
 	return origin_protocol_reason(action)
 
 func origin_protocol_reason(action: String) -> String:
-	if ended or not machine_present() or disabled():
-		return "Protocol unavailable: encounter ended or machine stopped/departed."
-	if machine["collected_round"] > 0:
-		return "Too late: the skid has already been collected."
-	if not soldier_can_act(active_soldier) or soldiers[active_soldier]["ap"] < 1:
-		return "Select an active soldier with 1 AP."
-	if action == "observe" or action == "transmit":
-		if active_soldier != 0:
-			return "Only MSG may observe and transmit the pause protocol."
-		if action == "observe":
-			if protocol["observed"]:
-				return "Machine already observed."
-			var info := sight_preview(soldiers[0]["cell"],enemies[0]["cell"])
-			if not info["clear"] or info["distance"] > 8:
-				return "Observation needs sight and Manhattan distance 8 or less."
-		else:
-			if not protocol["observed"]:
-				return "Observe the machine before transmitting."
-			if protocol["acknowledged"]:
-				return "Pause already acknowledged; it can be requested only once."
-	else:
-		if not protocol["acknowledged"]:
-			return "Console requires the returned acknowledgement token."
-		var eligible := active_soldier == 2 or (active_soldier == 0 and not soldier_can_act(2))
-		if not eligible:
-			return "%s operates the console. MSG substitutes if unavailable." % soldiers[2]["name"]
-		var delta: Vector2i = soldiers[active_soldier]["cell"] - CONSOLE_CELL
-		if absi(delta.x) + absi(delta.y) != 1:
-			return "Stand adjacent to the console at (11,12)."
-		if action == "authenticate" and protocol["authenticated"]:
-			return "Token already authenticated."
-		if action == "divert":
-			if not protocol["authenticated"]:
-				return "Authenticate ACK-01 before setting the route."
-			if protocol["route_set"]:
-				return "Diversion already used; firing on it cancels safe routing."
-	return ""
+	return MachineControls.origin_protocol_reason(self, action)
 
 func protocol_action(action: String) -> bool:
 	if return_state["active"]: return reject_return_protocol()
@@ -1265,42 +1189,10 @@ func protocol_action(action: String) -> bool:
 	return success
 
 func execute_protocol_action(action: String) -> bool:
-	if not ["observe","transmit","authenticate","divert"].has(action):
-		return false
-	var reason := protocol_reason(action)
-	if reason != "":
-		status_text = reason
-		queue_redraw()
-		return false
-	close_pending = false
-	soldiers[active_soldier]["ap"] -= 1
-	match action:
-		"observe":
-			protocol["observed"] = true
-			status_text = "Observed machine. Pause protocol displayed: HOLD / ONE CYCLE."
-		"transmit":
-			protocol["acknowledged"] = true
-			protocol["pause_pending"] = true
-			status_text = "ACK-01 received. The next machine activation will be skipped once."
-		"authenticate":
-			protocol["authenticated"] = true
-			status_text = "ACK-01 authenticated. Set alternate route for 1 AP before skid collection."
-		"divert":
-			protocol["route_set"] = true
-			protocol["diverted"] = true
-			machine["pending_shot"] = NONE
-			machine["hostile"] = false
-			status_text = "Diverted: (10,10) → (14,10) → component (14,8). Avoids people."
-	rebuild_movement()
-	return true
+	return MachineControls.execute_protocol_action(self, action)
 
 func apply_protocol_betrayal(fired: bool, was_diverted: bool) -> void:
-	if fired and was_diverted:
-		protocol["diverted"] = false
-		protocol["betrayed"] = true
-		machine["hostile"] = true
-		if machine_present():
-			status_text += " Safe routing canceled; returning to skid."
+	return MachineControls.apply_protocol_betrayal(self, fired, was_diverted)
 
 func protocol_panel_snapshot() -> Dictionary:
 	return ViewModels.protocol_panel_snapshot(self)
@@ -1488,8 +1380,7 @@ func update_closure_knowledge() -> void:
 	if not ended and phase >= 3: closure_warning = true
 
 func update_protocol_observation(action: String, success: bool) -> void:
-	if success and action == "observe":
-		status_text = "Fact: retrieving a marked component. Assessment: evacuation equipment (unconfirmed). Tab: log."
+	return MachineControls.update_protocol_observation(self, action, success)
 
 func present(index: int) -> bool:
 	return soldiers[index].get("actor_id","") != "" and soldiers[index]["extracted"] and ["active","stable"].has(soldiers[index]["condition"])
