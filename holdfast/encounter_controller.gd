@@ -289,6 +289,9 @@ const StoryFlow = preload("res://systems/story_flow.gd")
 const CampaignFlow = preload("res://systems/campaign_flow.gd")
 const ReturnMission = preload("res://systems/return_mission.gd")
 const CivilianOrders = preload("res://systems/civilian_orders.gd")
+const MissionResults = preload("res://systems/mission_results.gd")
+const MachineTurn = preload("res://systems/machine_turn.gd")
+const SquadActions = preload("res://systems/squad_actions.gd")
 ## "phase": one free group order per turn (original rule, used by the legacy layout and tests).
 ## "authority": MSG's voice range, 1 AP orders from nearby soldiers, and panic (desktop game).
 var command_model := "phase"
@@ -372,46 +375,10 @@ func extraction_cell(cell: Vector2i) -> bool:
 	return MissionObjectives.squad_exit(mission_definition(),cell)
 
 func try_extract() -> bool:
-	var actor := active_soldier
-	var passenger: int = soldiers[actor]["carrying"] if actor >= 0 else -1
-	close_pending = false
-	var success := false
-	if not ended:
-		success = extract_selected_soldier()
-		# Preserve the original status evaluation before passenger extraction.
-		if success and all_extracted():
-			status_text = "Squad extracted. %d civilians remain; continue turns or close operation." % remaining_civilians()
-	if success and passenger >= 0:
-		soldiers[passenger]["extracted"] = true
-		soldiers[passenger]["carried_by"] = -1
-		soldiers[actor]["carrying"] = -1
-		status_text = "%s and %s extracted together for 1 AP." % [soldiers[actor]["name"],soldiers[passenger]["name"]]
-		record_rescue("extracted_with",actor,passenger)
-	if not success and return_state["active"]:
-		status_text = "North extraction: (9,1) through (11,1), 1 AP; carriers extract both."
-	return success
+	return SquadActions.try_extract(self)
 
 func extract_selected_soldier() -> bool:
-	if not soldier_can_act(active_soldier):
-		status_text = "Select an active soldier to extract."
-	elif not extraction_cell(soldiers[active_soldier]["cell"]):
-		status_text = mission_definition().squad_exit_hint
-	elif soldiers[active_soldier]["ap"] < 1:
-		status_text = "Extraction needs 1 AP. Entering the zone does not extract automatically."
-	else:
-		var soldier: Dictionary = soldiers[active_soldier]
-		soldier["ap"] -= 1
-		soldier["extracted"] = true
-		status_text = "%s extracted for 1 AP." % soldier["name"]
-		if all_extracted():
-			status_text = "All four soldiers extracted. A5 encounter complete."
-		active_soldier = -1
-		selected_cell = NONE
-		pinned_target = NONE
-		rebuild_movement()
-		return true
-	queue_redraw()
-	return false
+	return SquadActions.extract_selected_soldier(self)
 
 func enemy_target() -> int:
 	return machine_behavior.nearest_target(machine,enemies[0],soldiers,machine_plan(),soldier_can_act,sight_preview)
@@ -447,60 +414,16 @@ func fire_block_reason() -> String:
 	return rifle_block_reason().replace("enemy (red E)","machine (D)").replace("enemy","machine")
 
 func rifle_block_reason() -> String:
-	if not soldier_can_act(active_soldier):
-		return "Select an active soldier."
-	var soldier: Dictionary = soldiers[active_soldier]
-	if soldier["attacked"]:
-		return "Attack already used this round."
-	if soldier["ap"] < 1:
-		return "No AP remaining."
-	if soldier["ammo"] < 1:
-		return "Magazine empty. Reload first."
-	if not sight_mode:
-		return "Switch to sight mode [T] and pin a enemy."
-	if pinned_target == NONE:
-		return "Click a enemy to pin it before firing."
-	if target_at(pinned_target) < 0:
-		return "Pin a standing enemy (red E)."
-	var info := sight_preview(soldier["cell"], pinned_target)
-	if not info["clear"]:
-		return "Wall blocks the shot."
-	if not info["can_fire"]:
-		return "Target outside rifle range (1–12 squares)."
-	return ""
+	return SquadActions.rifle_block_reason(self)
 
 func try_fire() -> bool:
-	if return_state["active"]: return reject_return_fire()
-	var was_diverted: bool = protocol["diverted"]
-	var shooter_cell: Vector2i = soldiers[active_soldier]["cell"] if active_soldier >= 0 and active_soldier < soldiers.size() else NONE
-	var success := fire_at_machine()
-	if success and command_model == "authority":
-		round_noise.append(shooter_cell)
-		round_noise.append(enemies[0]["cell"])
-	apply_protocol_betrayal(success,was_diverted)
-	check_recovery_failure()
-	finalize_result()
-	return success
+	return SquadActions.try_fire(self)
 
 func try_reload() -> bool:
-	close_pending = false
-	return false if ended else reload_selected_soldier()
+	return SquadActions.try_reload(self)
 
 func reload_selected_soldier() -> bool:
-	if not soldier_can_act(active_soldier):
-		status_text = "Select an active soldier to reload."
-	elif soldiers[active_soldier]["ap"] < 1:
-		status_text = "Reload needs 1 AP."
-	elif soldiers[active_soldier]["ammo"] == 4:
-		status_text = "Magazine already full. No AP spent."
-	else:
-		soldiers[active_soldier]["ap"] -= 1
-		soldiers[active_soldier]["ammo"] = 4
-		status_text = "%s reloaded for 1 AP. Attack allowance unchanged." % soldiers[active_soldier]["name"]
-		rebuild_movement()
-		return true
-	queue_redraw()
-	return false
+	return SquadActions.reload_selected_soldier(self)
 
 # Complete stable combat snapshot includes RNG state for later save integration (A6).
 
@@ -532,16 +455,7 @@ func cell_to_local(cell: Vector2i) -> Vector2:
 	return board_projection.cell_anchor(cell)
 
 func try_select_cell(cell: Vector2i) -> bool:
-	if not cell_is_in_bounds(cell):
-		return false
-	if not is_walkable(cell):
-		status_text = "Cell (%d, %d) is blocked. Selection unchanged." % [cell.x, cell.y]
-		queue_redraw()
-		return false
-	selected_cell = cell
-	status_text = "Selected ground (%d, %d)." % [cell.x, cell.y]
-	queue_redraw()
-	return true
+	return SquadActions.try_select_cell(self, cell)
 
 func soldier_at(cell: Vector2i) -> int:
 	for index in range(soldiers.size()):
@@ -554,67 +468,22 @@ func rebuild_movement() -> void:
 	limit_carrier_movement()
 
 func refresh_tactical_movement() -> void:
-	distances.clear()
-	parents.clear()
-	if not soldier_can_act(active_soldier):
-		queue_redraw()
-		return
-	var found := MovementSearch.reachable(soldiers[active_soldier]["cell"],soldiers[active_soldier]["ap"]*4,DIRECTIONS,is_walkable)
-	distances.merge(found["distances"])
-	parents.merge(found["parents"])
-	queue_redraw()
+	return SquadActions.refresh_tactical_movement(self)
 
 func move_cost(cell: Vector2i) -> int:
-	if not soldier_can_act(active_soldier) or not distances.has(cell) or soldier_at(cell) >= 0:
-		return 0
-	var steps: int = distances[cell]
-	if steps <= 0:
-		return 0
-	return 1 if steps <= 4 else 2
+	return SquadActions.move_cost(self, cell)
 
 func path_to(cell: Vector2i) -> Array[Vector2i]:
-	var path: Array[Vector2i] = []
-	if move_cost(cell) == 0:
-		return path
-	var current := cell
-	path.push_front(current)
-	while parents.has(current):
-		current = parents[current]
-		path.push_front(current)
-	return path
+	return SquadActions.path_to(self, cell)
 
 func select_soldier(index: int) -> void:
-	if not soldier_can_act(index):
-		status_text = "Soldier unavailable. Critical soldiers cannot act; recovery comes later."
-		queue_redraw()
-		return
-	active_soldier = index
-	selected_cell = soldiers[index]["cell"]
-	status_text = "%s selected. Hover a target; click to pin or unpin." % soldiers[index]["name"] if sight_mode else "%s selected. Hover a destination to preview its route." % soldiers[index]["name"]
-	rebuild_movement()
+	return SquadActions.select_soldier(self, index)
 
 func try_move(cell: Vector2i) -> bool:
-	var actor := active_soldier
-	close_pending = false
-	if ended: return false
-	var success := move_selected_soldier(cell)
-	if success and soldiers[actor]["carrying"] >= 0:
-		soldiers[soldiers[actor]["carrying"]]["cell"] = cell
-	return success
+	return SquadActions.try_move(self, cell)
 
 func move_selected_soldier(cell: Vector2i) -> bool:
-	var cost := move_cost(cell)
-	if cost == 0 or cost > soldiers[active_soldier]["ap"]:
-		status_text = "Cannot move there: blocked, occupied, or beyond remaining AP."
-		queue_redraw()
-		return false
-	var steps: int = distances[cell]
-	soldiers[active_soldier]["cell"] = cell
-	soldiers[active_soldier]["ap"] -= cost
-	selected_cell = cell
-	status_text = "%s moved %d squares for %d AP. %d AP remaining." % [soldiers[active_soldier]["name"], steps, cost, soldiers[active_soldier]["ap"]]
-	rebuild_movement()
-	return true
+	return SquadActions.move_selected_soldier(self, cell)
 
 func next_phase() -> void:
 	TurnResolution.resolve(phase, {
@@ -630,9 +499,7 @@ func next_phase() -> void:
 	})
 
 func toggle_sight() -> void:
-	sight_mode = not sight_mode
-	status_text = "Aim: click the enemy to pin it, review the chance, then press F to fire." if sight_mode else "Movement mode. Click a destination to move."
-	queue_redraw()
+	return SquadActions.toggle_sight(self)
 
 func sight_target() -> Vector2i:
 	return pinned_target if pinned_target != NONE else hovered_cell
@@ -678,19 +545,7 @@ func tactical_buttons() -> Dictionary:
 		"fire":FIRE_RECT,"reload":RELOAD_RECT,"mode":MODE_RECT,"next":NEXT_PHASE_RECT}
 
 func run_tactical_command(command: String) -> void:
-	match command:
-		"save": save_encounter()
-		"load": load_encounter()
-		"extract": try_extract()
-		"fire": try_fire()
-		"reload": try_reload()
-		"mode": toggle_sight()
-		"next": next_phase()
-		"clear":
-			active_soldier = -1
-			pinned_target = NONE
-			status_text = "Selection cleared. Click a soldier or inspect a ground cell."
-			rebuild_movement()
+	return SquadActions.run_tactical_command(self, command)
 
 func soldier_marker_snapshot(index: int) -> Dictionary:
 	return ViewModels.soldier_marker_snapshot(self, index)
@@ -737,24 +592,10 @@ func next_machine_cell() -> Vector2i:
 	return machine_behavior.next_cell(machine,enemies[0],ROUTE,machine_plan())
 
 func origin_machine_intent() -> String:
-	if machine["departed"]:
-		return "Machine departed unresolved."
-	if not machine_present():
-		return "Machine destroyed. Route and pending shot cleared."
-	var next := next_machine_cell()
-	var action := "collect skid" if machine["stage"] == 3 else ("depart" if machine["stage"] == 8 else "move to (%d,%d)" % [next.x, next.y])
-	var shot: Vector2i = machine["pending_shot"]
-	return "%s | Next: %s%s" % ["HOSTILE" if machine["hostile"] else "NEUTRAL", action, " | SHOT (%d,%d): 4 damage" % [shot.x, shot.y] if shot != NONE else ""]
+	return MachineTurn.origin_machine_intent(self)
 
 func danger_summary() -> String:
-	if not machine_present(): return "Machine gone. Civilian rescue still needs orders and End turn [N]."
-	if next_machine_cell() == NONE and machine["pending_shot"] == NONE:
-		return enemy_intent()
-	if machine["pending_shot"] != NONE:
-		return "DANGER: red X takes 4 damage next machine turn. Move off it before [N]."
-	if machine["hostile"]:
-		return "HOSTILE: charges after its move if a soldier is visible within 6 cells; fires next turn."
-	return "NEUTRAL: orange cell takes 4 damage if occupied. Firing makes it hostile."
+	return MachineTurn.danger_summary(self)
 
 func cell_occupied_by_people(cell: Vector2i) -> bool:
 	if soldier_at(cell) >= 0: return true
@@ -763,46 +604,13 @@ func cell_occupied_by_people(cell: Vector2i) -> bool:
 	return false
 
 func damage_cell(cell: Vector2i, amount: int) -> String:
-	var report := apply_casualty_damage(cell,amount)
-	# Recovery must wait for every cell in the enclosing blast to resolve.
-	call_deferred("check_recovery_failure")
-	return report
+	return MachineTurn.damage_cell(self, cell, amount)
 
 func activate_origin_machine() -> void:
-	if last_enemy_phase == phase: return
-	last_enemy_phase = phase
-	var outcome := machine_behavior.activate(machine,enemies[0],soldiers,phase,machine_plan())
-	enemy_message = outcome["message"]
-	if outcome["rebuild"]: rebuild_movement()
+	return MachineTurn.activate_origin_machine(self)
 
 func fire_at_machine() -> bool:
-	var reason := fire_block_reason()
-	if reason != "":
-		status_text = reason
-		queue_redraw()
-		return false
-	var soldier: Dictionary = soldiers[active_soldier]
-	var info := sight_preview(soldier["cell"], pinned_target)
-	# The machine never receives low-cover protection.
-	var chance := clampi(75 + info["range_modifier"], 5, 95)
-	var before := shot_rng.state
-	var roll := shot_rng.randi_range(1, 100)
-	var damage := 4 if roll <= chance else 0
-	soldier["ap"] -= 1
-	soldier["ammo"] -= 1
-	soldier["attacked"] = true
-	machine["hostile"] = true
-	enemies[0]["hp"] = maxi(0, enemies[0]["hp"] - damage)
-	shot_history.append({"phase": phase, "soldier": active_soldier, "target": pinned_target,
-		"chance": chance, "roll": roll, "damage": damage, "rng_before": before, "rng_after": shot_rng.state})
-	status_text = "%s: %s (roll %d/%d%%), %d damage. Machine HP %d/16." % [soldier["name"], "HIT" if damage > 0 else "MISS", roll, chance, damage, enemies[0]["hp"]]
-	if enemies[0]["hp"] == 0:
-		machine["pending_shot"] = NONE
-		for direction in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-			damage_cell(enemies[0]["cell"] + direction, 4)
-		status_text += " Blast: 4 damage nearby. Destroyed before any further response."
-	rebuild_movement()
-	return true
+	return MachineTurn.fire_at_machine(self)
 
 func machine_track() -> Array[Vector2i]:
 	if return_state["active"]:
@@ -815,31 +623,10 @@ func skid_visible() -> bool:
 	return machine["collected_round"] == 0
 
 func machine_plan() -> Dictionary:
-	return {"collect_stage":mission_definition().machine_collect_stage,"depart_stage":ROUTE.size()-1,
-		"disabled":disabled(),"protocol":protocol,"skid":SKID_CELL,"diversion":DIVERSION}
+	return MachineTurn.machine_plan(self)
 
 func machine_path(start: Vector2i, goal: Vector2i, avoid_people: bool) -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	var frontier: Array[Vector2i] = [start]
-	var previous: Dictionary = {start: NONE}
-	var cursor := 0
-	while cursor < frontier.size():
-		var current := frontier[cursor]
-		cursor += 1
-		if current == goal:
-			while current != start:
-				result.push_front(current)
-				current = previous[current]
-			return result
-		for direction in DIRECTIONS:
-			var next := current + direction
-			if previous.has(next) or not cell_is_in_bounds(next) or WALL_CELLS.has(next) or FIXTURES.has(next):
-				continue
-			if avoid_people and cell_occupied_by_people(next):
-				continue
-			previous[next] = current
-			frontier.append(next)
-	return result
+	return MachineTurn.machine_path(self, start, goal, avoid_people)
 
 func machine_view_snapshot() -> Dictionary:
 	return ViewModels.machine_view_snapshot(self)
@@ -951,18 +738,7 @@ func after_turn_resolution() -> void:
 	update_closure_knowledge()
 
 func begin_player_phase() -> void:
-	phase += 1
-	order_used = false
-	for index in range(soldiers.size()):
-		if soldier_can_act(index):
-			soldiers[index]["ap"] = 2
-			soldiers[index]["attacked"] = false
-	status_text = "Player phase %d: one free group order available." % phase
-	if phase == 2:
-		status_text = "Briefing: the buried feeder supplies occupied structures; their nature is unknown."
-	elif phase == 3:
-		status_text = "Briefing: external road closure confirmed at the end of round 10."
-	rebuild_movement()
+	return SquadActions.begin_player_phase(self)
 
 func mission_completion_reason(round_number: int) -> String:
 	return MissionObjectives.completion_reason(mission_definition(),round_number,
@@ -1007,16 +783,7 @@ func operate_origin_breaker(confirm: bool = false) -> bool:
 	return MachineControls.operate_origin_breaker(self, confirm)
 
 func blast_victims() -> String:
-	var names: Array[String] = []
-	for soldier in soldiers:
-		var delta: Vector2i = soldier["cell"] - enemies[0]["cell"]
-		if not soldier["extracted"] and absi(delta.x) + absi(delta.y) <= 1:
-			names.append(soldier["name"])
-	for cohort in cohorts:
-		var delta: Vector2i = cohort["cell"] - enemies[0]["cell"]
-		if cohort["status"] == "active" and absi(delta.x) + absi(delta.y) <= 1:
-			names.append("group " + cohort["id"])
-	return "none" if names.is_empty() else ", ".join(names)
+	return MachineTurn.blast_victims(self)
 
 func machine_outcome() -> String:
 	if return_state["active"]:
@@ -1026,13 +793,7 @@ func machine_outcome() -> String:
 	return origin_machine_outcome()
 
 func origin_machine_outcome() -> String:
-	if enemies[0]["hp"] <= 0:
-		return "Destroyed | cooling lost | " + ("skid recoverable" if machine["collected_round"] == 0 else "collected skid not restored")
-	if disabled():
-		return "Disabled: machine retained; feeder outage; civilian gates locked."
-	if machine["departed"]:
-		return "Departed unresolved: machine and cooling unit unavailable."
-	return "Active: no intervention completed."
+	return MachineTurn.origin_machine_outcome(self)
 
 func breaker_panel_snapshot() -> Dictionary:
 	return ViewModels.breaker_panel_snapshot(self)
@@ -1154,20 +915,13 @@ func append_rescue_record(kind: String, actor: int, casualty: int) -> void:
 		"kind":kind,"actor":actor,"casualty":casualty,"phase":phase})
 
 func check_recovery_failure() -> void:
-	if ended or soldiers[0]["extracted"] or soldiers[0]["condition"] == "active":
-		return
-	for index in range(soldiers.size()):
-		if soldier_can_act(index):
-			return
-	finish_operation("MSG incapacitated; no conscious rescuer remains")
+	return MissionResults.check_recovery_failure(self)
 
 func finalize_result() -> void:
-	Completion.finalize(result_state,soldiers,close_result_operation,save_mission_result,
-		commit_roster,persist_campaign_result)
+	return MissionResults.finalize_result(self)
 
 func close_result_operation(reason: String) -> void:
-	close_evacuation(reason)
-	close_rescue()
+	return MissionResults.close_result_operation(self, reason)
 
 func save_mission_result() -> void:
 	var problem := CampaignPersistence.report(encounter_snapshot,report_path,completion_path,not retry_required())
@@ -1182,51 +936,23 @@ func soldier_disposition(index: int) -> String:
 	return recorded_soldier_disposition(index)
 
 func recorded_soldier_disposition(index: int) -> String:
-	var soldier: Dictionary = soldiers[index]
-	if soldier["condition"] == "dead":
-		return "CONFIRMED DEAD"
-	if not soldier["extracted"]:
-		return "LEFT BEHIND / unavailable"
-	if soldier["condition"] == "critical":
-		return "EXTRACTED / critical casualty"
-	if soldier["condition"] == "stable":
-		return "EXTRACTED / stabilized casualty"
-	return "EXTRACTED / %d HP" % soldier["hp"]
+	return MissionResults.recorded_soldier_disposition(self, index)
 
 func feeder_result() -> String:
 	if return_state["active"]: return "Original record: "+campaign["missions"][0]["feeder"]
 	return origin_feeder_result()
 
 func origin_feeder_result() -> String:
-	if machine["collected_round"] > 0:
-		return "Feeder severed when the skid was collected."
-	if disabled():
-		return "Feeder isolated / power outage; skid retained."
-	return "Feeder intact; skid not collected."
+	return MissionResults.origin_feeder_result(self)
 
 func evacuated_people() -> int:
-	var count := 0
-	for cohort in cohorts:
-		if cohort["status"] == "extracted": count += cohort["manifest"].size()
-	return count
+	return MissionResults.evacuated_people(self)
 
 func result_title() -> String:
-	if retry_required():
-		return "ATTEMPT ENDED / RETRY REQUIRED"
-	var everyone := evacuated_people() == 12
-	for soldier in soldiers:
-		everyone = everyone and soldier["extracted"] and soldier["condition"] != "dead"
-	return "FARM ROAD / EVACUATION COMPLETE" if everyone else "FARM ROAD / PARTIAL COMPLETION"
+	return MissionResults.result_title(self)
 
 func restart_attempt() -> void:
-	if campaign["committed"]:
-		open_roster()
-		return
-	var state := ReturnRules.initial()
-	if return_state["active"]:
-		state["active"] = true
-		state["source"] = return_state["source"]
-	replace_return_attempt(campaign.duplicate(true),state)
+	return MissionResults.restart_attempt(self)
 
 func results_panel_snapshot() -> Dictionary:
 	return ViewModels.results_panel_snapshot(self)
