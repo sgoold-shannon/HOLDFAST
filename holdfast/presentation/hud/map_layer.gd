@@ -32,7 +32,7 @@ static func render(board) -> void:
 	if board.machine_present():
 		var at: Vector2 = projection.cell_anchor(board.enemies[0]["cell"])
 		board.draw_rect(Rect2(at+Vector2(-37,-15),Vector2(110,14)),Color(0.05,0.08,0.07,0.85))
-		board.draw_string(font,at+Vector2(-37,-4),"MACHINE %d/16" % board.enemies[0]["hp"],HORIZONTAL_ALIGNMENT_CENTER,110,11,Color("ff8a80") if board.machine["hostile"] else Color("e6a2c7"))
+		board.draw_string(font,at+Vector2(-37,-4),"%s %d/%d" % [board.machine_label() if board.has_method("machine_label") else "MACHINE",board.enemies[0]["hp"],board.mission_definition().machine_hp],HORIZONTAL_ALIGNMENT_CENTER,110,11,Color("ff8a80") if board.machine["hostile"] else Color("e6a2c7"))
 	# Name the civilian exit so it isn't confused with the squad's EXIT squares.
 	var civ_exit: Vector2 = projection.cell_anchor(board.civilian_exit())
 	board.draw_rect(Rect2(civ_exit+Vector2(-22,-15),Vector2(80,14)),Color(0.05,0.08,0.07,0.85))

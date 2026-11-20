@@ -39,7 +39,7 @@ func origin_breaker_reason() -> String:
 		return "Select an active soldier."
 	var delta: Vector2i = soldiers[active_soldier]["cell"] - BREAKER_CELL
 	if absi(delta.x) + absi(delta.y) != 1:
-		return "Stand adjacent to breaker (9,4)."
+		return "Stand adjacent to the breaker at (%d,%d)." % [BREAKER_CELL.x,BREAKER_CELL.y]
 	if soldiers[active_soldier]["ap"] < 1:
 		return "Breaker action needs 1 AP."
 	return ""

@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 03 · Main Street, v1 greybox — Act I closes (Nov 2026)
+
+Spec: `docs/missions/main-street.md` (approved by Spence). Launch it from the Operations board.
+
+- `main_street.gd` + `main_street.tscn` + `missions/main_street.tres`: a 20×16 town. The Farm Road machine rules drive a 24 HP Drover recovery platform heading down Main Street for the substation. Demolish it, isolate it at the junction box JB (14,10), or redirect it through the control panel CP (7,6); a redirected platform parks across the north alley and shelters the ground next to it.
+- If it reaches the substation, the corridor closes two rounds later (otherwise after round 9).
+- `systems/fallow_cutter.gd`: first Fallow contact. Distortion shown at the end of round 3, cutter and coordination node arrive in round 4. Each Fallow turn it turns last turn's violet strip into rift (impassable, 4 damage, thrown clear) and marks a new strip two columns ahead of the lead group (4 squares with the node linked, 2 without). Interrupt the node (1 AP, adjacent) to buy a turn; kill the cutter (12 HP) to stop new marks. Exits and route waypoints are never marked, so the town can be cut but not sealed.
+- Drover security walks beside the platform (not a target), drops a component when the cutter arrives and leaves. Recover it for 1 AP.
+- Carry-over reads the latest record (River Bridge, else Farm Road); replacements never double up a name.
+- Campaign record gains a mission 03 entry (platform fate, component, rifts, interrupts, cutter). The debrief and the Operations board close Act I: the single-command hypothesis is rejected.
+- Shared fixes: machine HP, breaker/console coordinates and the collect/depart stages now come from mission data instead of Farm Road's numbers.
+- Not yet: save/load inside Main Street, Drover security reacting to being shot, final art.
+- Tests: `test_main_street.gd` plus HUD launch checks. `sim_main.gd`: a simple scripted player gets 4/12 out ignoring the platform and 8/12 demolishing it. Tune after playtests.
+
 ### Mission 02 · River Bridge, v1 greybox (Nov 2026)
 
 Spec: `docs/missions/river-bridge.md` (approved by Spence). Launch it from the Operations board.

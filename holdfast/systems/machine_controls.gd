@@ -14,7 +14,7 @@ static func origin_breaker_reason(board) -> String:
 		return "Select an active soldier."
 	var delta: Vector2i = board.soldiers[board.active_soldier]["cell"] - board.BREAKER_CELL
 	if absi(delta.x) + absi(delta.y) != 1:
-		return "Stand adjacent to breaker (9,4)."
+		return "Stand adjacent to the breaker at (%d,%d)." % [board.BREAKER_CELL.x,board.BREAKER_CELL.y]
 	if board.soldiers[board.active_soldier]["ap"] < 1:
 		return "Breaker action needs 1 AP."
 	return ""
@@ -79,7 +79,7 @@ static func origin_protocol_reason(board, action: String) -> String:
 			return "%s operates the console. MSG substitutes if unavailable." % board.soldiers[2]["name"]
 		var delta: Vector2i = board.soldiers[board.active_soldier]["cell"] - board.CONSOLE_CELL
 		if absi(delta.x) + absi(delta.y) != 1:
-			return "Stand adjacent to the console at (11,12)."
+			return "Stand adjacent to the console at (%d,%d)." % [board.CONSOLE_CELL.x,board.CONSOLE_CELL.y]
 		if action == "authenticate" and board.protocol["authenticated"]:
 			return "Token already authenticated."
 		if action == "divert":

@@ -98,6 +98,54 @@ static func carry_forward_river(entry: Dictionary) -> Array[String]:
 		lines.append("An unidentified craft spent its shield and left damaged. Verified later at the Regional Airfield (Mission 08).")
 	return lines
 
+## Mission 03 entry built from a finished Main Street board.
+static func main_street_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"]})
+	return {"mission":3,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"platform":board.platform_state(),
+		"component":board.drover["recovered"],"rifts":board.fallow["rifts"].size(),
+		"interrupts":board.fallow["interrupts"],"cutter_down":board.fallow["log"].has("cutter_down")}
+
+static func record_main_street(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := main_street_entry(board)
+	var previous: Dictionary = record["missions"].get(3,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][3] = entry
+	save_record(path,record)
+	return true
+
+static func act_one_complete(record: Dictionary) -> bool:
+	var entry: Dictionary = record["missions"].get(3,{})
+	return not entry.is_empty() and not entry["retry_required"]
+
+static func carry_forward_main(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("Main Street: MSG lost. Retry the mission.")
+		return lines
+	lines.append("Main Street: %d of 12 civilians out of town." % entry["evacuated"])
+	match entry["platform"]:
+		"demolished": lines.append("Platform demolished. The street opened fast; nothing was preserved, and the Drovers will remember that at Interchange (Mission 04).")
+		"isolated": lines.append("Platform isolated at the junction box, intact. Better footing with the Drovers at Interchange (Mission 04).")
+		"redirected": lines.append("Platform redirected and parked across the alley. Its work order (substation coolant maintenance) is on record. Best footing with the Drovers at Interchange (Mission 04).")
+		"substation": lines.append("Platform reached the substation and the corridor lost power.")
+		_: lines.append("Platform still moving when the squad withdrew.")
+	if entry["component"]: lines.append("Drover component recovered: evidence, and leverage or a returned-goods gesture at Interchange (Mission 04).")
+	lines.append("Fallow: %d squares of rift ground%s%s." % [entry["rifts"],", node interrupted %d time%s" % [entry["interrupts"],"" if entry["interrupts"] == 1 else "s"] if entry["interrupts"] > 0 else "",", cutter killed" if entry["cutter_down"] else ""])
+	lines.append("ACT I COMPLETE: the single-command hypothesis is rejected. Ward accepts the local assessment and asks for independent corroboration.")
+	return lines
+
 ## What carries into later missions, in plain language. Effects past Mission 01 are
 ## planned in the GDD and will apply as those missions are built.
 static func carry_forward(entry: Dictionary) -> Array[String]:

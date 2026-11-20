@@ -5,6 +5,8 @@ extends Control
 
 const BoardScene = preload("res://farm_final.tscn")
 const RiverScene = preload("res://river_bridge.tscn")
+const MainScene = preload("res://main_street.tscn")
+const Fallow = preload("res://systems/fallow_cutter.gd")
 const Greys = preload("res://systems/grey_team.gd")
 const MapInput = preload("res://presentation/hud/map_input.gd")
 const MapLayer = preload("res://presentation/hud/map_layer.gd")
@@ -210,7 +212,9 @@ func build_sidebar() -> void:
 			["cooling","Cooling move  [Y]",func(): board.use_cooling_move()],
 			["lanes_people","Bridge: people first",func(): board.set_lanes("people")],
 			["lanes_heavy","Bridge: heavy lane",func(): board.set_lanes("heavy")],
-			["sensor","Recover sensor",func(): board.recover_sensor()]]:
+			["sensor","Recover sensor",func(): board.recover_sensor()],
+			["interrupt","Interrupt node",func(): board.interrupt_node()],
+			["component","Recover component",func(): board.recover_component()]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
@@ -422,10 +426,11 @@ func refresh() -> void:
 	dirty = false
 	if not ensure_board(): return
 	if board.result_ready and not board.return_state["active"]:
-		var signature := var_to_str(Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))
+		var signature := var_to_str(Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board)))
 		if signature != last_record_signature:
 			last_record_signature = signature
-			if is_river(): Record.record_river_bridge(campaign_record_path,board)
+			if is_main(): Record.record_main_street(campaign_record_path,board)
+			elif is_river(): Record.record_river_bridge(campaign_record_path,board)
 			else: Record.record_farm_road(campaign_record_path,board)
 	fit_map()
 	refresh_top()
@@ -476,7 +481,7 @@ func preview_text() -> String:
 		if info["edge"] != "none":
 			text += "\n%s cover edge: %s" % [str(info["edge"]).capitalize(),"protected (-25)" if info["protected"] else "flanked (0)"]
 		if board.machine_present() and board.pinned_target == board.enemies[0]["cell"]:
-			text += "\nMachine HP %d/16. Destroying it deals 4 blast damage to: %s" % [board.enemies[0]["hp"],board.blast_victims()]
+			text += "\n%s HP %d/%d. Destroying it deals 4 blast damage to: %s" % ["Platform" if is_main() else "Machine",board.enemies[0]["hp"],board.mission_definition().machine_hp,board.blast_victims()]
 		return text
 	var path: Array = board.path_to(board.hovered_cell)
 	if path.size() > 0:
@@ -512,7 +517,16 @@ func refresh_actions() -> void:
 	else:
 		var progress: int = board.breaker_progress
 		actions["breaker"].text = "Open breaker  [I]" if progress == 0 else ("Isolate drive  [I]" if progress == 1 else "Drive isolated")
+		if is_main(): actions["breaker"].text = "Junction box: open  [I]" if progress == 0 else ("Junction box: isolate  [I]" if progress == 1 else "Platform isolated")
 		gate("breaker",board.breaker_reason())
+	var main := is_main()
+	for action in ["interrupt","component"]: actions[action].visible = main
+	if main:
+		var near_node: bool = can_act and Fallow.node_present(board.fallow) and Fallow.distance(board.soldiers[board.active_soldier]["cell"],board.fallow["node"]) <= 1
+		gate("interrupt","" if near_node and not board.fallow["interrupted"] and board.soldiers[board.active_soldier]["ap"] >= 1 else ("The node is already interrupted." if board.fallow["interrupted"] else ("No node yet." if not Fallow.node_present(board.fallow) else "Select a soldier with 1 AP next to the node (%d,%d)." % [board.fallow["node"].x,board.fallow["node"].y])))
+		var component: Vector2i = board.drover["component"]
+		var near_part: bool = can_act and component != board.NONE and not board.drover["recovered"] and Fallow.distance(board.soldiers[board.active_soldier]["cell"],component) <= 1
+		gate("component","" if near_part and board.soldiers[board.active_soldier]["ap"] >= 1 else ("Component recovered." if board.drover["recovered"] else ("Nothing dropped yet." if component == board.NONE else "Select a soldier with 1 AP next to the component (%d,%d)." % [component.x,component.y])))
 	for action in ["observe","transmit","authenticate","divert"]:
 		actions[action].visible = not returning and not river
 		if not returning and not river: gate(action,board.protocol_reason(action))
@@ -594,7 +608,7 @@ func machine_threat_active() -> bool:
 	return not board.return_state["active"] and board.machine_present() and board.machine["collected_round"] == 0 and not board.protocol["diverted"] and not board.disabled() and not board.ended
 
 func cargo_round() -> int:
-	return board.phase+3-board.machine["stage"]
+	return board.phase+board.mission_definition().machine_collect_stage-board.machine["stage"]
 
 func refresh_priority() -> void:
 	var box: Control = widgets["priority_box"]
@@ -613,6 +627,10 @@ func refresh_priority() -> void:
 		set_text("priority",text)
 		box.visible = text != ""
 		return
+	if is_main():
+		set_text("priority",main_priority())
+		box.visible = widgets["priority"].text != ""
+		return
 	if machine_threat_active():
 		var turns: int = cargo_round()-board.phase
 		var when := "THIS round" if turns <= 0 else ("next round" if turns == 1 else "in %d rounds (round %d)" % [turns,cargo_round()])
@@ -624,6 +642,21 @@ func refresh_priority() -> void:
 	else:
 		box.visible = false
 
+func main_priority() -> String:
+	if board.ended: return ""
+	var fallow: Dictionary = board.fallow
+	if Fallow.cutter_alive(fallow) and not fallow["marked"].is_empty():
+		return "GROUND MARKED — %d violet squares turn to rift next turn: anyone on them takes 4 damage. Move people off, interrupt the node (%d,%d) to buy a turn, or kill the cutter (%d HP)." % [fallow["marked"].size(),fallow["node"].x,fallow["node"].y,fallow["cutter"]["hp"]]
+	if fallow["stage"] == "signaled":
+		return "SOMETHING IS COMING — a distortion at the north-east end of the alley (%d,%d). It arrives next turn." % [fallow["entry"].x,fallow["entry"].y]
+	if machine_threat_active():
+		var turns: int = cargo_round()-board.phase
+		var when := "THIS round" if turns <= 0 else ("next round" if turns == 1 else "in %d rounds (round %d)" % [turns,cargo_round()])
+		return "STOP THE PLATFORM — it reaches the substation %s, then the corridor closes two rounds later. Shoot it (%d HP), cut power at junction box JB (%d,%d), or redirect it at control panel CP (%d,%d)." % [when,board.enemies[0]["hp"],board.BREAKER_CELL.x,board.BREAKER_CELL.y,board.CONSOLE_CELL.x,board.CONSOLE_CELL.y]
+	if board.machine["collected_round"] > 0:
+		return "Substation down. The corridor closes after round %d — get every group moving now." % board.deadline()
+	return ""
+
 func refresh_threat() -> void:
 	set_text("intent",board.enemy_intent())
 	set_text("danger",board.danger_summary())
@@ -631,10 +664,10 @@ func refresh_threat() -> void:
 	var machine: Dictionary = board.machine
 	var forecast := "none"
 	if machine["collected_round"] > 0: forecast = "round %d" % (machine["collected_round"]+1)
-	elif board.machine_present(): forecast = "round %d" % (board.phase+4-machine["stage"])
+	elif board.machine_present(): forecast = "round %d" % (cargo_round()+1)
 	var road := "Road closes after round %d." % board.deadline()
 	if not board.return_state["active"] and board.machine_present() and machine["collected_round"] == 0 and not board.protocol["diverted"] and not board.disabled():
-		road += " If the machine reaches its cargo, the road closes early (after %s). Stop it — shoot it (Aim → Fire) or cut its power at the breaker B (9,4) — or divert it with the console C." % forecast
+		road += " If the machine reaches its cargo, the road closes early (after %s). Stop it — shoot it (Aim → Fire) or cut its power at the breaker B (%d,%d) — or divert it with the console C." % [forecast,board.BREAKER_CELL.x,board.BREAKER_CELL.y]
 	set_text("forecast",road)
 	if board.return_state["active"]:
 		set_text("return_info",board.machine_outcome()+"\nCooling: "+("available" if board.cooling_ready() else "unavailable")+" — one free civilian move of up to 3 squares.")
@@ -741,10 +774,19 @@ func modal_content() -> Dictionary:
 	return {}
 
 func should_brief() -> bool:
-	if is_river(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
+	if is_river() or is_main(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
+	if is_main():
+		var brief: Dictionary = Arc.mission(3)["briefing"]
+		var lines: Array = [["heading","ACT I · THE BREAKING OF SILENCE"],["title","MISSION 03: MAIN STREET"]]
+		for key in ["objective","intel","risks","choice","delay"]:
+			lines.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],brief[key]],22])
+		lines.append(["heading","HOW IT PLAYS"])
+		lines.append(["text","1. The platform (%d HP) grinds down Main Street toward the substation. Shoot it, cut power at the junction box JB (%d,%d), or redirect it through the control panel CP (%d,%d) like the Farm Road console.\n2. Drover security walks beside it. It isn't a target.\n3. Watch the north-east end of the alley. Whatever comes through marks ground in violet, and next turn that ground turns to rift: impassable, and 4 damage to anyone standing on it. A soldier next to its node can Interrupt (1 AP) to buy a turn.\n4. Main Street is fast; the north alley is the way round when the street gets cut." % [board.mission_definition().machine_hp,board.BREAKER_CELL.x,board.BREAKER_CELL.y,board.CONSOLE_CELL.x,board.CONSOLE_CELL.y],22])
+		lines.append(["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]])
+		return {"items":lines}
 	if is_river():
 		var briefing: Dictionary = Arc.mission(2)["briefing"]
 		var items: Array = [["heading","ACT I · THE BREAKING OF SILENCE"],["title","MISSION 02: RIVER BRIDGE"]]
@@ -783,6 +825,7 @@ func operations_content() -> Dictionary:
 	var record := Record.load_record(campaign_record_path)
 	var entry: Dictionary = record["missions"].get(1,{})
 	var river: Dictionary = record["missions"].get(2,{})
+	var main: Dictionary = record["missions"].get(3,{})
 	var acts: Array = []
 	for act_index in range(Arc.ACTS.size()):
 		var act: Dictionary = Arc.ACTS[act_index]
@@ -794,37 +837,53 @@ func operations_content() -> Dictionary:
 				"playable":
 					var done: Dictionary = record["missions"].get(mission["id"],{})
 					var detail := ""
-					if not done.is_empty(): detail = "machine %s" % done["machine"] if mission["id"] == 1 else ("%d taken" % (done["taken"].size()*4) if not done["taken"].is_empty() else "supplies %s" % done["supplies"])
+					if not done.is_empty():
+						match mission["id"]:
+							1: detail = "machine %s" % done["machine"]
+							2: detail = "%d taken" % (done["taken"].size()*4) if not done["taken"].is_empty() else "supplies %s" % done["supplies"]
+							_: detail = "platform %s" % done.get("platform","?")
 					state = ("PLAYED · %d/12 out · %s" % [done["evacuated"],detail] if not done.is_empty() and not done["retry_required"] else ("RETRY NEEDED" if not done.is_empty() else "PLAY NOW"))
 				"next": state = "NEXT · in development"
 				_: state = "planned"
 			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
-		acts.append({"title":"ACT %s · %s" % [act["number"],act["title"].to_upper()],"summary":act["summary"],"cards":cards})
-	var next: Dictionary = Arc.mission(2)
+		var complete := act_index == 0 and Record.act_one_complete(record)
+		acts.append({"title":"ACT %s · %s%s" % [act["number"],act["title"].to_upper(),"  ·  COMPLETE" if complete else ""],"summary":act["summary"],"cards":cards})
+	var next: Dictionary = Arc.mission(3)
 	var briefing: Dictionary = next["briefing"]
 	var items: Array = [["title","OPERATIONS BOARD · TASK FORCE ALDER"],
 		["text","Earth may be lost, but humanity does not have to be. Seventeen missions across four acts; Farm Road is where it starts, and where it ends.",21,MUTED],
 		["acts",acts],
 		["heading","WHAT THE TASK FORCE KNOWS"]]
 	for line in Record.knowledge(entry): items.append(["text",line,20,TEXT])
+	if not main.is_empty():
+		items.append(["text","OBSERVED: on Main Street a new threat marked ground and transformed it a turn later. It didn't negotiate and answered to neither the machines nor the Greys.",20,TEXT])
+	if Record.act_one_complete(record):
+		items.append(["text","ASSESSMENT, accepted locally: these are not one invasion. Ward wants independent corroboration.",20,GOLD])
 	items.append(["heading","WHAT FARM ROAD CARRIES FORWARD"])
 	if not river.is_empty():
 		items.append(["text","OBSERVED: at River Bridge the Greys went for people, not ground; the Farm Road machine went around them. Two different patterns.",20,TEXT])
 	items.append(["heading","WHAT CARRIES FORWARD"])
 	for line in Record.carry_forward(entry): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_river(river): items.append(["text","•  "+line,20,GOLD])
-	items.append(["heading","MISSION 02 · RIVER BRIDGE  (playable)"])
+	for line in Record.carry_forward_main(main): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","MISSION 03 · MAIN STREET  (playable)"])
 	for key in ["objective","intel","risks","choice","delay"]:
 		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
-	items.append(["row",[["Back",close_operations],["Play Mission 01: Farm Road",replay_farm_road],["Play Mission 02: River Bridge",play_river_bridge]]])
+	items.append(["row",[["Back",close_operations],["Play 01: Farm Road",replay_farm_road],["Play 02: River Bridge",play_river_bridge],["Play 03: Main Street",play_main_street]]])
 	return {"items":items}
 
 func play_river_bridge() -> void:
+	launch(RiverScene)
+
+func play_main_street() -> void:
+	launch(MainScene)
+
+func launch(scene: PackedScene) -> void:
 	show_operations = false
 	start_menu = false
 	if valid_board(): board.queue_free()
 	board = null
-	var fresh = RiverScene.instantiate()
+	var fresh = scene.instantiate()
 	fresh.auto_resume = false
 	fresh.record_path = campaign_record_path
 	holder.add_child(fresh)
@@ -834,8 +893,11 @@ func play_river_bridge() -> void:
 func is_river() -> bool:
 	return valid_board() and board.has_method("set_lanes")
 
+func is_main() -> bool:
+	return valid_board() and board.has_method("interrupt_node")
+
 func mission_number() -> int:
-	return 2 if is_river() else 1
+	return 3 if is_main() else (2 if is_river() else 1)
 
 func start_content() -> Dictionary:
 	var where := "Return to Farm Road (deployment %d)" % board.campaign.get("deployment",2) if board.return_state["active"] else "Farm Road"

@@ -113,8 +113,8 @@ func run() -> void:
 	shell.refresh()
 	var briefed := false
 	for child in shell.modal_box.get_children():
-		if child is Label and String(child.text).contains("RIVER BRIDGE"): briefed = true
-	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 02")
+		if child is Label and String(child.text).contains("MAIN STREET"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 03")
 	shell.close_operations()
 	board.soldiers[0]["extracted"] = true
 	board.request_close()
@@ -133,6 +133,15 @@ func run() -> void:
 	expect(shell.is_river() and shell.board.hud_mode and shell.board.command_model == "authority","River Bridge launches in the HUD")
 	expect(String(shell.widgets["mission"].text).contains("Mission 02") and shell.actions["lanes_people"].visible,"HUD shows River Bridge controls")
 	expect(shell.modal_root.visible,"River Bridge opens with its story")
+	# Mission 03 launches the same way, with its own controls.
+	shell.play_main_street()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_main() and shell.board.hud_mode and shell.board.command_model == "authority","Main Street launches in the HUD")
+	expect(String(shell.widgets["mission"].text).contains("Mission 03") and shell.actions["interrupt"].visible and shell.actions["component"].visible and shell.actions["breaker"].visible and not shell.actions["lanes_people"].visible,"HUD shows Main Street controls")
+	shell.board.finish_opening()
+	shell.refresh()
+	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("STOP THE PLATFORM"),"Main Street briefs and points at the platform")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()

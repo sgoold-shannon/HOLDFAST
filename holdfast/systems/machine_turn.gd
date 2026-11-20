@@ -8,7 +8,8 @@ static func origin_machine_intent(board) -> String:
 	if not board.machine_present():
 		return "Machine destroyed. Route and pending shot cleared."
 	var next = board.next_machine_cell()
-	var action = "collect skid" if board.machine["stage"] == 3 else ("depart" if board.machine["stage"] == 8 else "move to (%d,%d)" % [next.x, next.y])
+	var plan := machine_plan(board)
+	var action = "collect skid" if board.machine["stage"] == plan["collect_stage"] else ("depart" if board.machine["stage"] == plan["depart_stage"] else "move to (%d,%d)" % [next.x, next.y])
 	var shot: Vector2i = board.machine["pending_shot"]
 	return "%s | Next: %s%s" % ["HOSTILE" if board.machine["hostile"] else "NEUTRAL", action, " | SHOT (%d,%d): 4 damage" % [shot.x, shot.y] if shot != board.NONE else ""]
 
@@ -55,7 +56,7 @@ static func fire_at_machine(board) -> bool:
 	board.enemies[0]["hp"] = maxi(0, board.enemies[0]["hp"] - damage)
 	board.shot_history.append({"phase": board.phase, "soldier": board.active_soldier, "target": board.pinned_target,
 		"chance": chance, "roll": roll, "damage": damage, "rng_before": before, "rng_after": board.shot_rng.state})
-	board.status_text = "%s: %s (roll %d/%d%%), %d damage. Machine HP %d/16." % [soldier["name"], "HIT" if damage > 0 else "MISS", roll, chance, damage, board.enemies[0]["hp"]]
+	board.status_text = "%s: %s (roll %d/%d%%), %d damage. Machine HP %d/%d." % [soldier["name"], "HIT" if damage > 0 else "MISS", roll, chance, damage, board.enemies[0]["hp"], board.mission_definition().machine_hp]
 	if board.enemies[0]["hp"] == 0:
 		board.machine["pending_shot"] = board.NONE
 		for direction in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
