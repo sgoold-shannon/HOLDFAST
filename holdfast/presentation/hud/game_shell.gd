@@ -6,6 +6,8 @@ extends Control
 const BoardScene = preload("res://farm_final.tscn")
 const RiverScene = preload("res://river_bridge.tscn")
 const MainScene = preload("res://main_street.tscn")
+const InterchangeScene = preload("res://interchange.tscn")
+const Crew = preload("res://systems/drover_crew.gd")
 const Fallow = preload("res://systems/fallow_cutter.gd")
 const Greys = preload("res://systems/grey_team.gd")
 const MapInput = preload("res://presentation/hud/map_input.gd")
@@ -214,7 +216,13 @@ func build_sidebar() -> void:
 			["lanes_heavy","Bridge: heavy lane",func(): board.set_lanes("heavy")],
 			["sensor","Recover sensor",func(): board.recover_sensor()],
 			["interrupt","Interrupt node",func(): board.interrupt_node()],
-			["component","Recover component",func(): board.recover_component()]]:
+			["component","Recover component",func(): board.recover_component()],
+			["ic_observe","Observe hauler (MSG)",func(): board.observe_hauler()],
+			["ic_drone","Observe drone",func(): board.observe_drone()],
+			["ic_pause","Transmit pause (MSG)",func(): board.transmit_pause(false)],
+			["ic_gift","Pause + return component",func(): board.transmit_pause(true)],
+			["suppress","Suppress  (2 rounds)",func(): board.suppress()],
+			["restrain","Restrain",func(): board.restrain()]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
@@ -426,10 +434,11 @@ func refresh() -> void:
 	dirty = false
 	if not ensure_board(): return
 	if board.result_ready and not board.return_state["active"]:
-		var signature := var_to_str(Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board)))
+		var signature := var_to_str(Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
 		if signature != last_record_signature:
 			last_record_signature = signature
-			if is_main(): Record.record_main_street(campaign_record_path,board)
+			if is_interchange(): Record.record_interchange(campaign_record_path,board)
+			elif is_main(): Record.record_main_street(campaign_record_path,board)
 			elif is_river(): Record.record_river_bridge(campaign_record_path,board)
 			else: Record.record_farm_road(campaign_record_path,board)
 	fit_map()
@@ -505,8 +514,17 @@ func refresh_actions() -> void:
 	actions["casualty"].text = "Casualty: %s  [V]" % (board.soldiers[target]["name"] if casualty else "none")
 	var river := is_river()
 	for action in ["lanes_people","lanes_heavy","sensor"]: actions[action].visible = river
-	actions["breaker"].visible = not river
-	if river:
+	var interchange := is_interchange()
+	actions["breaker"].visible = not river and not interchange
+	if interchange:
+		gate("ic_observe",board.observe_hauler_reason())
+		gate("ic_drone",board.observe_drone_reason())
+		gate("ic_pause",board.pause_reason(false))
+		actions["ic_gift"].visible = board.component_held
+		if board.component_held: gate("ic_gift",board.pause_reason(true))
+		gate("suppress",board.suppress_reason())
+		gate("restrain",board.restrain_reason())
+	elif river:
 		var lane_reason: String = "" if can_act and board.lanes == "" else ("Lanes already set: " + board.lanes if board.lanes != "" else "Select a soldier at the checkpoint (8,8).")
 		gate("lanes_people",lane_reason)
 		gate("lanes_heavy",lane_reason)
@@ -521,6 +539,8 @@ func refresh_actions() -> void:
 		gate("breaker",board.breaker_reason())
 	var main := is_main()
 	for action in ["interrupt","component"]: actions[action].visible = main
+	for action in ["ic_observe","ic_drone","ic_pause","suppress","restrain"]: actions[action].visible = interchange
+	if not interchange: actions["ic_gift"].visible = false
 	if main:
 		var near_node: bool = can_act and Fallow.node_present(board.fallow) and Fallow.distance(board.soldiers[board.active_soldier]["cell"],board.fallow["node"]) <= 1
 		gate("interrupt","" if near_node and not board.fallow["interrupted"] and board.soldiers[board.active_soldier]["ap"] >= 1 else ("The node is already interrupted." if board.fallow["interrupted"] else ("No node yet." if not Fallow.node_present(board.fallow) else "Select a soldier with 1 AP next to the node (%d,%d)." % [board.fallow["node"].x,board.fallow["node"].y])))
@@ -528,8 +548,8 @@ func refresh_actions() -> void:
 		var near_part: bool = can_act and component != board.NONE and not board.drover["recovered"] and Fallow.distance(board.soldiers[board.active_soldier]["cell"],component) <= 1
 		gate("component","" if near_part and board.soldiers[board.active_soldier]["ap"] >= 1 else ("Component recovered." if board.drover["recovered"] else ("Nothing dropped yet." if component == board.NONE else "Select a soldier with 1 AP next to the component (%d,%d)." % [component.x,component.y])))
 	for action in ["observe","transmit","authenticate","divert"]:
-		actions[action].visible = not returning and not river
-		if not returning and not river: gate(action,board.protocol_reason(action))
+		actions[action].visible = not returning and not river and not interchange
+		if not returning and not river and not interchange: gate(action,board.protocol_reason(action))
 	actions["cooling"].visible = returning
 	if returning:
 		gate("cooling","" if board.cooling_ready() and board.return_state["bonus_event"] == "" else "Cooling move unavailable or already used.")
@@ -627,6 +647,10 @@ func refresh_priority() -> void:
 		set_text("priority",text)
 		box.visible = text != ""
 		return
+	if is_interchange():
+		set_text("priority",interchange_priority())
+		box.visible = widgets["priority"].text != ""
+		return
 	if is_main():
 		set_text("priority",main_priority())
 		box.visible = widgets["priority"].text != ""
@@ -641,6 +665,20 @@ func refresh_priority() -> void:
 		box.visible = true
 	else:
 		box.visible = false
+
+func interchange_priority() -> String:
+	if board.ended: return ""
+	var crew: Dictionary = board.crew
+	for entry in crew["units"]:
+		if Crew.hostile(crew,board.phase) and not entry["aim"].is_empty() and Crew.unit_fighting(entry):
+			return "DROVER SECURITY AIMING at (%d,%d). Move that soldier off the red line, or Suppress the shooter (−20 Aim)." % [entry["aim"]["cell"].x,entry["aim"]["cell"].y]
+	if board.drone_visible() and not board.drone["observed"] and not board.drone["fired"]:
+		return "GREY DRONE at (%d,%d). It isn't Drover. Observe it (1 AP, any soldier in sight) so everyone sees whose it is, or shoot it down (4 HP)." % [board.drone["cell"].x,board.drone["cell"].y]
+	if Crew.pause_active(crew):
+		return "PAUSE HOLDING through round %d. Civilians can cross the work zone; soldiers stay on the green lane (row %d) near the hauler." % [crew["pause"]["until"],board.LANE_ROW]
+	if not crew["left"] and crew["pause"]["state"] == "none" and crew["agreement"] == "none":
+		return "OPEN THE JUNCTION — civilians won't enter the Drover work zone. MSG within %d of the hauler can Transmit a pause%s, or take the frontage road, or assault. They leave after round %d; the convoy window closes after round %d." % [Crew.VOICE_RANGE,"" if board.acknowledged else " (Observe the hauler first: no ACK-01 on record)",Crew.LEAVE_ROUND,board.deadline()]
+	return ""
 
 func main_priority() -> String:
 	if board.ended: return ""
@@ -774,10 +812,25 @@ func modal_content() -> Dictionary:
 	return {}
 
 func should_brief() -> bool:
-	if is_river() or is_main(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
+	if is_river() or is_main() or is_interchange(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
+	if is_interchange():
+		var brief: Dictionary = Arc.mission(4)["briefing"]
+		var lines: Array = [["heading","ACT II · THE HIDDEN WAR"],["title","MISSION 04: INTERCHANGE"]]
+		for key in ["objective","intel","risks","choice","delay"]:
+			lines.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],brief[key]],22])
+		var carry: Array[String] = []
+		if board.acknowledged: carry.append("ACK-01 on record: they'll take a pause request straight away.")
+		if board.wary: carry.append("You preserved the Main Street platform: the crew is wary, and answers its first provocation with a warning shot.")
+		if board.component_held: carry.append("You have the Main Street component: hand it back with the request for a 5-round pause.")
+		if board.sensor: carry.append("The River Bridge sensor shows the Grey drone from the moment it arrives.")
+		if not carry.is_empty(): lines.append(["text","From earlier missions:  " + " ".join(carry),21,GOLD])
+		lines.append(["heading","HOW IT PLAYS"])
+		lines.append(["text","1. Civilians won't walk into the armed work zone (columns 9–13, barrier to barrier). A soldier who gets within 2 of the hauler without a pause provokes security.\n2. PAUSE: MSG within %d of the hauler transmits (1 AP). It starts in their next phase and lasts %d rounds; groups cross, soldiers keep to the green lane.\n3. ESCORT: group C is on the overpass. The east end collapsed, so the only way down is the west ramp (6,4).\n4. ASSAULT: Suppress (1 AP, 2 rounds of ammo) gives a target −20 Aim; Restrain takes a suppressed Drover at %d HP or less alive.\n5. Watch the south. Something grey is watching the crew." % [Crew.VOICE_RANGE,Crew.PAUSE_ROUNDS,Crew.RESTRAIN_HP],22])
+		lines.append(["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]])
+		return {"items":lines}
 	if is_main():
 		var brief: Dictionary = Arc.mission(3)["briefing"]
 		var lines: Array = [["heading","ACT I · THE BREAKING OF SILENCE"],["title","MISSION 03: MAIN STREET"]]
@@ -826,6 +879,7 @@ func operations_content() -> Dictionary:
 	var entry: Dictionary = record["missions"].get(1,{})
 	var river: Dictionary = record["missions"].get(2,{})
 	var main: Dictionary = record["missions"].get(3,{})
+	var junction: Dictionary = record["missions"].get(4,{})
 	var acts: Array = []
 	for act_index in range(Arc.ACTS.size()):
 		var act: Dictionary = Arc.ACTS[act_index]
@@ -841,14 +895,15 @@ func operations_content() -> Dictionary:
 						match mission["id"]:
 							1: detail = "machine %s" % done["machine"]
 							2: detail = "%d taken" % (done["taken"].size()*4) if not done["taken"].is_empty() else "supplies %s" % done["supplies"]
-							_: detail = "platform %s" % done.get("platform","?")
+							3: detail = "platform %s" % done.get("platform","?")
+							_: detail = "agreement %s" % str(done.get("agreement","?")).replace("_"," ")
 					state = ("PLAYED · %d/12 out · %s" % [done["evacuated"],detail] if not done.is_empty() and not done["retry_required"] else ("RETRY NEEDED" if not done.is_empty() else "PLAY NOW"))
 				"next": state = "NEXT · in development"
 				_: state = "planned"
 			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
 		var complete := act_index == 0 and Record.act_one_complete(record)
 		acts.append({"title":"ACT %s · %s%s" % [act["number"],act["title"].to_upper(),"  ·  COMPLETE" if complete else ""],"summary":act["summary"],"cards":cards})
-	var next: Dictionary = Arc.mission(3)
+	var next: Dictionary = Arc.mission(4)
 	var briefing: Dictionary = next["briefing"]
 	var items: Array = [["title","OPERATIONS BOARD · TASK FORCE ALDER"],
 		["text","Earth may be lost, but humanity does not have to be. Seventeen missions across four acts; Farm Road is where it starts, and where it ends.",21,MUTED],
@@ -866,10 +921,11 @@ func operations_content() -> Dictionary:
 	for line in Record.carry_forward(entry): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_river(river): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_main(main): items.append(["text","•  "+line,20,GOLD])
-	items.append(["heading","MISSION 03 · MAIN STREET  (playable)"])
+	for line in Record.carry_forward_interchange(junction): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","MISSION 04 · INTERCHANGE  (playable)"])
 	for key in ["objective","intel","risks","choice","delay"]:
 		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
-	items.append(["row",[["Back",close_operations],["Play 01: Farm Road",replay_farm_road],["Play 02: River Bridge",play_river_bridge],["Play 03: Main Street",play_main_street]]])
+	items.append(["row",[["Back",close_operations],["Play 01: Farm Road",replay_farm_road],["Play 02: River Bridge",play_river_bridge],["Play 03: Main Street",play_main_street],["Play 04: Interchange",play_interchange]]])
 	return {"items":items}
 
 func play_river_bridge() -> void:
@@ -877,6 +933,9 @@ func play_river_bridge() -> void:
 
 func play_main_street() -> void:
 	launch(MainScene)
+
+func play_interchange() -> void:
+	launch(InterchangeScene)
 
 func launch(scene: PackedScene) -> void:
 	show_operations = false
@@ -896,7 +955,11 @@ func is_river() -> bool:
 func is_main() -> bool:
 	return valid_board() and board.has_method("interrupt_node")
 
+func is_interchange() -> bool:
+	return valid_board() and board.has_method("transmit_pause")
+
 func mission_number() -> int:
+	if is_interchange(): return 4
 	return 3 if is_main() else (2 if is_river() else 1)
 
 func start_content() -> Dictionary:

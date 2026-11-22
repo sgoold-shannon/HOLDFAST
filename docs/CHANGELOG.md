@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 04 · Interchange, v1 greybox — Act II opens (Nov 2026)
+
+Spec: `docs/missions/interchange.md` (approved by Spence, 21 Nov 2026). Launch it from the Operations board.
+
+- `interchange.gd` + `interchange.tscn` + `missions/interchange.tres`: a highway interchange, Farm Road machine off. Group C starts on an overpass whose east end has collapsed; the only way down is the west ramp.
+- `systems/drover_crew.gd`: hauler (20 HP, leaves at the end of round 7) and two security units (10 HP, aim lines a turn ahead, never target civilians). Civilians won't enter the work zone (columns 9–13) unless a pause holds; a soldier within 2 of the hauler without one provokes security.
+- Corridor pause: MSG within 6 of the hauler transmits (1 AP); without ACK-01 he observes the hauler first. 3 rounds, or 5 with the Main Street component handed back. Soldiers stay on the green lane (row 9). Every broken pause records who broke it.
+- `systems/grey_drone.gd`: arrives round 1, fires on the hauler in round 4. Observed first, the Drovers see who did it and shoot it down; unseen, they blame the squad for 2 rounds.
+- New squad tools here: Suppress (1 AP + 2 rounds, −20 Aim, ends if the suppressor moves) and Restrain (a suppressed Drover at 5 HP or less, taken alive).
+- Carry-ins: ACK-01 (no observation needed), preserved Main Street platform (crew is wary: warning shot first), component (longer pause), River Bridge sensor (drone visible from arrival). Carry-over reads the latest squad on record.
+- Campaign record gains a mission 04 entry (agreement, breach, drone, Drover security tally, cargo). An honored agreement makes MSG Ward's field contact; Kesh speaks for the first time.
+- Not yet: save/load inside the Interchange, overwatch, final art.
+- Tests: `test_interchange.gd` plus HUD launch checks. `sim_interchange.gd`: pause plus an observed drone gets 12/12 out; frontage road only gets 8/12 (group C can't make it without the pause); the naive assault script gets MSG killed. Tune after playtests.
+
 ### Mission 03 · Main Street, v1 greybox — Act I closes (Nov 2026)
 
 Spec: `docs/missions/main-street.md` (approved by Spence). Launch it from the Operations board.

@@ -113,8 +113,8 @@ func run() -> void:
 	shell.refresh()
 	var briefed := false
 	for child in shell.modal_box.get_children():
-		if child is Label and String(child.text).contains("MAIN STREET"): briefed = true
-	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 03")
+		if child is Label and String(child.text).contains("INTERCHANGE"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 04")
 	shell.close_operations()
 	board.soldiers[0]["extracted"] = true
 	board.request_close()
@@ -142,6 +142,15 @@ func run() -> void:
 	shell.board.finish_opening()
 	shell.refresh()
 	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("STOP THE PLATFORM"),"Main Street briefs and points at the platform")
+	# Mission 04 launches with its own controls.
+	shell.play_interchange()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_interchange() and shell.board.hud_mode and String(shell.widgets["mission"].text).contains("Mission 04"),"Interchange launches in the HUD")
+	expect(shell.actions["ic_pause"].visible and shell.actions["suppress"].visible and not shell.actions["breaker"].visible and not shell.actions["observe"].visible and not shell.actions["interrupt"].visible,"HUD shows Interchange controls only")
+	shell.board.finish_opening()
+	shell.refresh()
+	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("OPEN THE JUNCTION"),"Interchange briefs and points at the junction")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()

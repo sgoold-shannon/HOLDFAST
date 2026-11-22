@@ -124,6 +124,59 @@ static func record_main_street(path: String, board) -> bool:
 	save_record(path,record)
 	return true
 
+## Mission 04 entry built from a finished Interchange board.
+static func interchange_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"]})
+	var tally: Dictionary = board.security_tally()
+	return {"mission":4,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"agreement":board.agreement(),
+		"breach":board.crew["breach"],"component_returned":board.crew["log"].has("component_returned"),
+		"drone":board.drone["outcome"],"security":tally,"cargo":board.crew["cargo"],
+		"supplies":"gained" if board.crew["cargo"] == "seized" else "none"}
+
+static func record_interchange(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := interchange_entry(board)
+	var previous: Dictionary = record["missions"].get(4,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][4] = entry
+	save_record(path,record)
+	return true
+
+static func field_contact(entry: Dictionary) -> bool:
+	return not entry.is_empty() and not entry["retry_required"] and ["honored","honored_greys_attributed","greys_attributed","expired"].has(entry["agreement"])
+
+static func carry_forward_interchange(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("Interchange: MSG lost. Retry the mission.")
+		return lines
+	lines.append("Interchange: %d of 12 civilians through the junction." % entry["evacuated"])
+	if field_contact(entry):
+		lines.append("The local agreement held. Ward designates MSG field contact for limited Drover agreements; Kesh is on the channel. County Hospital (Mission 06) offers a monitored Drover passage.")
+	elif entry["agreement"] == "breached_greys":
+		lines.append("Unseen Grey fire broke the pause and the Drovers blamed the squad. No field contact yet; at County Hospital (Mission 06) the Drover convoy contests the road.")
+	else:
+		lines.append("No agreement (%s). No field contact yet; at County Hospital (Mission 06) the Drover convoy contests the road." % str(entry["agreement"]).replace("_"," "))
+	var tally: Dictionary = entry["security"]
+	if tally["restrained"] > 0: lines.append("%d Drover security held alive. Returning them later is a gesture the stewards will notice." % tally["restrained"])
+	if tally["killed"] > 0: lines.append("%d Drover security killed. That can't be returned." % tally["killed"])
+	if entry["cargo"] == "seized": lines.append("Cargo seized: supplies for Ward, and a missing ark component the Drovers will need repaired at Quarry (Mission 07).")
+	if entry["component_returned"]: lines.append("Main Street component returned: a returned-goods gesture on the record.")
+	if ["observed","shot","shot_after","downed_by_drovers"].has(entry["drone"]):
+		lines.append("Grey drone %s: first verified evidence that the Greys monitor the other factions. It feeds the Rail Yard (Mission 05) records." % {"observed":"observed","shot":"shot down","shot_after":"shot down","downed_by_drovers":"downed by the Drovers"}[entry["drone"]])
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]
