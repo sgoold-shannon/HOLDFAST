@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 07 · Quarry, v1 greybox — Act II closes (Nov 2026)
+
+Spec: `docs/missions/quarry.md` (approved by Spence, 24 Nov 2026). Launch it from the Operations board.
+
+- `quarry.gd` + `quarry.tscn` + `missions/quarry.tres`: upper bench (high ground), quarry floor, a haul tunnel with two trapped groups, the power platform, two junction boxes and the west-mouth debris carrying the live trunk. The briefing states the habitat as corroborated fact before commitment.
+- `systems/quarry_works.gd`: three plans. Demolish (2 AP charge, blows next phase, clears the mouth, habitat lost for good); isolate (both junction boxes, then a safe-off; then dig 3 debris squares at 2 AP each); recover the controller (one step a round over 3 rounds, platform keeps running, groups take the airshaft). The tunnel collapses at the end of round 9.
+- Scoped elevation: +10 shooting down from the bench, −10 shooting up, shown in the aim preview.
+- `systems/drive_rig.gd`: the Farm Road machine returns if it was disabled or diverted. One free order a turn from MSG within 6: move, dig debris (once the trunk is dead), brace (adjacent squares safe from Fallow marks).
+- Fallow cutter and node over the ridge in round 4. The cutter now marks ahead of a group toward whichever side its exit is on. Rift ground now deals 2 to civilian groups (4 to soldiers), so a group caught on a strip is hurt and thrown clear rather than wiped out (this also applies at Main Street). Groups that got out won't panic back into the tunnel.
+- Carry-ins: Farm Road machine (rig), Interchange cargo seized (4 controller steps), Rail Yard archive (digging 1 AP), Hospital monitored passage (a maintenance hatch shortcut), squad from the latest record.
+- Campaign record gains a mission 07 entry (platform, habitat, controller, collapse losses, rig, rifts, the plan). The debrief names what MSG knew, recommended and saved, then closes Act II; the Operations board marks Act II complete.
+- Not yet: save/load inside the quarry, final art.
+- Tests: `test_quarry.gd` plus HUD launch checks. `sim_quarry.gd` (a simple scripted player): demolish 8/12, isolate 4/12, controller 4/12. The habitat-preserving plans are meant to cost more; tune after playtests.
+
 ### Mission 06 · County Hospital, v1 greybox (Nov 2026)
 
 Spec: `docs/missions/county-hospital.md` (approved by Spence, 24 Nov 2026). Launch it from the Operations board.

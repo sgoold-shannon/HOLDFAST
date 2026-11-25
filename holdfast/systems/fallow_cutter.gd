@@ -11,6 +11,7 @@ const CUTTER_MOVE := 2
 const STRIP_WITH_NODE := 4     # squares marked per strip while the node is linked
 const STRIP_WITHOUT_NODE := 2
 const RIFT_DAMAGE := 4
+const RIFT_CROWD_DAMAGE := 2    # civilian groups are thrown clear hurt, not wiped out
 const SHOT_DAMAGE := 4
 const EXIT_MARGIN := 3          # marks stop this many columns short of the east edge
 const DIRECTIONS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT]
@@ -93,7 +94,7 @@ static func transform(fallow: Dictionary, board) -> String:
 		if not fallow["rifts"].has(cell): fallow["rifts"].append(cell)
 		board.add_rift(cell)
 		if board.soldier_at(cell) >= 0 or board.cohort_at(cell) >= 0:
-			hurt.append(board.apply_casualty_damage(cell,RIFT_DAMAGE))
+			hurt.append(board.apply_casualty_damage(cell,RIFT_DAMAGE if board.soldier_at(cell) >= 0 else RIFT_CROWD_DAMAGE))
 			board.throw_clear(cell)
 	var count: int = fallow["marked"].size()
 	fallow["marked"] = []
@@ -115,8 +116,9 @@ static func mark(fallow: Dictionary, board) -> String:
 			leader = index
 	if leader < 0: return "The cutter turns slowly, finding nothing to cut."
 	var origin: Vector2i = board.cohorts[leader]["cell"]
-	# Never mark the last two columns: the exits always stay reachable.
-	var column := mini(origin.x+2,board.GRID_SIZE.x-EXIT_MARGIN)
+	# Two columns ahead of the group, toward its exit, never on the last columns by the exit.
+	var ahead := 1 if exit_cell.x >= origin.x else -1
+	var column := mini(origin.x+2,board.GRID_SIZE.x-EXIT_MARGIN) if ahead > 0 else maxi(origin.x-2,1+EXIT_MARGIN)
 	var cells: Array = []
 	for offset in [0,-1,1,-2,2,-3,3]:
 		if cells.size() >= length: break

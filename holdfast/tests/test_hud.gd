@@ -113,8 +113,8 @@ func run() -> void:
 	shell.refresh()
 	var briefed := false
 	for child in shell.modal_box.get_children():
-		if child is Label and String(child.text).contains("COUNTY HOSPITAL"): briefed = true
-	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 06")
+		if child is Label and String(child.text).contains("QUARRY"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 07")
 	shell.close_operations()
 	board.soldiers[0]["extracted"] = true
 	board.request_close()
@@ -170,6 +170,15 @@ func run() -> void:
 	shell.board.finish_opening()
 	shell.refresh()
 	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("ASSIGN POWER"),"County Hospital briefs and points at the power")
+	# Mission 07 launches with its own controls.
+	shell.play_quarry()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_quarry() and not shell.is_main() and shell.board.hud_mode and String(shell.widgets["mission"].text).contains("Mission 07"),"Quarry launches in the HUD")
+	expect(shell.actions["q_charge"].visible and shell.actions["q_controller"].visible and not shell.actions["q_rig_move"].visible and not shell.actions["ch_load"].visible and not shell.actions["breaker"].visible,"HUD shows Quarry controls only (no rig without the Farm Road record)")
+	shell.board.finish_opening()
+	shell.refresh()
+	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("haul tunnel"),"Quarry briefs and points at the tunnel")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()

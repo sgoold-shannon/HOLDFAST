@@ -277,6 +277,52 @@ static func carry_forward_hospital(entry: Dictionary) -> Array[String]:
 	if not entry["team_dead"].is_empty(): lines.append("Guard Team Marsh lost %s." % ", ".join(entry["team_dead"]))
 	return lines
 
+## Mission 07 entry built from a finished Quarry board.
+static func quarry_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	var Works = load("res://systems/quarry_works.gd")
+	return {"mission":7,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"platform":Works.platform_state(board.works),
+		"habitat":Works.habitat(board.works),"controller":board.works["controller"],"lost_in_collapse":board.works["lost"].duplicate(),
+		"rig":"absent" if not board.rig["present"] else ("dug" if board.rig["dug"] > 0 else "present"),
+		"rifts":board.fallow["rifts"].size(),"plan":board.plan_name()}
+
+static func record_quarry(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := quarry_entry(board)
+	var previous: Dictionary = record["missions"].get(7,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][7] = entry
+	save_record(path,record)
+	return true
+
+static func act_two_complete(record: Dictionary) -> bool:
+	var entry: Dictionary = record["missions"].get(7,{})
+	return not entry.is_empty() and not entry["retry_required"]
+
+static func carry_forward_quarry(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("Quarry: MSG lost. Retry the mission.")
+		return lines
+	lines.append("Quarry: %d of 12 out%s." % [entry["evacuated"],"" if entry["lost_in_collapse"].is_empty() else "; group %s lost in the tunnel collapse" % ", ".join(entry["lost_in_collapse"])])
+	match entry["habitat"]:
+		"lost": lines.append("The platform was demolished and the habitat it powered is gone, with its ecological reserve. That's permanent: the Dam (Mission 10) and the ark remember it, and Kesh's terms harden.")
+		"strained": lines.append("Platform isolated: the habitat survives on reserve. The Dam (Mission 10) opens with a repair objective.")
+		"powered": lines.append("The habitat kept its power%s. The best terms at the Dam (Mission 10)." % (", and the controller authenticates a partial channel there" if entry["controller"] else ""))
+	lines.append("ACT II COMPLETE: separate threats, separate objectives. Act III, The Enemy of My Enemy, starts at the Regional Airfield (Mission 08).")
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]
