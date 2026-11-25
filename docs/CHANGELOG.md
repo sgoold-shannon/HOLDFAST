@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 06 · County Hospital, v1 greybox (Nov 2026)
+
+Spec: `docs/missions/county-hospital.md` (approved by Spence, 24 Nov 2026). Launch it from the Operations board.
+
+- `county_hospital.gd` + `county_hospital.tscn` + `missions/county_hospital.tres`: one road east, three groups (walking patients, staff, critical patients on gurneys who walk 1 square a turn). The perimeter collapses after round 10.
+- `systems/hospital_power.gd`: power for 1 system (+1 from Rail Yard generator cells, +1 from the Drover coupling), assigned by MSG at the generator room: ambulance charger, triage scanner, fence lights. The ambulance takes one group a trip; people on the road step aside, the convoy and troopers stop it.
+- `systems/screening.gd`: one person of interest per group, one of them the infiltrator. Credentials check and scan at the triage tent, a witnessed act at the north gate in round 3. Two discrepancies confirm; detaining on less is allowed and a wrong call is a recorded false detention. Groups are never targets.
+- `systems/reptilian_team.gd`: two armored troopers (10 HP, rifle hits deal 3) through the gate in round 5 if the infiltrator opened it, round 7 if not. They take a group they end next to (gurneys first) and mark a sonic cone a turn ahead (−1 AP, panic).
+- `systems/drover_convoy.gd`: arrives for round 4 and uses the road in rounds 5–6. With Interchange field contact: monitored passage (+1 power afterwards) or reserve the road. Without it, they force the road and shove people off it.
+- `systems/fire_team.gd`: Guard Team Marsh, four named members, one free order a turn (hold by a soldier, protect the selected group, withdraw), two shots a turn, named casualties.
+- Campaign record gains a mission 06 entry (ambulance trips, power, infiltrator outcome, false detentions, convoy, taken groups, team dead, critical patients) with carry-forward to Quarry and Civic Center.
+- Not yet: save/load inside the hospital, final art.
+- Tests: `test_county_hospital.gd` plus HUD launch checks. `sim_county_hospital.gd`: ambulance for the gurneys with early screening gets 8/12 and contains the infiltrator; ambulance for the walkers gets 4/12. Tune after playtests.
+
 ### Mission 05 · Rail Yard, v1 greybox (Nov 2026)
 
 Spec: `docs/missions/rail-yard.md` (approved by Spence, 24 Nov 2026). Launch it from the Operations board.

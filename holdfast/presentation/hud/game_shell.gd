@@ -8,6 +8,9 @@ const RiverScene = preload("res://river_bridge.tscn")
 const MainScene = preload("res://main_street.tscn")
 const InterchangeScene = preload("res://interchange.tscn")
 const RailScene = preload("res://rail_yard.tscn")
+const HospitalScene = preload("res://county_hospital.tscn")
+const HospitalPower = preload("res://systems/hospital_power.gd")
+const Team = preload("res://systems/fire_team.gd")
 const Yard = preload("res://systems/grey_yard.gd")
 const Crew = preload("res://systems/drover_crew.gd")
 const Fallow = preload("res://systems/fallow_cutter.gd")
@@ -229,7 +232,19 @@ func build_sidebar() -> void:
 			["ry_cut","Cut lock (2 AP)",func(): board.cut_lock()],
 			["ry_download","Download archive",func(): board.download_archive()],
 			["ry_brake","Release handcar",func(): board.release_brake()],
-			["ry_trade","Accept Grey trade (MSG)",func(): board.accept_trade()]]:
+			["ry_trade","Accept Grey trade (MSG)",func(): board.accept_trade()],
+			["ch_power_ambulance","Power: ambulance",func(): board.toggle_power("ambulance")],
+			["ch_power_scanner","Power: scanner",func(): board.toggle_power("scanner")],
+			["ch_power_lights","Power: fence lights",func(): board.toggle_power("lights")],
+			["ch_load","Load ambulance",func(): board.load_ambulance()],
+			["ch_badge","Check credentials",func(): board.check_credentials()],
+			["ch_scan","Scan person",func(): board.scan_person()],
+			["ch_detain","Detain person",func(): board.detain_person()],
+			["ch_monitor","Convoy: monitored passage",func(): board.answer_convoy("monitored")],
+			["ch_reserve","Convoy: reserve the road",func(): board.answer_convoy("reserved")],
+			["ch_hold","Team: hold by soldier",func(): board.order_team("hold")],
+			["ch_protect","Team: protect group",func(): board.order_team("protect")],
+			["ch_withdraw","Team: withdraw",func(): board.order_team("withdraw")]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
@@ -441,10 +456,11 @@ func refresh() -> void:
 	dirty = false
 	if not ensure_board(): return
 	if board.result_ready and not board.return_state["active"]:
-		var signature := var_to_str(Record.rail_yard_entry(board) if is_rail() else Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
+		var signature := var_to_str(Record.county_hospital_entry(board) if is_hospital() else Record.rail_yard_entry(board) if is_rail() else Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
 		if signature != last_record_signature:
 			last_record_signature = signature
-			if is_rail(): Record.record_rail_yard(campaign_record_path,board)
+			if is_hospital(): Record.record_county_hospital(campaign_record_path,board)
+			elif is_rail(): Record.record_rail_yard(campaign_record_path,board)
 			elif is_interchange(): Record.record_interchange(campaign_record_path,board)
 			elif is_main(): Record.record_main_street(campaign_record_path,board)
 			elif is_river(): Record.record_river_bridge(campaign_record_path,board)
@@ -524,7 +540,26 @@ func refresh_actions() -> void:
 	for action in ["lanes_people","lanes_heavy","sensor"]: actions[action].visible = river
 	var interchange := is_interchange()
 	var rail := is_rail()
-	actions["breaker"].visible = not river and not interchange and not rail
+	var hospital := is_hospital()
+	actions["breaker"].visible = not river and not interchange and not rail and not hospital
+	var hospital_actions := ["ch_power_ambulance","ch_power_scanner","ch_power_lights","ch_load","ch_badge","ch_scan","ch_detain","ch_monitor","ch_reserve","ch_hold","ch_protect","ch_withdraw"]
+	for action in hospital_actions: actions[action].visible = hospital
+	if hospital:
+		for system in ["ambulance","scanner","lights"]:
+			var on: bool = HospitalPower.powered(board.power,system)
+			actions["ch_power_"+system].text = "Power: %s (%s)" % [{"ambulance":"ambulance","scanner":"scanner","lights":"fence lights"}[system],"ON" if on else "off"]
+			gate("ch_power_"+system,board.power_reason(system))
+		gate("ch_load",board.load_reason())
+		gate("ch_badge",board.screen_reason("credentials"))
+		gate("ch_scan",board.screen_reason("scan"))
+		gate("ch_detain",board.detain_reason())
+		var convoy_open: bool = board.convoy["stage"] == "arrived" and board.convoy["contact"] and board.convoy["choice"] == "none"
+		actions["ch_monitor"].visible = convoy_open
+		actions["ch_reserve"].visible = convoy_open
+		if convoy_open:
+			gate("ch_monitor",board.convoy_reason())
+			gate("ch_reserve",board.convoy_reason())
+		for action in ["ch_hold","ch_protect","ch_withdraw"]: gate(action,board.team_reason())
 	for action in ["ry_bypass","ry_cut","ry_download","ry_brake","ry_trade"]: actions[action].visible = rail
 	if rail:
 		gate("ry_bypass",board.bypass_reason())
@@ -565,8 +600,8 @@ func refresh_actions() -> void:
 		var near_part: bool = can_act and component != board.NONE and not board.drover["recovered"] and Fallow.distance(board.soldiers[board.active_soldier]["cell"],component) <= 1
 		gate("component","" if near_part and board.soldiers[board.active_soldier]["ap"] >= 1 else ("Component recovered." if board.drover["recovered"] else ("Nothing dropped yet." if component == board.NONE else "Select a soldier with 1 AP next to the component (%d,%d)." % [component.x,component.y])))
 	for action in ["observe","transmit","authenticate","divert"]:
-		actions[action].visible = not returning and not river and not interchange and not rail
-		if not returning and not river and not interchange and not rail: gate(action,board.protocol_reason(action))
+		actions[action].visible = not returning and not river and not interchange and not rail and not hospital
+		if not returning and not river and not interchange and not rail and not hospital: gate(action,board.protocol_reason(action))
 	actions["cooling"].visible = returning
 	if returning:
 		gate("cooling","" if board.cooling_ready() and board.return_state["bonus_event"] == "" else "Cooling move unavailable or already used.")
@@ -594,7 +629,7 @@ func refresh_squad() -> void:
 func refresh_civilians() -> void:
 	var view: Dictionary = board.civilian_panel_snapshot()
 	var exit_cell: Vector2i = view["exit"]
-	set_text("civ_how","MSG can order any group within %d squares, free. Any other soldier can order a group within %d squares for 1 AP. Gunfire or the machine within %d squares scares a group: SHAKEN groups move 2, PANICKED groups won't take orders and run. MSG within %d squares keeps a group steady, and Calm talks them down (1 AP). Groups walk when you end the turn, toward the CIVILIAN EXIT at (%d, %d)." % [Command.VOICE_RANGE,Command.NEAR_RANGE,Command.THREAT_RANGE,Command.STEADY_RANGE,exit_cell.x,exit_cell.y])
+	set_text("civ_how",(board.screening_summary()+"\n\n" if is_hospital() else "")+"MSG can order any group within %d squares, free. Any other soldier can order a group within %d squares for 1 AP. Gunfire or the machine within %d squares scares a group: SHAKEN groups move 2, PANICKED groups won't take orders and run. MSG within %d squares keeps a group steady, and Calm talks them down (1 AP). Groups walk when you end the turn, toward the CIVILIAN EXIT at (%d, %d)." % [Command.VOICE_RANGE,Command.NEAR_RANGE,Command.THREAT_RANGE,Command.STEADY_RANGE,exit_cell.x,exit_cell.y])
 	var selected: int = view["cohort_selected"]
 	var selected_cohort: Dictionary = board.cohorts[selected]
 	var authority: Dictionary = Command.order_authority(board.soldiers,board.active_soldier,selected_cohort)
@@ -664,6 +699,10 @@ func refresh_priority() -> void:
 		set_text("priority",text)
 		box.visible = text != ""
 		return
+	if is_hospital():
+		set_text("priority",hospital_priority())
+		box.visible = widgets["priority"].text != ""
+		return
 	if is_rail():
 		set_text("priority",rail_priority())
 		box.visible = widgets["priority"].text != ""
@@ -686,6 +725,21 @@ func refresh_priority() -> void:
 		box.visible = true
 	else:
 		box.visible = false
+
+func hospital_priority() -> String:
+	if board.ended: return ""
+	var power: Dictionary = board.power
+	if board.phase == 1 and HospitalPower.used(power) == 0:
+		return "ASSIGN POWER — MSG at the generator room (2,8). You have %d system%s: ambulance charger, triage scanner or fence lights." % [HospitalPower.capacity(power),"" if HospitalPower.capacity(power) == 1 else "s"]
+	if not board.reptilians["cone"].is_empty():
+		return "SONIC CONE marked (violet). Anyone in it next phase loses 1 AP; groups in it panic. Spread out and step clear."
+	if board.convoy["stage"] == "arrived" and board.convoy["contact"] and board.convoy["choice"] == "none":
+		return "KESH ON THE CHANNEL — the Drover convoy needs the road for rounds 5–6. MSG within 6 of it: monitored passage (coupling: +1 power) or reserve the road."
+	for entry in board.reptilian_targets():
+		return "REPTILIAN TROOPERS inside the fence. They take any group they end next to, gurneys first. Shots on their armor deal 3."
+	if not board.screening["acted"] and board.phase <= 3:
+		return "SCREEN BEFORE ROUND 3 — at the triage tent (12,6), check credentials (and scan, if powered). Two discrepancies confirm; then detain. Keep a soldier with eyes on the north gate (12,2) in round 3."
+	return ""
 
 func rail_priority() -> String:
 	if board.ended: return ""
@@ -847,10 +901,24 @@ func modal_content() -> Dictionary:
 	return {}
 
 func should_brief() -> bool:
-	if is_river() or is_main() or is_interchange() or is_rail(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
+	if is_river() or is_main() or is_interchange() or is_rail() or is_hospital(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
+	if is_hospital():
+		var brief: Dictionary = Arc.mission(6)["briefing"]
+		var lines: Array = [["heading","ACT II · THE HIDDEN WAR"],["title","MISSION 06: COUNTY HOSPITAL"]]
+		for key in ["objective","intel","risks","choice","delay"]:
+			lines.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],brief[key]],22])
+		var carry: Array[String] = []
+		if board.rail_cells: carry.append("Rail Yard generator cells: +1 power system.")
+		if board.field_contact: carry.append("Kesh is your field contact: you can negotiate the convoy (monitored passage gives +1 power).")
+		else: carry.append("No Drover field contact: the convoy will come through regardless.")
+		lines.append(["text","From earlier missions:  " + " ".join(carry),21,GOLD])
+		lines.append(["heading","HOW IT PLAYS"])
+		lines.append(["text","1. MSG assigns power at the generator room (2,8). The ambulance won't run without its charger.\n2. Ambulance: a soldier at the bay loads the selected group next to it (1 AP). One group a trip, about two trips. Group C (gurneys) walks 1 square a turn.\n3. Screening at the triage tent (12,6): check credentials, scan if powered, and watch the north gate in round 3. Two discrepancies confirm. Detain is 1 AP next to the group, and a wrong call is recorded.\n4. Reptilians take a group they end their move next to. Their sonic cone is marked a turn ahead.\n5. Guard Team Marsh takes one order a turn: hold by a soldier, protect the selected group, or withdraw.",22])
+		lines.append(["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]])
+		return {"items":lines}
 	if is_rail():
 		var brief: Dictionary = Arc.mission(5)["briefing"]
 		var lines: Array = [["heading","ACT II · THE HIDDEN WAR"],["title","MISSION 05: RAIL YARD"]]
@@ -929,6 +997,7 @@ func operations_content() -> Dictionary:
 	var main: Dictionary = record["missions"].get(3,{})
 	var junction: Dictionary = record["missions"].get(4,{})
 	var rail_entry: Dictionary = record["missions"].get(5,{})
+	var hospital_entry: Dictionary = record["missions"].get(6,{})
 	var acts: Array = []
 	for act_index in range(Arc.ACTS.size()):
 		var act: Dictionary = Arc.ACTS[act_index]
@@ -946,14 +1015,15 @@ func operations_content() -> Dictionary:
 							2: detail = "%d taken" % (done["taken"].size()*4) if not done["taken"].is_empty() else "supplies %s" % done["supplies"]
 							3: detail = "platform %s" % done.get("platform","?")
 							4: detail = "agreement %s" % str(done.get("agreement","?")).replace("_"," ")
-							_: detail = "%d aboard · archive %s" % [done.get("aboard",[]).size()*4,done.get("archive","none")]
+							5: detail = "%d aboard · archive %s" % [done.get("aboard",[]).size()*4,done.get("archive","none")]
+							_: detail = "infiltrator %s" % str(done.get("infiltrator","?")).replace("_"," ")
 					state = ("PLAYED · %d/12 out · %s" % [done["evacuated"],detail] if not done.is_empty() and not done["retry_required"] else ("RETRY NEEDED" if not done.is_empty() else "PLAY NOW"))
 				"next": state = "NEXT · in development"
 				_: state = "planned"
 			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
 		var complete := act_index == 0 and Record.act_one_complete(record)
 		acts.append({"title":"ACT %s · %s%s" % [act["number"],act["title"].to_upper(),"  ·  COMPLETE" if complete else ""],"summary":act["summary"],"cards":cards})
-	var next: Dictionary = Arc.mission(5)
+	var next: Dictionary = Arc.mission(6)
 	var briefing: Dictionary = next["briefing"]
 	var items: Array = [["title","OPERATIONS BOARD · TASK FORCE ALDER"],
 		["text","Earth may be lost, but humanity does not have to be. Seventeen missions across four acts; Farm Road is where it starts, and where it ends.",21,MUTED],
@@ -973,10 +1043,12 @@ func operations_content() -> Dictionary:
 	for line in Record.carry_forward_main(main): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_interchange(junction): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_rail(rail_entry): items.append(["text","•  "+line,20,GOLD])
-	items.append(["heading","MISSION 05 · RAIL YARD  (playable)"])
+	for line in Record.carry_forward_hospital(hospital_entry): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","MISSION 06 · COUNTY HOSPITAL  (playable)"])
 	for key in ["objective","intel","risks","choice","delay"]:
 		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
 	items.append(["row",[["Back",close_operations],["Play 01: Farm Road",replay_farm_road],["Play 02: River Bridge",play_river_bridge],["Play 03: Main Street",play_main_street],["Play 04: Interchange",play_interchange],["Play 05: Rail Yard",play_rail_yard]]])
+	items.append(["row",[["Play 06: County Hospital",play_county_hospital]]])
 	return {"items":items}
 
 func play_river_bridge() -> void:
@@ -990,6 +1062,9 @@ func play_interchange() -> void:
 
 func play_rail_yard() -> void:
 	launch(RailScene)
+
+func play_county_hospital() -> void:
+	launch(HospitalScene)
 
 func launch(scene: PackedScene) -> void:
 	show_operations = false
@@ -1015,7 +1090,11 @@ func is_interchange() -> bool:
 func is_rail() -> bool:
 	return valid_board() and board.has_method("bypass_lock")
 
+func is_hospital() -> bool:
+	return valid_board() and board.has_method("load_ambulance")
+
 func mission_number() -> int:
+	if is_hospital(): return 6
 	if is_rail(): return 5
 	if is_interchange(): return 4
 	return 3 if is_main() else (2 if is_river() else 1)

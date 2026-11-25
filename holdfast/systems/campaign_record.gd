@@ -223,6 +223,60 @@ static func carry_forward_rail(entry: Dictionary) -> Array[String]:
 	elif entry["trade"] == "honored": lines.append("The Grey trade was honored on both sides: exactly what was promised, and nothing about the pens.")
 	return lines
 
+## Mission 06 entry built from a finished County Hospital board.
+static func county_hospital_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	var Screening = load("res://systems/screening.gd")
+	var on: Array = []
+	for key in ["ambulance","scanner","lights"]:
+		if board.power["on"][key]: on.append(key)
+	return {"mission":6,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"ambulance":board.ambulance["trips"].duplicate(),
+		"power":on,"capacity":board.power["base"]+board.power["rail"]+board.power["coupling"],
+		"infiltrator":Screening.result(board.screening,board),"false_detentions":board.screening["false_detentions"].duplicate(),
+		"convoy":board.convoy["choice"],"taken":board.reptilians["taken"].duplicate(),"team_dead":board.team_dead(),
+		"critical_out":board.cohorts[board.GURNEY_GROUP]["status"] == "extracted"}
+
+static func record_county_hospital(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := county_hospital_entry(board)
+	var previous: Dictionary = record["missions"].get(6,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][6] = entry
+	save_record(path,record)
+	return true
+
+static func carry_forward_hospital(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("County Hospital: MSG lost. Retry the mission.")
+		return lines
+	lines.append("County Hospital: %d of 12 out%s." % [entry["evacuated"],"" if entry["ambulance"].is_empty() else ", group %s by ambulance" % ", ".join(entry["ambulance"])])
+	lines.append("Critical patients out: the base keeps its medical capacity." if entry["critical_out"] else "Critical patients lost or left: medical capacity at the base is degraded.")
+	match entry["infiltrator"]:
+		"contained": lines.append("Infiltrator contained on corroborated evidence. The harvest files open the Civic Center network (Mission 09).")
+		"detained_thin": lines.append("Infiltrator held on thin evidence. The harvest files open the Civic Center network (Mission 09), and the method is on the record.")
+		"reached_base": lines.append("An undetected infiltrator reached the base with their group. Later base scenes and the Civic Center briefing change.")
+		_: lines.append("The infiltrator was never identified.")
+	if not entry["false_detentions"].is_empty(): lines.append("Falsely detained: %s. Their names are on the record." % ", ".join(entry["false_detentions"]))
+	match entry["convoy"]:
+		"monitored": lines.append("Drover convoy passed under watch: a kept route the stewards will remember at Quarry (Mission 07).")
+		"reserved": lines.append("Road reserved for people. Kesh noted the refusal.")
+		"contested": lines.append("The convoy forced the road: a grievance on both sides.")
+	if not entry["taken"].is_empty(): lines.append("Taken by the Reptilians: group %s. Named, unresolved." % ", ".join(entry["taken"]))
+	if not entry["team_dead"].is_empty(): lines.append("Guard Team Marsh lost %s." % ", ".join(entry["team_dead"]))
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]
