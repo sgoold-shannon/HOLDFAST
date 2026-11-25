@@ -177,6 +177,52 @@ static func carry_forward_interchange(entry: Dictionary) -> Array[String]:
 		lines.append("Grey drone %s: first verified evidence that the Greys monitor the other factions. It feeds the Rail Yard (Mission 05) records." % {"observed":"observed","shot":"shot down","shot_after":"shot down","downed_by_drovers":"downed by the Drovers"}[entry["drone"]])
 	return lines
 
+## Mission 05 entry built from a finished Rail Yard board.
+static func rail_yard_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	return {"mission":5,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"aboard":board.yard["aboard"].duplicate(),
+		"archive":board.archive["state"],"supplies":"generator cells" if board.handcar["out"] else "none",
+		"trade":board.trade_result(),"trade_broken_by":board.yard["trade"]["broken_by"],"greys_down":board.greys_down()}
+
+static func record_rail_yard(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := rail_yard_entry(board)
+	var previous: Dictionary = record["missions"].get(5,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][5] = entry
+	save_record(path,record)
+	return true
+
+static func carry_forward_rail(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("Rail Yard: MSG lost. Retry the mission.")
+		return lines
+	lines.append("Rail Yard: %d of 12 captives freed and out." % entry["evacuated"])
+	for group in entry["groups"]:
+		if group["status"] == "extracted" and str(group["origin"]).begins_with("River Bridge"):
+			lines.append("%s is back. The River Bridge thread is closed." % group["origin"])
+	if not entry["aboard"].is_empty():
+		lines.append("Aboard the Grey transport: group %s. Named and in custody; a rescue option at the Regional Airfield (Mission 08)." % ", ".join(entry["aboard"]))
+	match entry["archive"]:
+		"full": lines.append("Full Grey archive: resource accounting and files on every faction. Ward accepts the separate-threats assessment, and the Grey intel line opens at the Airfield (Mission 08).")
+		"partial": lines.append("Survey records from the trade: useful for Quarry (Mission 07) planning, no faction evidence.")
+	if entry["supplies"] != "none": lines.append("Generator cells recovered: one extra powered system at County Hospital (Mission 06).")
+	if entry["trade"] == "broken": lines.append("The squad broke the Grey trade (%s). The record names it." % entry["trade_broken_by"])
+	elif entry["trade"] == "honored": lines.append("The Grey trade was honored on both sides: exactly what was promised, and nothing about the pens.")
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]

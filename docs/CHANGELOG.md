@@ -2,6 +2,18 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 05 · Rail Yard, v1 greybox (Nov 2026)
+
+Spec: `docs/missions/rail-yard.md` (approved by Spence, 24 Nov 2026). Launch it from the Operations board.
+
+- `rail_yard.gd` + `rail_yard.tscn` + `missions/rail_yard.tres`: a Grey extraction site in the county rail yard. All three groups start in field pens; the exit is west, the way the squad came in. Penned groups sit out the civilian phase; freed groups come out shaken and already pointed at the exit.
+- `systems/grey_yard.gd`: Collector marks a pen in rounds 3, 5 and 7 and takes it the round after (hit it or open the pen to stop it); two Sentries with River Bridge-style beams, passive until provoked; a Disruptor that marks a 3×3 blackout a round ahead (no radio, no lock bypass, no downloads); the transport lifts off at the end of round 8.
+- Squad actions: Bypass lock (Bell, 1 AP), Cut lock (anyone, 2 AP, works in a blackout), Download archive (2 steps by the transport), Release handcar (rolls west 3 a round with generator cells), Accept Grey trade (round 2 only: survey records for leaving the transport, ramp and terminal alone for 3 rounds; the pens aren't covered).
+- Carry-ins: River Bridge's taken groups are in the pens by name and manifest; Interchange drone evidence makes the archive a 1-step download; squad from the latest record.
+- Campaign record gains a mission 05 entry (groups and origins, aboard, archive, supplies, trade, Greys down) with carry-forward to Hospital, Quarry and the Airfield.
+- Not yet: save/load inside the Rail Yard, final art.
+- Tests: `test_rail_yard.gd` plus HUD launch checks. `sim_rail_yard.gd`: people first gets 12/12; people plus the trade gets 12/12 and the survey records; sending a soldier for the full archive costs a pen and a wounded soldier. Tune after playtests.
+
 ### Mission 04 · Interchange, v1 greybox — Act II opens (Nov 2026)
 
 Spec: `docs/missions/interchange.md` (approved by Spence, 21 Nov 2026). Launch it from the Operations board.

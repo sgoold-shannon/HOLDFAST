@@ -113,8 +113,8 @@ func run() -> void:
 	shell.refresh()
 	var briefed := false
 	for child in shell.modal_box.get_children():
-		if child is Label and String(child.text).contains("INTERCHANGE"): briefed = true
-	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 04")
+		if child is Label and String(child.text).contains("RAIL YARD"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 05")
 	shell.close_operations()
 	board.soldiers[0]["extracted"] = true
 	board.request_close()
@@ -151,6 +151,15 @@ func run() -> void:
 	shell.board.finish_opening()
 	shell.refresh()
 	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("OPEN THE JUNCTION"),"Interchange briefs and points at the junction")
+	# Mission 05 launches with its own controls.
+	shell.play_rail_yard()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_rail() and shell.board.hud_mode and String(shell.widgets["mission"].text).contains("Mission 05"),"Rail Yard launches in the HUD")
+	expect(shell.actions["ry_cut"].visible and shell.actions["ry_download"].visible and not shell.actions["ic_pause"].visible and not shell.actions["breaker"].visible,"HUD shows Rail Yard controls only")
+	shell.board.finish_opening()
+	shell.refresh()
+	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("FREE THE PENS"),"Rail Yard briefs and points at the pens")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()
