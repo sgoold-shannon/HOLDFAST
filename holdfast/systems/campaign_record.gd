@@ -323,6 +323,50 @@ static func carry_forward_quarry(entry: Dictionary) -> Array[String]:
 	lines.append("ACT II COMPLETE: separate threats, separate objectives. Act III, The Enemy of My Enemy, starts at the Regional Airfield (Mission 08).")
 	return lines
 
+## Mission 08 entry built from a finished Regional Airfield board.
+static func airfield_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	return {"mission":8,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"contact":board.craft["contact"],
+		"craft_verified":board.craft["contact"] and board.craft["river_shield"],"charges_left":board.craft["charges"],
+		"sensor_data":board.craft["data"],"aircraft":board.aircraft_state(),"runway":"ruined" if board.runway_ruined() else "clear",
+		"bargain":board.strip["bargain"]["state"],"captives_freed":board.pod["active"] and board.pod["open"],
+		"captives":board.pod["origin"],"rifts":board.fallow["rifts"].size(),"team":board.team["name"],"team_dead":board.team_dead()}
+
+static func record_airfield(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := airfield_entry(board)
+	var previous: Dictionary = record["missions"].get(8,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][8] = entry
+	save_record(path,record)
+	return true
+
+static func carry_forward_airfield(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("Regional Airfield: MSG lost. Retry the mission.")
+		return lines
+	lines.append("Regional Airfield: %d of 12 out by the north-west ground route." % entry["evacuated"])
+	if entry["aircraft"] == "intact" and entry["runway"] == "clear": lines.append("Transport plane and runway preserved: air support later at the Mountain Pass and the Valley.")
+	else: lines.append("No air support later (plane %s, runway %s). The ground route remains." % [entry["aircraft"],entry["runway"]])
+	if entry["contact"]: lines.append("Nordic contact made%s: Custodian Aven's line is open for the ark parley (Mission 11)." % (", and the River Bridge craft verified" if entry["craft_verified"] else ""))
+	else: lines.append("The Nordic contact window closed unanswered.")
+	if entry["sensor_data"]: lines.append("Nordic sensor data: the scale of the Fallow, and how few rescue ships exist. The turn toward evacuation starts here.")
+	if entry["captives_freed"]: lines.append("%s freed. The Rail Yard custody thread is closed." % str(entry["captives"]).replace(" (in Grey custody)",""))
+	if not entry["team_dead"].is_empty(): lines.append("%s lost %s." % [entry["team"],", ".join(entry["team_dead"])])
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]

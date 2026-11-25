@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 08 · Regional Airfield, v1 greybox — Act III opens (Nov 2026)
+
+Spec: `docs/missions/regional-airfield.md` (approved by Spence, 25 Nov 2026). Launch it from the Operations board.
+
+- `regional_airfield.gd` + `regional_airfield.tscn` + `missions/regional_airfield.tres`: terminal in the south, runway across the middle, the north-west ground route out, hangar 2 holding the craft. Every unit's label shows its faction and stance.
+- `systems/nordic_craft.gd`: contact (MSG at the hatch, by the end of round 6) with Custodian Aven; 2 protection charges (1 if the craft shielded a column at River Bridge, which contact then verifies). A shield covers a 3×3 area around the selected group; when the charges are gone the craft leaves. Sensor data in 2 steps after contact.
+- `systems/grey_strippers.gd`: a Collector strips the plane's two engines (2 Grey phases each; a hit breaks the strip), two passive Sentries that turn on interference, Greys stepping off Fallow-marked ground, and one stated bargain in round 3 if the full Rail Yard archive opened the intel line.
+- Fallow cutter and node down the runway from round 4; two rift squares on the runway ruin it.
+- Rail Yard captives in a Grey pod replace group C (Bypass or Cut to free them). The Hospital fire team returns with its survivors, or Guard Team Holt if none survived.
+- Campaign record gains a mission 08 entry (contact, verification, charges, sensor data, aircraft, runway, bargain, captives, team) with carry-forward to the Pass, the Valley and the ark.
+- Balance passes: the first map had the exit beside the terminal (everyone out by round 4), so the exit moved across the runway; hangar 1 shrank so rift strips can't seal the exit approach. I also tried making groups refuse to step on violet ground everywhere: it stalled them badly in all three Fallow missions, so it's reverted.
+- Not yet: save/load inside the airfield, final art.
+- Tests: `test_regional_airfield.gd` plus HUD launch checks. `sim_regional_airfield.gd` (scripted, no shields used): guarding the plane 4/12; sending a soldier for the sensor data 8/12. Shields over threatened groups are the intended counter.
+
 ### Mission 07 · Quarry, v1 greybox — Act II closes (Nov 2026)
 
 Spec: `docs/missions/quarry.md` (approved by Spence, 24 Nov 2026). Launch it from the Operations board.
