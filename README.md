@@ -48,5 +48,5 @@ Every file in `holdfast/tests/` runs the same way. A passing run prints `FAILURE
 ## Current decisions
 
 - **Camera:** stylized 2D or 2.5D (StarCraft / Shadowrun style), not full 3D. The 3D preview and Machine A model stay in the project as reference.
-- **Art:** paused until the interface is readable and the controls are clear in playtesting.
+- **Art (resumed 26 Nov 2026):** this is a first visual pass. The environment is top-down with real lighting and shadows, and figures are tilted slightly so they read as people. Sprites are rendered from free CC0 3D kits by `holdfast/tools/sprite_render.gd`. Main Street has it first; other missions keep the flat look until their maps are rendered. Sources and licenses are in `holdfast/assets/CREDITS.md` and `art-source/library/README.md`.
 - **Overwatch:** deferred to the first armed-enemy encounter.

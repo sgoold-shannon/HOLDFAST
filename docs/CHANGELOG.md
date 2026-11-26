@@ -2,6 +2,33 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Visual pass 1 · Main Street gets real art (Nov 2026)
+
+Playtesting a grid of dots and triangles told Spence nothing about whether the game felt right, so new missions are paused for a visual pass on one mission.
+
+- **Free asset library.** Downloaded into `art-source/library/`, which is gitignored and has a license table:
+  - Kenney particles, sci-fi sounds, impact sounds and top-down shooter;
+  - Quaternius Downtown City MegaKit, Universal Base Characters, Universal Animation Library and Sci-Fi Essentials Kit;
+  - GDQuest Godot 4 VFX (shaders only: its textures are non-commercial);
+  - the Sonniss GDC 2026 bundle, left zipped in ~/Downloads.
+- **Sprite renderer.** `holdfast/tools/sprite_render.gd` turns the 3D kits into 2D sprites. It needs a real window, so it runs through the bridge without --headless.
+  - **Map backgrounds** are built from the mission file: street, sidewalks and crosswalks, alleys and service lanes, brick buildings with roofs, parapets and AC units, and cover props on the edges they protect. They're rendered top-down with sun shadows and ambient occlusion, at 96 px per square.
+  - **Soldiers:** woodland camo, gloves and boots painted onto the base body, plus a helmet, plate carrier and rifle. Sheets cover 4 facings × idle, walk (6 frames), aim, shoot, crouch and down.
+  - **Civilians:** six clothing colors.
+- **Sprite layer.** `presentation/sprite_art.gd` is presentation only: it watches state between draws and never changes it. Any mission with a `map_<id>.png` gets:
+  - the background, with reachable squares tinted over it;
+  - soldiers that slide between squares with walk cycles, face where they last moved or aimed, and show a role-colored ground ring, name tag and health bar;
+  - civilian groups as four walking figures;
+  - shot tracers and muzzle flashes, hit flashes and floating damage numbers, rift-fold bursts, cutter sparks and node pulses, and pulsing Fallow marks;
+  - sound: a synthesized rifle shot, Kenney hits, footsteps and sci-fi effects, and a Sonniss city-ambience loop.
+- **Capture tool.** `tools/capture_main_street.gd` plays Main Street and saves screenshots. Those are gitignored.
+- **Credits.** `holdfast/assets/CREDITS.md` lists every shipped file and its license.
+- **Still to do:**
+  - other missions' maps (the renderer's map builder is generic, but each needs a theme pass);
+  - better Fallow art;
+  - moving along the actual route rather than a straight slide;
+  - a playtest of how it feels.
+
 ### Mission 11 · The Buried Ark, v1 greybox — Act III closes (Nov 2026)
 
 Spec: `docs/missions/the-buried-ark.md` (approved by Spence, 26 Nov 2026). Launch it from the Operations board.

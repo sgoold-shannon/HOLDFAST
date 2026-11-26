@@ -6,6 +6,7 @@ const OverlayView = preload("res://presentation/tactical_overlay.gd")
 const MachineView = preload("res://presentation/machine_view.gd")
 const CivilianView = preload("res://presentation/civilian_view.gd")
 const Command = preload("res://systems/civilian_command.gd")
+const SpriteArt = preload("res://presentation/sprite_art.gd")
 
 ## Region of the legacy page that holds the board and its coordinate labels.
 const CROP := Rect2(24, 68, 776, 608)
@@ -14,7 +15,13 @@ static func render(board) -> void:
 	var font: Font = board.font
 	var projection = board.board_projection
 	board.draw_rect(CROP, Color("0e1412"))
-	BoardView.render(board,font,projection,board.board_view_snapshot())
+	var art = SpriteArt.for_board(board)
+	var view: Dictionary = board.board_view_snapshot()
+	if art != null:
+		art.watch(board,projection)
+		art.draw_background(board,projection)
+		view["art"] = true
+	BoardView.render(board,font,projection,view)
 	var custom: bool = board.has_method("draw_mission_layer")
 	if custom: board.draw_mission_layer(projection,font)
 	var path: Array[Vector2i] = []
@@ -25,9 +32,11 @@ static func render(board) -> void:
 	board.draw_targets()
 	for index in range(board.soldiers.size()):
 		if board.soldier_visible(index):
-			board.draw_soldier_marker(index,board.cell_to_local(board.soldiers[index]["cell"])+Vector2(18,18))
+			if art != null: art.draw_soldier(board,index,projection,board.soldier_color(index),index == board.active_soldier)
+			else: board.draw_soldier_marker(index,board.cell_to_local(board.soldiers[index]["cell"])+Vector2(18,18))
 	if not custom: MachineView.render(board,font,projection,board.machine_view_snapshot())
 	CivilianView.render(board,font,projection,board.civilian_view_snapshot())
+	if art != null: art.draw_cohorts(board,projection)
 	# Label the machine (the only enemy on Farm Road) so it reads as a target.
 	if board.machine_present():
 		var at: Vector2 = projection.cell_anchor(board.enemies[0]["cell"])
@@ -103,3 +112,4 @@ static func render(board) -> void:
 		board.draw_rect(hover.grow(-1),Color(1,1,1,0.55),false,2)
 		if board.drop_mode:
 			board.draw_rect(hover.grow(-4),Color(0.55,0.9,0.87,0.25))
+	if art != null: art.draw_effects(board,projection)

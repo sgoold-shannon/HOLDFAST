@@ -501,6 +501,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
+	if valid_board() and board.has_meta("sprite_art") and board.get_meta("sprite_art") != null and board.get_meta("sprite_art").animating():
+		board.queue_redraw()
 	refresh_timer += delta
 	if dirty or refresh_timer > 0.1:
 		refresh()

@@ -4,3 +4,11 @@
 # Local Claude bridge (runs Godot/git jobs on the Mac; not part of the game)
 .bridge/
 Claude Bridge.command
+
+# Third-party asset libraries (downloaded raw packs; only what the game uses is copied into holdfast/assets)
+art-source/library/
+
+# 3D sources for the sprite renderer (third-party, large). Rendered PNGs in holdfast/assets/sprites are committed.
+holdfast/render_src/
+# Screenshots from the capture tools
+holdfast/tools/cap_*.png

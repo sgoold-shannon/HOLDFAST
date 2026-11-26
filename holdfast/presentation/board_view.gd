@@ -5,15 +5,20 @@ static func render(canvas: Object, font: Font, projection: RefCounted, view: Dic
 		for x in range(1, view["size"].x + 1):
 			var cell := Vector2i(x, y)
 			var rect: Rect2 = Rect2(projection.cell_anchor(cell), Vector2.ONE * view["cell_size"])
-			var fill := Color("24352e") if (x + y) % 2 == 0 else Color("293b33")
 			var cost := int(view["costs"].get(cell,0))
-			if cost > 0:
-				fill = Color("315b50") if cost == 1 else Color("304965")
-			if view["walls"].has(cell):
-				fill = Color("66727b")
-			canvas.draw_rect(rect, fill)
-			canvas.draw_rect(rect, Color("42554a"), false, 1.0)
-			if view["walls"].has(cell):
+			if view.get("art",false):
+				# Rendered art underneath: only tint reachable squares and keep a faint grid.
+				if cost > 0: canvas.draw_rect(rect, Color(0.25,0.85,0.65,0.30) if cost == 1 else Color(0.35,0.55,1.0,0.30))
+				canvas.draw_rect(rect, Color(0,0,0,0.10), false, 1.0)
+			else:
+				var fill := Color("24352e") if (x + y) % 2 == 0 else Color("293b33")
+				if cost > 0:
+					fill = Color("315b50") if cost == 1 else Color("304965")
+				if view["walls"].has(cell):
+					fill = Color("66727b")
+				canvas.draw_rect(rect, fill)
+				canvas.draw_rect(rect, Color("42554a"), false, 1.0)
+			if view["walls"].has(cell) and not view.get("art",false):
 				canvas.draw_line(rect.position + Vector2(10, 10), rect.end - Vector2(10, 10), Color("e4e8ec"), 2.0)
 				canvas.draw_line(rect.position + Vector2(26, 10), rect.position + Vector2(10, 26), Color("e4e8ec"), 2.0)
 			if cost > 0:
