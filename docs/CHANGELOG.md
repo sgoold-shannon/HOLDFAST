@@ -2,6 +2,47 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 11 · The Buried Ark, v1 greybox — Act III closes (Nov 2026)
+
+Spec: `docs/missions/the-buried-ark.md` (approved by Spence, 26 Nov 2026). Launch it from the Operations board.
+
+- **New mission files.** `the_buried_ark.gd`, `the_buried_ark.tscn` and `missions/the_buried_ark.tres`. The map:
+  - the service spur and lift (south);
+  - the gallery, with the Warden at its mouth, the maintenance crawl along the west wall, and the reserve battery bay;
+  - the sanctuary, with the parley table, the shelter alcove, the life-support plant (west), and the nursery behind its door (east).
+- **`systems/ark_warden.gd`.** The Warden is never a must-kill boss.
+  - It takes a shot at anyone crossing the gallery mouth (the crawl avoids it). It marks anyone standing in its cone and fires on them next phase.
+  - Bell disables it at the coupling (2 steps). MSG negotiates at the console with authenticated control: trunk 2, or Kesh's authenticated channel plus trunk 1. Once allied, it fires on the Fallow.
+  - It can also be destroyed. It's armored from the front, so shots from the sanctuary side do full damage.
+- **`systems/ark_parley.gd`.** Terms go up +1 a round while the delegates are seated, MSG is within 2 of the table and no Fallow are within 3. Kesh and Aven add +1 each. The agreement is narrow, working (8+) or generous (15+, only if life support survives).
+- **The incursion.** From round 4 a cutter and node come through the east wall. They mark strips toward the table, the life-support plant and the nursery in turn.
+  - **The nursery.** Ilen and the children stay behind their door until a soldier opens it. Then they head for the spur.
+  - **The delegates** scatter to the alcove. MSG calls them back once the table is clear.
+  - **Aven** shields one strip.
+  - **The node** re-links for a round after each interrupt.
+  - **A second cutter** comes in round 8 if the first is dead.
+- **The reserve connector** is optional: Bell seats it in 2 steps, which sets up the reserve power path for later.
+- **Carry-ins:**
+  - Dam trunk power, which decides the console and the lift.
+  - Dam habitat and cargo, Civic records and council, and the Interchange agreement: these set the starting terms.
+  - Kesh is absent if the Quarry habitat was lost and the Dam families weren't stabilized.
+  - Aven attends after Airfield contact, with a charge if one was left.
+  - The squad comes from the latest record.
+- **Campaign record.** It gains a mission 11 entry: agreement, terms, Warden, life support, delegates, keepers, nursery, connector, Kesh/Aven, MSG's packing line and squad. Act III shows complete on the board. Carry-forward covers Act IV terms, the Warden at boarding, the berth cap, and the reserve.
+- **Story.** The debrief establishes that Earth can't be held. Then the packing scene (Ortiz, Bell): MSG picks one of three lines (duty, uncertainty, the people still in reach), and replacement speakers fill in if Ortiz or Bell were lost.
+- **Balance pass:** the Warden's crossing shot, the node re-link, the second cutter, cutters with 16 HP, terms thresholds raised to 8/15, and the deadline moved to round 12 so the nursery can physically get out. Details are in the spec's tuning notes.
+- **Not yet:** save and load at the ark; final art.
+- **Tests and sim.** `test_the_buried_ark.gd`, plus HUD launch checks.
+  - `sim_the_buried_ark.gd` runs three plans:
+
+    | Plan | Terms | Agreement | Nursery |
+    |---|---|---|---|
+    | Crawl, no carry-ins | 10 | Working | Lost |
+    | Disable | 15 | Generous | Saved |
+    | Negotiate, full carry-ins | 26 | Generous | Saved |
+
+  - The scripted player kills cutters fast, so life support was never threatened. That needs a real playtest.
+
 ### Mission 10 · The Dam, v1 greybox (Nov 2026)
 
 Spec: `docs/missions/the-dam.md` (approved by Spence, 25 Nov 2026). Launch it from the Operations board.

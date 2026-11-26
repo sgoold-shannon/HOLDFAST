@@ -113,8 +113,8 @@ func run() -> void:
 	shell.refresh()
 	var briefed := false
 	for child in shell.modal_box.get_children():
-		if child is Label and String(child.text).contains("THE DAM"): briefed = true
-	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 10")
+		if child is Label and String(child.text).contains("THE BURIED ARK"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 11")
 	shell.close_operations()
 	board.soldiers[0]["extracted"] = true
 	board.request_close()
@@ -206,6 +206,15 @@ func run() -> void:
 	shell.board.finish_opening()
 	shell.refresh()
 	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("PRESSURE"),"The Dam briefs and points at the pressure")
+	# Mission 11 launches with its own controls.
+	shell.play_ark()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_ark() and shell.board.hud_mode and String(shell.widgets["mission"].text).contains("Mission 11"),"The Buried Ark launches in the HUD")
+	expect(shell.actions["ba_negotiate"].visible and shell.actions["ba_disable"].visible and shell.actions["ba_nursery"].visible and not shell.actions["ba_shield"].visible and not shell.actions["dm_west"].visible and not shell.actions["breaker"].visible,"HUD shows Buried Ark controls only (no shield without Aven)")
+	shell.board.finish_opening()
+	shell.refresh()
+	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("TERMS"),"The Buried Ark briefs and points at the terms")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()

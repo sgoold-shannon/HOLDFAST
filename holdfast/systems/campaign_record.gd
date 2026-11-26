@@ -457,6 +457,54 @@ static func carry_forward_dam(entry: Dictionary) -> Array[String]:
 	lines.append("Ark trunk power: %d of 2. %s" % [entry["trunk"],["The ark's systems start dark.","Some ark systems start powered.","The Warden's controls and the lift start powered."][entry["trunk"]]])
 	return lines
 
+## Mission 11 entry built from a finished Buried Ark board.
+static func ark_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	return {"mission":11,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,
+		"agreement":board.agreement(),"terms":board.parley["terms"],"warden":board.warden["state"],
+		"life":board.life,"life_lost":board.life == 0,"delegates":board.group_state(0),"keepers":board.group_state(1),
+		"nursery":board.group_state(2),"connector":board.connector >= board.CONNECTOR_STEPS,
+		"kesh":board.kesh,"aven":board.aven,"packing":board.packing_line}
+
+static func record_ark(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := ark_entry(board)
+	var previous: Dictionary = record["missions"].get(11,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][11] = entry
+	save_record(path,record)
+	return true
+
+static func act_three_complete(record: Dictionary) -> bool:
+	var entry: Dictionary = record["missions"].get(11,{})
+	return not entry.is_empty() and not entry["retry_required"]
+
+static func carry_forward_ark(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("The Buried Ark: MSG lost. Retry the mission.")
+		return lines
+	lines.append({"generous":"A generous agreement (terms %d): more berths, more boarding time, the lift. Life support can carry it.","working":"A working agreement (terms %d): humans board alongside the habitats on a schedule both sides can check.","narrow":"A narrow bargain (terms %d): some berths, a short boarding window. A launch is still possible, at higher cost."}[entry["agreement"]] % entry["terms"])
+	lines.append({"allied":"The Warden is preserved and allied: it can protect boarding in the last mission.","hostile":"The Warden is intact but answers to no one yet.","disabled":"The Warden is disabled: it needs replacement parts before it can guard anything.","destroyed":"The Warden is destroyed. Boarding will have less protection."}[entry["warden"]])
+	if entry["life_lost"]: lines.append("Life support was lost: it caps how many berths any agreement can open.")
+	match entry["nursery"]:
+		"safe", "hurt": lines.append("The nursery got out: Kesh's obligation to Ilen and the children is kept. Steward trust widens.")
+		_: lines.append("The nursery was lost to the rift.")
+	if entry["connector"]: lines.append("Reserve battery connector seated: the reserve can support one launch (Substation, Mission 15).")
+	lines.append("Earth can't be held. The goal is evacuation.")
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]
