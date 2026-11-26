@@ -1,0 +1,25 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://missions/mission_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+mission_id = "civic_center"
+grid_size = Vector2i(20,16)
+walls = Array[Vector2i]([Vector2i(5,2),Vector2i(5,3),Vector2i(5,4),Vector2i(5,5),Vector2i(5,6),Vector2i(5,8),Vector2i(5,9),Vector2i(5,10),Vector2i(5,11),Vector2i(5,12),Vector2i(6,2),Vector2i(6,6),Vector2i(6,12),Vector2i(7,2),Vector2i(7,6),Vector2i(7,12),Vector2i(8,2),Vector2i(8,6),Vector2i(8,12),Vector2i(9,2),Vector2i(9,12),Vector2i(10,2),Vector2i(10,6),Vector2i(11,2),Vector2i(11,6),Vector2i(11,12),Vector2i(12,2),Vector2i(12,6),Vector2i(12,12),Vector2i(13,2),Vector2i(13,6),Vector2i(13,12),Vector2i(14,2),Vector2i(14,3),Vector2i(14,4),Vector2i(14,5),Vector2i(14,6),Vector2i(14,7),Vector2i(14,8),Vector2i(14,9),Vector2i(14,11),Vector2i(14,12),Vector2i(15,1),Vector2i(15,2),Vector2i(15,3),Vector2i(15,4),Vector2i(15,5),Vector2i(15,6),Vector2i(15,8),Vector2i(15,12),Vector2i(16,1),Vector2i(16,6),Vector2i(16,8),Vector2i(16,12),Vector2i(17,1),Vector2i(17,8),Vector2i(17,12),Vector2i(18,1),Vector2i(18,6),Vector2i(18,8),Vector2i(18,12),Vector2i(19,1),Vector2i(19,6),Vector2i(19,8),Vector2i(19,9),Vector2i(19,10),Vector2i(19,11),Vector2i(19,12)])
+cover_edges = {Vector2i(8,10): "north",Vector2i(11,8): "south",Vector2i(7,9): "east",Vector2i(12,9): "west",Vector2i(10,13): "north",Vector2i(6,14): "north",Vector2i(13,14): "north"}
+fixtures = Array[Vector2i]([Vector2i(12,3),Vector2i(5,7),Vector2i(14,10)])
+squad_spawns = Array[Vector2i]([Vector2i(8,15),Vector2i(9,15),Vector2i(11,15),Vector2i(12,15)])
+civilian_spawns = Array[Vector2i]([Vector2i(9,4),Vector2i(9,9),Vector2i(17,10)])
+squad_exits = Array[Vector2i]([Vector2i(20,13),Vector2i(20,14),Vector2i(20,15),Vector2i(20,16)])
+civilian_exit = Vector2i(20,14)
+civilian_routes = {"north":Vector2i(20,14),"south":Vector2i(20,14)}
+disabled_routes = {"north":Vector2i(20,14),"south":Vector2i(20,14)}
+gates = Array[Vector2i]([])
+machine_spawn = Vector2i(-1,-1)
+machine_hp = 0
+closing_round = 10
+collection_shortens_deadline = false
+closure_reason = "Civic center lost"
+evacuation_reason = "Civic center cleared"
+squad_exit_hint = "Extraction: the east gate, column 20, rows 13–16."

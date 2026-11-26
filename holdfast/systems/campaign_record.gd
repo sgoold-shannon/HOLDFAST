@@ -367,6 +367,51 @@ static func carry_forward_airfield(entry: Dictionary) -> Array[String]:
 	if not entry["team_dead"].is_empty(): lines.append("%s lost %s." % [entry["team"],", ".join(entry["team_dead"])])
 	return lines
 
+## Mission 09 entry built from a finished Civic Center board.
+static func civic_center_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	return {"mission":9,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"groups":groups,"squad":squad,"records":board.records["done"],
+		"detainees":board.detainee_state(),"council_out":board.cohorts[board.COUNCIL_GROUP]["status"] == "extracted",
+		"vehicles":board.mortar["vehicles"],"alarm_round":board.alarm_round(),"alarm_cause":board.garrison["alarm_cause"],
+		"troopers_down":board.troopers_down(),"cover_lost":board.garrison["cover_lost"],"taken":board.garrison["taken"].duplicate()}
+
+static func record_civic_center(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := civic_center_entry(board)
+	var previous: Dictionary = record["missions"].get(9,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][9] = entry
+	save_record(path,record)
+	return true
+
+static func carry_forward_civic(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("Civic Center: MSG lost. Retry the mission.")
+		return lines
+	lines.append("Civic Center: %d of 12 out." % entry["evacuated"])
+	if entry["records"]: lines.append("Infiltration records recovered: an old network exposed and purged, and proof of the Reptilian split. Ward's credibility rises; it strengthens the human representatives at the ark parley (Mission 11).")
+	else: lines.append("No records: surviving institutions are weaker, and there are fewer human seats at the parley.")
+	if entry["council_out"] and entry["vehicles"] >= 2: lines.append("The council got out with the convoy (%d of 3 vehicles): civilian leadership survives to approve evacuation terms at the ark." % entry["vehicles"])
+	elif entry["council_out"]: lines.append("The council got out, but the convoy was mauled (%d of 3 vehicles)." % entry["vehicles"])
+	else: lines.append("The council didn't make the convoy. Civilian leadership is thin.")
+	match entry["detainees"]:
+		"freed": lines.append("Detainees freed and out, by name.")
+		"moved out": lines.append("The extraction faction moved the detainees out through the tunnel. Named; unresolved.")
+		_: lines.append("Detainees left in the facility: %s." % entry["detainees"])
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]

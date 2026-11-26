@@ -11,6 +11,7 @@ const RailScene = preload("res://rail_yard.tscn")
 const HospitalScene = preload("res://county_hospital.tscn")
 const QuarryScene = preload("res://quarry.tscn")
 const AirfieldScene = preload("res://regional_airfield.tscn")
+const CivicScene = preload("res://civic_center.tscn")
 const NordicCraft = preload("res://systems/nordic_craft.gd")
 const QuarryWorks = preload("res://systems/quarry_works.gd")
 const HospitalPower = preload("res://systems/hospital_power.gd")
@@ -267,7 +268,13 @@ func build_sidebar() -> void:
 			["af_node","Interrupt node",func(): board.interrupt_runway_node()],
 			["af_hold","Team: hold by soldier",func(): board.order_team("hold")],
 			["af_protect","Team: protect group",func(): board.order_team("protect")],
-			["af_withdraw","Team: withdraw",func(): board.order_team("withdraw")]]:
+			["af_withdraw","Team: withdraw",func(): board.order_team("withdraw")],
+			["cc_scout","Scout (Park)",func(): board.scout()],
+			["cc_door","Force service door",func(): board.force_door()],
+			["cc_records","Download records",func(): board.download_records()],
+			["cc_bypass","Bypass pen lock (Bell)",func(): board.bypass_pen()],
+			["cc_cut","Cut pen (2 AP)",func(): board.cut_pen()],
+			["cc_shield","Ask Aven: shield the convoy",func(): board.shield_convoy()]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
@@ -479,10 +486,11 @@ func refresh() -> void:
 	dirty = false
 	if not ensure_board(): return
 	if board.result_ready and not board.return_state["active"]:
-		var signature := var_to_str(Record.airfield_entry(board) if is_airfield() else Record.quarry_entry(board) if is_quarry() else Record.county_hospital_entry(board) if is_hospital() else Record.rail_yard_entry(board) if is_rail() else Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
+		var signature := var_to_str(Record.civic_center_entry(board) if is_civic() else Record.airfield_entry(board) if is_airfield() else Record.quarry_entry(board) if is_quarry() else Record.county_hospital_entry(board) if is_hospital() else Record.rail_yard_entry(board) if is_rail() else Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
 		if signature != last_record_signature:
 			last_record_signature = signature
-			if is_airfield(): Record.record_airfield(campaign_record_path,board)
+			if is_civic(): Record.record_civic_center(campaign_record_path,board)
+			elif is_airfield(): Record.record_airfield(campaign_record_path,board)
 			elif is_quarry(): Record.record_quarry(campaign_record_path,board)
 			elif is_hospital(): Record.record_county_hospital(campaign_record_path,board)
 			elif is_rail(): Record.record_rail_yard(campaign_record_path,board)
@@ -568,7 +576,20 @@ func refresh_actions() -> void:
 	var hospital := is_hospital()
 	var quarry := is_quarry()
 	var airfield := is_airfield()
-	actions["breaker"].visible = not river and not interchange and not rail and not hospital and not quarry and not airfield
+	var civic := is_civic()
+	actions["breaker"].visible = not river and not interchange and not rail and not hospital and not quarry and not airfield and not civic
+	for action in ["cc_scout","cc_door","cc_records","cc_bypass","cc_cut","cc_shield"]: actions[action].visible = civic
+	if civic:
+		gate("cc_scout",board.scout_reason())
+		actions["cc_door"].visible = not board.door_open
+		gate("cc_door",board.door_reason())
+		gate("cc_records",board.records_reason())
+		actions["cc_bypass"].visible = board.hatch_found and not board.pen["open"]
+		actions["cc_cut"].visible = board.hatch_found and not board.pen["open"]
+		gate("cc_bypass",board.bypass_reason())
+		gate("cc_cut",board.cut_reason())
+		actions["cc_shield"].visible = board.aven_charge and not board.convoy_shield
+		gate("cc_shield",board.shield_reason())
 	var airfield_actions := ["af_contact","af_shield","af_data","af_bargain","af_bypass","af_cut","af_node","af_hold","af_protect","af_withdraw"]
 	for action in airfield_actions: actions[action].visible = airfield
 	if airfield:
@@ -653,8 +674,9 @@ func refresh_actions() -> void:
 		var near_part: bool = can_act and component != board.NONE and not board.drover["recovered"] and Fallow.distance(board.soldiers[board.active_soldier]["cell"],component) <= 1
 		gate("component","" if near_part and board.soldiers[board.active_soldier]["ap"] >= 1 else ("Component recovered." if board.drover["recovered"] else ("Nothing dropped yet." if component == board.NONE else "Select a soldier with 1 AP next to the component (%d,%d)." % [component.x,component.y])))
 	for action in ["observe","transmit","authenticate","divert"]:
-		actions[action].visible = not returning and not river and not interchange and not rail and not hospital and not quarry and not airfield
-		if not returning and not river and not interchange and not rail and not hospital and not quarry and not airfield: gate(action,board.protocol_reason(action))
+		var legacy := not returning and not river and not interchange and not rail and not hospital and not quarry and not airfield and not civic
+		actions[action].visible = legacy
+		if legacy: gate(action,board.protocol_reason(action))
 	actions["cooling"].visible = returning
 	if returning:
 		gate("cooling","" if board.cooling_ready() and board.return_state["bonus_event"] == "" else "Cooling move unavailable or already used.")
@@ -752,6 +774,10 @@ func refresh_priority() -> void:
 		set_text("priority",text)
 		box.visible = text != ""
 		return
+	if is_civic():
+		set_text("priority",civic_priority())
+		box.visible = widgets["priority"].text != ""
+		return
 	if is_airfield():
 		set_text("priority",airfield_priority())
 		box.visible = widgets["priority"].text != ""
@@ -786,6 +812,17 @@ func refresh_priority() -> void:
 		box.visible = true
 	else:
 		box.visible = false
+
+func civic_priority() -> String:
+	if board.ended: return ""
+	for entry in board.garrison["units"]:
+		if entry["hp"] > 0 and not entry["aim"].is_empty():
+			return "TROOPER AIMING at (%d,%d). Move off the red line. Entrenched troopers also shoot cover away." % [entry["aim"]["cell"].x,entry["aim"]["cell"].y]
+	if board.mortar["mark"] != board.NONE: return "MORTAR IMPACT marked (orange 3×3) at (%d,%d): 4 damage and the cover goes. Get clear, or kill the spotter on the annex roof." % [board.mortar["mark"].x,board.mortar["mark"].y]
+	if board.mortar["convoy_mark"]: return "THE MORTAR IS ON THE CONVOY. Kill the spotter (annex roof) or each round costs a vehicle."
+	if not board.garrison["alarm"]: return "QUIET, FOR NOW — the alarm comes at round %d. A shot inside, the pen or the records terminal trips it early. Park can Scout to mark hidden troopers (and the concealed hatch)." % board.garrison["alarm_round"]
+	if board.garrison["load"] > 0: return "DETAINEES BEING MOVED — hit an extraction trooper to break it, or open the pen first."
+	return ""
 
 func airfield_priority() -> String:
 	if board.ended: return ""
@@ -984,10 +1021,25 @@ func modal_content() -> Dictionary:
 	return {}
 
 func should_brief() -> bool:
-	if is_river() or is_main() or is_interchange() or is_rail() or is_hospital() or is_quarry() or is_airfield(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
+	if is_river() or is_main() or is_interchange() or is_rail() or is_hospital() or is_quarry() or is_airfield() or is_civic(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
+	if is_civic():
+		var brief: Dictionary = Arc.mission(9)["briefing"]
+		var lines: Array = [["heading","ACT III · THE ENEMY OF MY ENEMY"],["title","MISSION 09: CIVIC CENTER"]]
+		for key in ["objective","intel","risks","choice","delay"]:
+			lines.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],brief[key]],22])
+		var carry: Array[String] = []
+		if board.files: carry.append("The Hospital harvest files give you the service door code and the concealed hatch: both open from the start.")
+		if board.leaked: carry.append("The Hospital infiltrator reached your base: your movements leaked, and the alarm comes at round 3.")
+		if not board.hospital_taken.is_empty(): carry.append("County Hospital group %s is among the detainees." % ", ".join(board.hospital_taken))
+		if board.aven_charge: carry.append("Aven has a charge left: she can shield the convoy once.")
+		if not carry.is_empty(): lines.append(["text","From earlier missions:  " + " ".join(carry),21,GOLD])
+		lines.append(["heading","HOW IT PLAYS"])
+		lines.append(["text","1. Troopers inside are hidden until a soldier is within 3, or Park scouts (1 AP, reveals within 6, including the concealed hatch). Seen troopers leave a ? where they were last seen.\n2. The west service door (5,7) gets you inside past the main entrance.\n3. The alarm (round %d, or a shot inside, the pen, or the terminal) splits the garrison: extraction troopers move the detainees out; territorial troopers dig in, aim a turn ahead and shoot cover away.\n4. The mortar marks a 3×3 impact a phase ahead; once the convoy leaves, it shells the convoy. Kill the spotter on the annex roof (stairs at 17,6).\n5. The convoy takes the council: it leaves when they reach the gate, or at round %d." % [board.garrison["alarm_round"],board.CONVOY_LEAVES],22])
+		lines.append(["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]])
+		return {"items":lines}
 	if is_airfield():
 		var brief: Dictionary = Arc.mission(8)["briefing"]
 		var lines: Array = [["heading","ACT III · THE ENEMY OF MY ENEMY"],["title","MISSION 08: REGIONAL AIRFIELD"]]
@@ -1113,6 +1165,7 @@ func operations_content() -> Dictionary:
 	var hospital_entry: Dictionary = record["missions"].get(6,{})
 	var quarry_entry: Dictionary = record["missions"].get(7,{})
 	var airfield_entry: Dictionary = record["missions"].get(8,{})
+	var civic_entry: Dictionary = record["missions"].get(9,{})
 	var acts: Array = []
 	for act_index in range(Arc.ACTS.size()):
 		var act: Dictionary = Arc.ACTS[act_index]
@@ -1133,14 +1186,15 @@ func operations_content() -> Dictionary:
 							5: detail = "%d aboard · archive %s" % [done.get("aboard",[]).size()*4,done.get("archive","none")]
 							6: detail = "infiltrator %s" % str(done.get("infiltrator","?")).replace("_"," ")
 							7: detail = "habitat %s" % done.get("habitat","?")
-							_: detail = "contact %s" % ("made" if done.get("contact",false) else "missed")
+							8: detail = "contact %s" % ("made" if done.get("contact",false) else "missed")
+							_: detail = "records %s" % ("taken" if done.get("records",false) else "lost")
 					state = ("PLAYED · %d/12 out · %s" % [done["evacuated"],detail] if not done.is_empty() and not done["retry_required"] else ("RETRY NEEDED" if not done.is_empty() else "PLAY NOW"))
 				"next": state = "NEXT · in development"
 				_: state = "planned"
 			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
 		var complete := (act_index == 0 and Record.act_one_complete(record)) or (act_index == 1 and Record.act_two_complete(record))
 		acts.append({"title":"ACT %s · %s%s" % [act["number"],act["title"].to_upper(),"  ·  COMPLETE" if complete else ""],"summary":act["summary"],"cards":cards})
-	var next: Dictionary = Arc.mission(8)
+	var next: Dictionary = Arc.mission(9)
 	var briefing: Dictionary = next["briefing"]
 	var items: Array = [["title","OPERATIONS BOARD · TASK FORCE ALDER"],
 		["text","Earth may be lost, but humanity does not have to be. Seventeen missions across four acts; Farm Road is where it starts, and where it ends.",21,MUTED],
@@ -1163,11 +1217,12 @@ func operations_content() -> Dictionary:
 	for line in Record.carry_forward_hospital(hospital_entry): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_quarry(quarry_entry): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_airfield(airfield_entry): items.append(["text","•  "+line,20,GOLD])
-	items.append(["heading","MISSION 08 · REGIONAL AIRFIELD  (playable)"])
+	for line in Record.carry_forward_civic(civic_entry): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","MISSION 09 · CIVIC CENTER  (playable)"])
 	for key in ["objective","intel","risks","choice","delay"]:
 		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
 	items.append(["row",[["Back",close_operations],["Play 01: Farm Road",replay_farm_road],["Play 02: River Bridge",play_river_bridge],["Play 03: Main Street",play_main_street],["Play 04: Interchange",play_interchange],["Play 05: Rail Yard",play_rail_yard]]])
-	items.append(["row",[["Play 06: County Hospital",play_county_hospital],["Play 07: Quarry",play_quarry],["Play 08: Regional Airfield",play_airfield]]])
+	items.append(["row",[["Play 06: County Hospital",play_county_hospital],["Play 07: Quarry",play_quarry],["Play 08: Regional Airfield",play_airfield],["Play 09: Civic Center",play_civic]]])
 	return {"items":items}
 
 func play_river_bridge() -> void:
@@ -1190,6 +1245,9 @@ func play_quarry() -> void:
 
 func play_airfield() -> void:
 	launch(AirfieldScene)
+
+func play_civic() -> void:
+	launch(CivicScene)
 
 func launch(scene: PackedScene) -> void:
 	show_operations = false
@@ -1224,7 +1282,11 @@ func is_quarry() -> bool:
 func is_airfield() -> bool:
 	return valid_board() and board.has_method("make_contact")
 
+func is_civic() -> bool:
+	return valid_board() and board.has_method("download_records")
+
 func mission_number() -> int:
+	if is_civic(): return 9
 	if is_airfield(): return 8
 	if is_quarry(): return 7
 	if is_hospital(): return 6

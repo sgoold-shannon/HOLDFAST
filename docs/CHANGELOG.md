@@ -2,6 +2,20 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 09 · Civic Center, v1 greybox (Nov 2026)
+
+Spec: `docs/missions/civic-center.md` (approved by Spence, 25 Nov 2026). Launch it from the Operations board.
+
+- `civic_center.gd` + `civic_center.tscn` + `missions/civic_center.tres`: chambers (council), atrium (civilians), a concealed holding facility (detainees, penned), the north-east annex with the mortar spotter, the convoy at the east gate.
+- `systems/reptilian_garrison.gd`: troopers hidden until a soldier is within 3 or Park scouts (1 AP, within 6, also finds the concealed hatch), with last-known markers. The alarm (round 5, or a shot inside, the pen, the records terminal) splits them: extraction troopers move up and load the detainees out (3 steps, a hit breaks it); territorial troopers aim a turn ahead and shoot one cover edge a round away.
+- `systems/plasma_mortar.gd`: after the alarm it marks a 3×3 impact a phase ahead (4 to soldiers, 2 to groups, cover destroyed). When the convoy leaves (the council reaches the gate, or round 6) its next two rounds go at the convoy, a vehicle each unless Aven shields it. Killing the spotter silences it.
+- Squad actions: Scout, Force service door, Download records (2 steps), Bypass/Cut pen, Ask Aven to shield the convoy.
+- Carry-ins: Hospital infiltrator contained (door code and hatch known), reached the base (alarm at round 3), Hospital's taken groups among the detainees, Airfield contact with a charge left (convoy shield), squad from the latest record.
+- Campaign record gains a mission 09 entry (records, detainees, council, vehicles, alarm, troopers down by faction, cover lost) with carry-forward to the ark parley.
+- Balance pass: the facility guard started next to the pen and an early alarm emptied it in two phases; it now starts three squares off and loading takes three steps.
+- Not yet: save/load inside the civic center, final art.
+- Tests: `test_civic_center.gd` plus HUD launch checks. `sim_civic_center.gd` is a weak scripted player (it never dodges aim lines or reaches the chambers): 4/12. This one needs a real playtest.
+
 ### Mission 08 · Regional Airfield, v1 greybox — Act III opens (Nov 2026)
 
 Spec: `docs/missions/regional-airfield.md` (approved by Spence, 25 Nov 2026). Launch it from the Operations board.
