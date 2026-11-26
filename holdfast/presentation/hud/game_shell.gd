@@ -12,6 +12,8 @@ const HospitalScene = preload("res://county_hospital.tscn")
 const QuarryScene = preload("res://quarry.tscn")
 const AirfieldScene = preload("res://regional_airfield.tscn")
 const CivicScene = preload("res://civic_center.tscn")
+const DamScene = preload("res://the_dam.tscn")
+const DamWorks = preload("res://systems/dam_works.gd")
 const NordicCraft = preload("res://systems/nordic_craft.gd")
 const QuarryWorks = preload("res://systems/quarry_works.gd")
 const HospitalPower = preload("res://systems/hospital_power.gd")
@@ -274,7 +276,19 @@ func build_sidebar() -> void:
 			["cc_records","Download records",func(): board.download_records()],
 			["cc_bypass","Bypass pen lock (Bell)",func(): board.bypass_pen()],
 			["cc_cut","Cut pen (2 AP)",func(): board.cut_pen()],
-			["cc_shield","Ask Aven: shield the convoy",func(): board.shield_convoy()]]:
+			["cc_shield","Ask Aven: shield the convoy",func(): board.shield_convoy()],
+			["dm_west","Open west valve",func(): board.open_valve("west")],
+			["dm_east","Open east valve",func(): board.open_valve("east")],
+			["dm_bridge","Power: footbridge",func(): board.assign_power("bridge")],
+			["dm_life","Power: life support",func(): board.assign_power("life")],
+			["dm_trunk","Power: ark trunk",func(): board.assign_power("trunk")],
+			["dm_stabilize","Stabilize habitat",func(): board.stabilize_habitat()],
+			["dm_repair","Repair junction",func(): board.repair_junction()],
+			["dm_crate","Pick up / set down crate",func(): board.handle_crate()],
+			["dm_node","Interrupt node",func(): board.interrupt_crest_node()],
+			["dm_t_move","Transport: move to soldier",func(): board.order_transport("move")],
+			["dm_t_load","Transport: load crates",func(): board.order_transport("load")],
+			["dm_t_go","Transport: to the trunk",func(): board.order_transport("deliver")]]:
 		var button := action_button(entry[0],entry[1],entry[2])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
@@ -486,10 +500,11 @@ func refresh() -> void:
 	dirty = false
 	if not ensure_board(): return
 	if board.result_ready and not board.return_state["active"]:
-		var signature := var_to_str(Record.civic_center_entry(board) if is_civic() else Record.airfield_entry(board) if is_airfield() else Record.quarry_entry(board) if is_quarry() else Record.county_hospital_entry(board) if is_hospital() else Record.rail_yard_entry(board) if is_rail() else Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
+		var signature := var_to_str(Record.dam_entry(board) if is_dam() else Record.civic_center_entry(board) if is_civic() else Record.airfield_entry(board) if is_airfield() else Record.quarry_entry(board) if is_quarry() else Record.county_hospital_entry(board) if is_hospital() else Record.rail_yard_entry(board) if is_rail() else Record.interchange_entry(board) if is_interchange() else (Record.main_street_entry(board) if is_main() else (Record.river_bridge_entry(board) if is_river() else Record.farm_road_entry(board))))
 		if signature != last_record_signature:
 			last_record_signature = signature
-			if is_civic(): Record.record_civic_center(campaign_record_path,board)
+			if is_dam(): Record.record_dam(campaign_record_path,board)
+			elif is_civic(): Record.record_civic_center(campaign_record_path,board)
 			elif is_airfield(): Record.record_airfield(campaign_record_path,board)
 			elif is_quarry(): Record.record_quarry(campaign_record_path,board)
 			elif is_hospital(): Record.record_county_hospital(campaign_record_path,board)
@@ -577,7 +592,26 @@ func refresh_actions() -> void:
 	var quarry := is_quarry()
 	var airfield := is_airfield()
 	var civic := is_civic()
-	actions["breaker"].visible = not river and not interchange and not rail and not hospital and not quarry and not airfield and not civic
+	var dam_mission := is_dam()
+	actions["breaker"].visible = not river and not interchange and not rail and not hospital and not quarry and not airfield and not civic and not dam_mission
+	var dam_actions := ["dm_west","dm_east","dm_bridge","dm_life","dm_trunk","dm_stabilize","dm_repair","dm_crate","dm_node","dm_t_move","dm_t_load","dm_t_go"]
+	for action in dam_actions: actions[action].visible = dam_mission
+	if dam_mission:
+		var dam: Dictionary = board.dam
+		gate("dm_west",board.valve_reason("west"))
+		gate("dm_east",board.valve_reason("east"))
+		actions["dm_bridge"].text = "Power: footbridge (%s)" % ("ON" if dam["power"]["bridge"] else "off")
+		actions["dm_life"].text = "Power: life support (%s)" % ("ON" if dam["power"]["life"] else "off")
+		actions["dm_trunk"].text = "Power: ark trunk (%d)" % dam["power"]["trunk"]
+		for pair in [["dm_bridge","bridge"],["dm_life","life"],["dm_trunk","trunk"]]: gate(pair[0],board.power_reason(pair[1]))
+		gate("dm_stabilize",board.stabilize_reason())
+		actions["dm_repair"].visible = dam["needs_repair"] and dam["repair"] < DamWorks.REPAIR_STEPS
+		gate("dm_repair",board.repair_reason())
+		gate("dm_crate",board.crate_reason())
+		gate("dm_node","" if can_act and board.fallow["stage"] == "active" else "No node to interrupt.")
+		for action in ["dm_t_move","dm_t_load","dm_t_go"]:
+			actions[action].visible = board.transport["present"]
+			if board.transport["present"]: gate(action,board.transport_reason())
 	for action in ["cc_scout","cc_door","cc_records","cc_bypass","cc_cut","cc_shield"]: actions[action].visible = civic
 	if civic:
 		gate("cc_scout",board.scout_reason())
@@ -674,7 +708,7 @@ func refresh_actions() -> void:
 		var near_part: bool = can_act and component != board.NONE and not board.drover["recovered"] and Fallow.distance(board.soldiers[board.active_soldier]["cell"],component) <= 1
 		gate("component","" if near_part and board.soldiers[board.active_soldier]["ap"] >= 1 else ("Component recovered." if board.drover["recovered"] else ("Nothing dropped yet." if component == board.NONE else "Select a soldier with 1 AP next to the component (%d,%d)." % [component.x,component.y])))
 	for action in ["observe","transmit","authenticate","divert"]:
-		var legacy := not returning and not river and not interchange and not rail and not hospital and not quarry and not airfield and not civic
+		var legacy := not returning and not river and not interchange and not rail and not hospital and not quarry and not airfield and not civic and not dam_mission
 		actions[action].visible = legacy
 		if legacy: gate(action,board.protocol_reason(action))
 	actions["cooling"].visible = returning
@@ -774,6 +808,10 @@ func refresh_priority() -> void:
 		set_text("priority",text)
 		box.visible = text != ""
 		return
+	if is_dam():
+		set_text("priority",dam_priority())
+		box.visible = widgets["priority"].text != ""
+		return
 	if is_civic():
 		set_text("priority",civic_priority())
 		box.visible = widgets["priority"].text != ""
@@ -812,6 +850,16 @@ func refresh_priority() -> void:
 		box.visible = true
 	else:
 		box.visible = false
+
+func dam_priority() -> String:
+	if board.ended: return ""
+	var dam: Dictionary = board.dam
+	var guidance: String = DamWorks.guidance(dam,board)
+	var head := "PRESSURE %d of %d" % [dam["pressure"],DamWorks.BREACH]
+	if dam["pressure"] >= DamWorks.BREACH-2: head = "PRESSURE %d of %d — BREACH IS CLOSE. Open a valve: west floods the lowland, east floods the habitat mouth." % [dam["pressure"],DamWorks.BREACH]
+	elif not board.fallow["marked"].is_empty(): head += " — the Fallow have marked %d crest squares (+1 pressure when they fold). Interrupt the node or kill the cutter." % board.fallow["marked"].size()
+	elif DamWorks.power_used(dam) == 0: head += " — MSG to the turbine (8,4): footbridge, life support, ark trunk."
+	return head + ("\n" + guidance if guidance != "" else "")
 
 func civic_priority() -> String:
 	if board.ended: return ""
@@ -1021,10 +1069,24 @@ func modal_content() -> Dictionary:
 	return {}
 
 func should_brief() -> bool:
-	if is_river() or is_main() or is_interchange() or is_rail() or is_hospital() or is_quarry() or is_airfield() or is_civic(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
+	if is_river() or is_main() or is_interchange() or is_rail() or is_hospital() or is_quarry() or is_airfield() or is_civic() or is_dam(): return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.result_ready and board.phase == 1
 	return not board.has_meta("hud_briefed") and board.scene_view == "" and not board.roster_open and not board.result_ready and board.phase == 1 and machine_threat_active()
 
 func briefing_content() -> Dictionary:
+	if is_dam():
+		var brief: Dictionary = Arc.mission(10)["briefing"]
+		var lines: Array = [["heading","ACT III · THE ENEMY OF MY ENEMY"],["title","MISSION 10: THE DAM"]]
+		for key in ["objective","intel","risks","choice","delay"]:
+			lines.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],brief[key]],22])
+		var carry: Array[String] = []
+		carry.append({"authenticated":"You recovered the Quarry controller: Kesh's channel is authenticated, guidance every round, and MSG can open valves from anywhere on the crest.","partial":"Kesh's channel is partial: guidance every other round.","hardened":"The Quarry habitat was lost: Kesh's terms are hard, with no guidance until the families are stabilized."}[board.dam["channel"]])
+		if board.dam["needs_repair"]: carry.append("You isolated the Quarry platform: the habitat's power junction needs repair (2 AP) before it can be stabilized.")
+		if board.transport["present"]: carry.append("The %s is here to move cargo." % ("Drive Rig" if board.transport["kind"] == "rig" else "Drover cart (no Drover security died at the Interchange)"))
+		lines.append(["text","From earlier missions:  " + " ".join(carry),21,GOLD])
+		lines.append(["heading","HOW IT PLAYS"])
+		lines.append(["text","1. Pressure starts at 2, +1 every round and +1 each time the Fallow fold the crest. Breach at %d floods everything low.\n2. A valve (next to it, 1 AP) drops pressure by 3 and floods its side for 2 rounds: west the lowland, east the habitat mouth.\n3. MSG at the turbine assigns 3 power: footbridge (shortcut for the lowland groups), life support (needed to stabilize), ark trunk (up to 2).\n4. Stabilize at the habitat console: 2 steps. The Drover families stay put; they're safe once it's stable.\n5. Two cargo crates at the habitat mouth: carry them, or use the rig or cart, to the trunk tunnel (19,14)." % DamWorks.BREACH,22])
+		lines.append(["row",[["Got it",func(): board.set_meta("hud_briefed",true)]]])
+		return {"items":lines}
 	if is_civic():
 		var brief: Dictionary = Arc.mission(9)["briefing"]
 		var lines: Array = [["heading","ACT III · THE ENEMY OF MY ENEMY"],["title","MISSION 09: CIVIC CENTER"]]
@@ -1166,6 +1228,7 @@ func operations_content() -> Dictionary:
 	var quarry_entry: Dictionary = record["missions"].get(7,{})
 	var airfield_entry: Dictionary = record["missions"].get(8,{})
 	var civic_entry: Dictionary = record["missions"].get(9,{})
+	var dam_entry: Dictionary = record["missions"].get(10,{})
 	var acts: Array = []
 	for act_index in range(Arc.ACTS.size()):
 		var act: Dictionary = Arc.ACTS[act_index]
@@ -1187,14 +1250,15 @@ func operations_content() -> Dictionary:
 							6: detail = "infiltrator %s" % str(done.get("infiltrator","?")).replace("_"," ")
 							7: detail = "habitat %s" % done.get("habitat","?")
 							8: detail = "contact %s" % ("made" if done.get("contact",false) else "missed")
-							_: detail = "records %s" % ("taken" if done.get("records",false) else "lost")
+							9: detail = "records %s" % ("taken" if done.get("records",false) else "lost")
+							_: detail = "dam %s" % ("breached" if done.get("breached",false) else "held")
 					state = ("PLAYED · %d/12 out · %s" % [done["evacuated"],detail] if not done.is_empty() and not done["retry_required"] else ("RETRY NEEDED" if not done.is_empty() else "PLAY NOW"))
 				"next": state = "NEXT · in development"
 				_: state = "planned"
 			cards.append({"title":"%02d  %s" % [mission["id"],mission["title"]],"state":state,"status":mission["status"],"brief":mission["brief"]})
 		var complete := (act_index == 0 and Record.act_one_complete(record)) or (act_index == 1 and Record.act_two_complete(record))
 		acts.append({"title":"ACT %s · %s%s" % [act["number"],act["title"].to_upper(),"  ·  COMPLETE" if complete else ""],"summary":act["summary"],"cards":cards})
-	var next: Dictionary = Arc.mission(9)
+	var next: Dictionary = Arc.mission(10)
 	var briefing: Dictionary = next["briefing"]
 	var items: Array = [["title","OPERATIONS BOARD · TASK FORCE ALDER"],
 		["text","Earth may be lost, but humanity does not have to be. Seventeen missions across four acts; Farm Road is where it starts, and where it ends.",21,MUTED],
@@ -1218,11 +1282,13 @@ func operations_content() -> Dictionary:
 	for line in Record.carry_forward_quarry(quarry_entry): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_airfield(airfield_entry): items.append(["text","•  "+line,20,GOLD])
 	for line in Record.carry_forward_civic(civic_entry): items.append(["text","•  "+line,20,GOLD])
-	items.append(["heading","MISSION 09 · CIVIC CENTER  (playable)"])
+	for line in Record.carry_forward_dam(dam_entry): items.append(["text","•  "+line,20,GOLD])
+	items.append(["heading","MISSION 10 · THE DAM  (playable)"])
 	for key in ["objective","intel","risks","choice","delay"]:
 		items.append(["text","%s:  %s" % [{"objective":"Objective","intel":"Intel","risks":"Known risks","choice":"The choice","delay":"If it goes wrong"}[key],briefing[key]],20,TEXT])
 	items.append(["row",[["Back",close_operations],["Play 01: Farm Road",replay_farm_road],["Play 02: River Bridge",play_river_bridge],["Play 03: Main Street",play_main_street],["Play 04: Interchange",play_interchange],["Play 05: Rail Yard",play_rail_yard]]])
 	items.append(["row",[["Play 06: County Hospital",play_county_hospital],["Play 07: Quarry",play_quarry],["Play 08: Regional Airfield",play_airfield],["Play 09: Civic Center",play_civic]]])
+	items.append(["row",[["Play 10: The Dam",play_dam]]])
 	return {"items":items}
 
 func play_river_bridge() -> void:
@@ -1248,6 +1314,9 @@ func play_airfield() -> void:
 
 func play_civic() -> void:
 	launch(CivicScene)
+
+func play_dam() -> void:
+	launch(DamScene)
 
 func launch(scene: PackedScene) -> void:
 	show_operations = false
@@ -1285,7 +1354,11 @@ func is_airfield() -> bool:
 func is_civic() -> bool:
 	return valid_board() and board.has_method("download_records")
 
+func is_dam() -> bool:
+	return valid_board() and board.has_method("stabilize_habitat")
+
 func mission_number() -> int:
+	if is_dam(): return 10
 	if is_civic(): return 9
 	if is_airfield(): return 8
 	if is_quarry(): return 7

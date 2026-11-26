@@ -412,6 +412,51 @@ static func carry_forward_civic(entry: Dictionary) -> Array[String]:
 		_: lines.append("Detainees left in the facility: %s." % entry["detainees"])
 	return lines
 
+## Mission 10 entry built from a finished Dam board.
+static func dam_entry(board) -> Dictionary:
+	var squad: Array = []
+	for index in range(board.soldiers.size()):
+		var soldier: Dictionary = board.soldiers[index]
+		squad.append({"name":soldier["name"],"condition":soldier.get("condition","active"),"extracted":soldier["extracted"],"disposition":board.soldier_disposition(index)})
+	var groups: Array = []
+	for cohort in board.cohorts:
+		groups.append({"id":cohort["id"],"status":cohort["status"],"origin":cohort.get("origin","")})
+	var humans := 0
+	for index in range(2):
+		if board.cohorts[index]["status"] == "extracted": humans += 4
+	return {"mission":10,"retry_required":board.retry_required(),"round":board.phase,"end_reason":board.end_reason,
+		"evacuated":board.evacuated_people(),"humans_out":humans,"groups":groups,"squad":squad,
+		"dependents":board.dependents_state(),"breached":board.dam["breached"],"valves":board.dam["valves"].duplicate(),
+		"power":board.dam["power"].duplicate(),"trunk":board.dam["power"]["trunk"],"cargo":board.dam["delivered"],
+		"channel":board.dam["channel"]}
+
+static func record_dam(path: String, board) -> bool:
+	var record := load_record(path)
+	var entry := dam_entry(board)
+	var previous: Dictionary = record["missions"].get(10,{})
+	var comparable: Dictionary = previous.duplicate()
+	comparable.erase("attempts")
+	if var_to_str(comparable) == var_to_str(entry): return false
+	entry["attempts"] = previous.get("attempts",0)+1
+	record["missions"][10] = entry
+	save_record(path,record)
+	return true
+
+static func carry_forward_dam(entry: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if entry.is_empty(): return lines
+	if entry["retry_required"]:
+		lines.append("The Dam: MSG lost. Retry the mission.")
+		return lines
+	if entry["breached"]: lines.append("The dam breached. The lowland and the habitat are gone; survivors still lead the team to the ark, on harder terms.")
+	else: lines.append("The dam held: %d of 8 lowland people out." % entry["humans_out"])
+	match entry["dependents"]:
+		"stabilized": lines.append("Drover dependents stabilized%s: the stewards accept Kesh's parley terms at the Buried Ark (Mission 11)." % (", and %d of 2 cargo crates reached the trunk" % entry["cargo"] if entry["cargo"] > 0 else ""))
+		"flooded": lines.append("The habitat flooded with the dam.")
+		_: lines.append("The habitat was left unstabilized: a habitat abandoned, and harder terms at the ark.")
+	lines.append("Ark trunk power: %d of 2. %s" % [entry["trunk"],["The ark's systems start dark.","Some ark systems start powered.","The Warden's controls and the lift start powered."][entry["trunk"]]])
+	return lines
+
 static func act_one_complete(record: Dictionary) -> bool:
 	var entry: Dictionary = record["missions"].get(3,{})
 	return not entry.is_empty() and not entry["retry_required"]

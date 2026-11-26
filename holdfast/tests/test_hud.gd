@@ -113,8 +113,8 @@ func run() -> void:
 	shell.refresh()
 	var briefed := false
 	for child in shell.modal_box.get_children():
-		if child is Label and String(child.text).contains("CIVIC CENTER"): briefed = true
-	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 09")
+		if child is Label and String(child.text).contains("THE DAM"): briefed = true
+	expect(shell.modal_root.visible and briefed,"Operations board shows the arc and briefs Mission 10")
 	shell.close_operations()
 	board.soldiers[0]["extracted"] = true
 	board.request_close()
@@ -197,6 +197,15 @@ func run() -> void:
 	shell.board.finish_opening()
 	shell.refresh()
 	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("QUIET"),"Civic Center briefs and points at the alarm")
+	# Mission 10 launches with its own controls.
+	shell.play_dam()
+	await process_frame
+	shell.refresh()
+	expect(shell.is_dam() and shell.board.hud_mode and String(shell.widgets["mission"].text).contains("Mission 10"),"The Dam launches in the HUD")
+	expect(shell.actions["dm_west"].visible and shell.actions["dm_life"].visible and not shell.actions["dm_repair"].visible and not shell.actions["dm_t_load"].visible and not shell.actions["cc_scout"].visible and not shell.actions["breaker"].visible,"HUD shows Dam controls only (no repair or transport without carry-ins)")
+	shell.board.finish_opening()
+	shell.refresh()
+	expect(shell.should_brief() and String(shell.widgets["priority"].text).contains("PRESSURE"),"The Dam briefs and points at the pressure")
 	# New game from Extras: confirm, then a fresh Farm Road board is adopted.
 	shell.open_extra(2)
 	shell.refresh()

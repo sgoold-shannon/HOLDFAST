@@ -2,6 +2,35 @@
 
 This is the running log of prototype and foundation work, moved out of the README on 18 November 2026. Newest entries are at the bottom of each section. For how to run the game and tests, see the [README](../README.md).
 
+### Mission 10 · The Dam, v1 greybox (Nov 2026)
+
+Spec: `docs/missions/the-dam.md` (approved by Spence, 25 Nov 2026). Launch it from the Operations board.
+
+- **New mission files.** `the_dam.gd`, `the_dam.tscn` and `missions/the_dam.tres`. The map runs north to south:
+  - the reservoir, the dam crest (row 2) with the west and east valves, and the dam wall (gap at (10,3));
+  - the turbine room;
+  - the west lowland (groups A and B), the footbridge channel, the Drover habitat cavern (dependents and two cargo crates), the power junction and the trunk tunnel;
+  - the south road out.
+- **`systems/dam_works.gd`** runs pressure, floods and the Fallow on the crest.
+  - Pressure starts at 2, goes up 1 a round, and goes up 1 more each time the Fallow fold a crest strip. Breach at 8 floods all low ground and the habitat and ends the mission.
+  - A valve (1 AP) drops pressure by 3 and floods its side for 2 rounds. The west valve floods the lowland, the east valve the habitat mouth. Anyone caught takes damage, and crates there are lost.
+  - Power is 3 units, assigned by MSG at the turbine: the footbridge, life support, and the ark trunk (up to 2).
+  - The habitat is stabilized in 2 steps at the console, which needs life support. The dependents are safe once it's stable.
+  - Kesh's guidance tells you which channel is clear.
+- **Carry-ins:**
+  - Quarry controller recovered: an authenticated channel. Guidance every round, and MSG opens valves remotely from the crest.
+  - Habitat lost at the Quarry: a hardened channel, with no guidance until the families are stable.
+  - Platform isolated at the Quarry: the power junction needs repair first.
+  - Drive Rig from the Quarry, or a Drover cart if no Drover security died at the Interchange: either one hauls the cargo.
+  - The squad comes from the latest record.
+- **Campaign record.** It gains a mission 10 entry: groups, dependents, breached, valves, power, trunk level, cargo, channel and squad. It carries forward to the Buried Ark: parley terms, and ark power from the trunk.
+- **Balance pass.** At the spec's numbers (breach 6, valve −2, +1 per rift square) the dam broke by round 3–4 whatever you did. Now it's breach 8, valve −3, +1 per fold. The turbine moved so its room opens onto the crest, and MSG starts near the lowland groups.
+- **Not yet:** save and load at the dam; final art.
+- **Tests.** `test_the_dam.gd`, plus HUD launch checks.
+  - In the sim (`sim_the_dam.gd`), a scripted player who opens the west valve every other round holds the dam at 5–7. All 12 people get out and the habitat is stabilized.
+  - The scripted player never delivers cargo or gets the squad back to the road, so the cargo and the squad's extraction are untested.
+  - The pressure sits one below breach most rounds. That needs a real playtest.
+
 ### Mission 09 · Civic Center, v1 greybox (Nov 2026)
 
 Spec: `docs/missions/civic-center.md` (approved by Spence, 25 Nov 2026). Launch it from the Operations board.
